@@ -1,0 +1,533 @@
+{
+  "meta": {
+    "title": "DONNA — the executive assistant that prepares, you approve",
+    "description": "Email, WhatsApp, calendar, reminders, documents: DONNA prepares the work for you and your teams, and sends nothing without approval."
+  },
+  "nav": {
+    "label": "Main navigation",
+    "features": "What she does",
+    "audience": "Individuals & companies",
+    "security": "Security",
+    "faq": "Questions",
+    "signIn": "Sign in",
+    "start": "Get started"
+  },
+  "language": {
+    "label": "Language"
+  },
+  "hero": {
+    "title": "She prepares. You approve.",
+    "subtitle": "For you and for your company, DONNA works in your email, WhatsApp, calendar and documents. She reads, searches, drafts and schedules, then brings you everything that needs to go out.",
+    "ctaPrimary": "Continue with Google",
+    "ctaSecondary": "See what she does",
+    "note": "Access is limited to the tools you connect, and you can revoke it anytime."
+  },
+  "demo": {
+    "label": "Demo: DONNA handles a request",
+    "placeholder": "Ask DONNA something…",
+    "request": "Reply to Sarah to move the contract review to Thursday.",
+    "thinking": "She's on it",
+    "steps": [
+      "Reading Sarah Layton's email",
+      "Checking your Thursday calendar",
+      "Drafting the reply"
+    ],
+    "draftLabel": "Email draft",
+    "pending": "Waiting for your approval",
+    "to": "To: Sarah Layton",
+    "subject": "Re: master agreement review",
+    "body": "Sarah, Thursday the 9th at 10 am works for the review. I'll send the invite right after.",
+    "send": "Send",
+    "edit": "Edit",
+    "sent": "Sent after your approval",
+    "greeting": "Hello. What shall we prepare today?",
+    "cursorLabel": "Approval"
+  },
+  "features": {
+    "title": "Everything she does for you",
+    "intro": "One conversation for your messages, your time and your files. Pick an area.",
+    "tabsLabel": "Areas",
+    "exampleLabel": "You tell her",
+    "items": [
+      {
+        "id": "emails",
+        "tab": "Email",
+        "title": "Your inbox, without losing the morning",
+        "example": "What did Harvey send me this week?",
+        "image": "emails",
+        "points": [
+          "She searches and reads your Gmail",
+          "She sums up what matters and who is waiting on you",
+          "She drafts the email; it only goes out once you approve"
+        ]
+      },
+      {
+        "id": "whatsapp",
+        "tab": "WhatsApp",
+        "title": "WhatsApp, in the same conversation",
+        "example": "Tell Rachel I'm confirmed for Thursday.",
+        "image": "whatsapp",
+        "points": [
+          "She reads your chats and searches their history",
+          "She prepares the message, photo, document or voice note",
+          "Nothing is sent without your approval, and sends stay spaced out to protect your number"
+        ]
+      },
+      {
+        "id": "agenda",
+        "tab": "Calendar & reminders",
+        "title": "Your time, kept for you",
+        "example": "Move my catch-up with Louis to 4 pm and remind me to prepare the file the day before.",
+        "image": "calendar",
+        "points": [
+          "She shows you your upcoming meetings",
+          "She creates, moves or cancels an event once you approve",
+          "Her reminders arrive on time, even when the app is closed",
+          "No date yet? She brings it up at the right moment"
+        ]
+      },
+      {
+        "id": "documents",
+        "tab": "Documents",
+        "title": "Your files, quoted word for word",
+        "example": "What are the termination clauses in the Hessington contract?",
+        "image": "documents",
+        "points": [
+          "Add your PDF, Word, Excel and PowerPoint files",
+          "She searches by meaning as well as by keywords",
+          "Every answer shows the excerpt and the source document",
+          "When your files aren't enough, she checks the web"
+        ]
+      },
+      {
+        "id": "production",
+        "tab": "Deliverables",
+        "title": "Deliverables, not just answers",
+        "example": "Build me an Excel sheet of overdue invoices from these PDFs.",
+        "image": "production",
+        "points": [
+          "Letters and meeting notes written in Word",
+          "Excel workbooks created and analyzed",
+          "Data extracted from PDFs, even scanned ones: tables, forms",
+          "The file is attached right in the conversation"
+        ]
+      },
+      {
+        "id": "memory",
+        "tab": "Memory",
+        "title": "She knows you, you stay in charge",
+        "example": "Remember that I never take meetings before 9 am.",
+        "image": "memory",
+        "points": [
+          "She remembers your preferences from one conversation to the next",
+          "You review, correct or erase what she knows",
+          "When a detail is missing, she offers choices instead of guessing",
+          "Type, dictate or send a photo: she understands all three"
+        ]
+      }
+    ],
+    "quote": [
+      "“",
+      "”"
+    ]
+  },
+  "how": {
+    "title": "How it works",
+    "steps": [
+      {
+        "title": "Connect your tools",
+        "body": "Sign in with Google, Microsoft, GitHub or Discord. Gmail and Google Calendar connect in one click.",
+        "image": "connect"
+      },
+      {
+        "title": "Ask like you would an assistant",
+        "body": "Type, dictate or attach a file. You see each step while she searches and prepares.",
+        "image": "ask"
+      },
+      {
+        "title": "Approve what goes out",
+        "body": "Emails, meetings and WhatsApp messages come to you first. One click to send, one click to cancel.",
+        "image": "approve"
+      }
+    ]
+  },
+  "security": {
+    "title": "Under your control, from first click to last",
+    "body": "An executive assistant handles sensitive information. DONNA is built so that no important action depends on her initiative alone.",
+    "items": [
+      {
+        "title": "Human approval",
+        "body": "Anything that leaves your account waits for your explicit approval."
+      },
+      {
+        "title": "Isolated files",
+        "body": "Conversations and documents stay within your account and your company."
+      },
+      {
+        "title": "Cited sources",
+        "body": "She names the documents she uses and says when she doesn't know."
+      },
+      {
+        "title": "Two-factor authentication",
+        "body": "Authenticator app and backup codes to protect your account."
+      },
+      {
+        "title": "Sessions in your hands",
+        "body": "See your signed-in devices and sign them out remotely."
+      },
+      {
+        "title": "Revocable access",
+        "body": "Remove access to Gmail, Google Calendar or any connected account in one click."
+      }
+    ]
+  },
+  "faq": {
+    "title": "Frequently asked questions",
+    "items": [
+      {
+        "q": "What can DONNA access?",
+        "a": "Only the tools you connect, such as Gmail and Google Calendar, WhatsApp if your company enables it, and the documents you share with her. You can remove any access at any time."
+      },
+      {
+        "q": "Can she send an email or message without asking me?",
+        "a": "No. Emails, invites and WhatsApp messages stay drafts until you approve them in the app."
+      },
+      {
+        "q": "What happens when she gets it wrong?",
+        "a": "Her answers cite the documents she used, so you can check in one click. And when information is missing, she asks you."
+      },
+      {
+        "q": "Which files can I share with her?",
+        "a": "PDF, Word, Excel, PowerPoint, text, images and audio recordings. She can also produce Word, Excel and PDF documents."
+      },
+      {
+        "q": "How do I get started?",
+        "a": "Sign in with Google, then ask your first question. No setup is needed to begin."
+      }
+    ]
+  },
+  "cta": {
+    "title": "Hand her your next day.",
+    "body": "Sign in, ask a first question, and see what she prepares for you.",
+    "button": "Continue with Google"
+  },
+  "footer": {
+    "tagline": "The executive assistant that prepares, and leaves the decisions to you.",
+    "legal": "© 2026 DONNA"
+  },
+  "illustrations": {
+    "emails": "A man checking email on a large phone",
+    "whatsapp": "A messaging conversation between two people",
+    "calendar": "A woman holding a calendar",
+    "documents": "Documents examined under a magnifying glass",
+    "production": "A man presenting a data chart",
+    "memory": "A woman reviewing a preferences card",
+    "connect": "A woman filling in a sign-in form",
+    "ask": "A woman making a request in front of a document",
+    "approve": "A woman approving a notification on her phone",
+    "security": "A woman in front of a shield and servers",
+    "relax": "A woman relaxing in an armchair",
+    "personal": "A woman working on her laptop next to a checked-off planner",
+    "team": "A team of three colleagues talking"
+  },
+  "audience": {
+    "title": "For you, and for your whole company",
+    "intro": "Start on your own, then open DONNA to your team when you're ready.",
+    "personal": {
+      "label": "Individuals and freelancers",
+      "title": "Your personal assistant",
+      "image": "personal",
+      "points": [
+        "Your email, calendar and reminders in one place",
+        "Your documents and what she remembers about you, kept to your account",
+        "No setup needed to begin"
+      ]
+    },
+    "business": {
+      "label": "Companies",
+      "title": "The assistant for your whole team",
+      "image": "team",
+      "points": [
+        "A company workspace where everyone keeps their own conversations",
+        "Invite colleagues by email",
+        "Roles and access assigned by an administrator",
+        "A log of sensitive actions"
+      ]
+    },
+    "soon": {
+      "label": "Coming soon",
+      "items": [
+        "Shared projects, with per-project invitations",
+        "Access to DONNA managed by the workspace lead or owner"
+      ]
+    }
+  },
+  "auth": {
+    "panel": {
+      "title": "Nothing goes out without your approval.",
+      "body": "DONNA prepares your emails, messages and meetings. Every send waits for your go-ahead.",
+      "signature": "Access limited to the tools you connect, revocable at any time."
+    },
+    "backHome": "Back to home",
+    "or": "or with your email",
+    "providers": {
+      "google": "Continue with Google",
+      "microsoft": "Continue with Microsoft",
+      "github": "Continue with GitHub",
+      "discord": "Continue with Discord"
+    },
+    "fields": {
+      "email": "Email address",
+      "password": "Password",
+      "newPassword": "New password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
+      "code": "Verification code",
+      "workspaceName": "Workspace name"
+    },
+    "policy": {
+      "title": "Your password has",
+      "length": "At least 8 characters",
+      "uppercase": "One uppercase letter",
+      "digit": "One number"
+    },
+    "login": {
+      "title": "Sign in",
+      "intro": "Pick up your conversations and what DONNA has prepared.",
+      "submit": "Sign in",
+      "pending": "Signing in…",
+      "forgot": "Forgot password?",
+      "noAccount": "No account yet?",
+      "signupLink": "Create an account"
+    },
+    "mfa": {
+      "title": "Two-step verification",
+      "intro": "Enter the 6-digit code from your authenticator app, or one of your backup codes.",
+      "submit": "Verify",
+      "pending": "Verifying…",
+      "restart": "Start sign-in again"
+    },
+    "signup": {
+      "title": "Create an account",
+      "intro": "Just for you or for your whole company: you set up your workspace right after.",
+      "submit": "Create my account",
+      "pending": "Creating account…",
+      "hasAccount": "Already have an account?",
+      "loginLink": "Sign in"
+    },
+    "forgot": {
+      "title": "Forgot password",
+      "intro": "Enter your account email: you'll get a link to choose a new password.",
+      "submit": "Send me the link",
+      "pending": "Sending…",
+      "sent": "If an account exists for this address, a link valid for 30 minutes has just been sent to it.",
+      "back": "Back to sign in"
+    },
+    "reset": {
+      "title": "New password",
+      "intro": "Choose the new password for your account.",
+      "submit": "Save password",
+      "pending": "Saving…",
+      "done": "Password saved. You can sign in now.",
+      "missingToken": "This link is incomplete. Request a new one.",
+      "requestNew": "Request a new link",
+      "loginLink": "Sign in"
+    },
+    "welcome": {
+      "title": "Create your workspace",
+      "intro": "Your workspace brings together your conversations, documents and connected tools.",
+      "placeholder": "Your name or your company's",
+      "hint": "You can invite your team afterwards.",
+      "submit": "Create workspace",
+      "pending": "Creating workspace…",
+      "fallbackName": "My workspace"
+    },
+    "workspaces": {
+      "title": "Choose a workspace",
+      "intro": "Your account has access to several workspaces.",
+      "owner": "Owner",
+      "member": "Member",
+      "unnamed": "Unnamed workspace",
+      "open": "Open"
+    },
+    "errors": {
+      "invalidCredentials": "Incorrect email or password.",
+      "accountInactive": "This account is deactivated. Contact your workspace lead.",
+      "emailTaken": "An account already exists with this email. Sign in instead.",
+      "passwordPolicy": "The password doesn't meet the rules shown yet.",
+      "invalidEmail": "Enter a valid email address.",
+      "required": "Fill in this field.",
+      "invalidCode": "Incorrect code. Check it and try again.",
+      "mfaExpired": "Verification expired. Sign in again.",
+      "tooMany": "Too many attempts. Wait a minute before trying again.",
+      "unavailable": "The sign-in service isn't responding. Try again in a moment.",
+      "generic": "The request didn't go through. Try again.",
+      "oauth": "Signing in with this provider didn't work. Try again, or use your email.",
+      "resetInvalid": "This link has expired or was already used. Request a new one.",
+      "sessionExpired": "Your session expired. Sign in again."
+    },
+    "app": {
+      "title": "Workspace",
+      "signedIn": "You're signed in.",
+      "next": "DONNA's main screen comes in the next step.",
+      "logout": "Sign out"
+    }
+  },
+  "workspace": {
+    "meta": {
+      "title": "Workspace",
+      "newTitle": "New conversation"
+    },
+    "sidebar": {
+      "label": "Sidebar",
+      "newChat": "New conversation",
+      "search": "Search",
+      "searchLabel": "Search conversations",
+      "conversations": "Conversations",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "week": "Last 7 days",
+      "earlier": "Earlier",
+      "empty": "Your conversations will show up here.",
+      "noResults": "No conversation matches.",
+      "more": "Conversation options",
+      "rename": "Rename",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this conversation? Its messages, reminders and pending actions will be erased.",
+      "renameLabel": "New title",
+      "save": "Save",
+      "cancel": "Cancel",
+      "open": "Open sidebar",
+      "close": "Close sidebar",
+      "account": "Account",
+      "signOut": "Sign out",
+      "owner": "Workspace",
+      "inMessages": "In messages",
+      "searching": "Searching…",
+      "searchPlaceholder": "Search a conversation or a message…",
+      "searchTitles": "Conversations",
+      "searchEmpty": "Type at least two letters to search your messages.",
+      "searchNone": "No results.",
+      "searchHint": "Enter to open · Esc to close"
+    },
+    "chat": {
+      "greeting": "Hello",
+      "prompt": "What can I prepare for you today?",
+      "placeholder": "Ask DONNA something…",
+      "send": "Send",
+      "stop": "Stop",
+      "attach": "Attach files",
+      "removeFile": "Remove",
+      "disclaimer": "DONNA can make mistakes. Check important information.",
+      "you": "You",
+      "thinking": "Thinking…",
+      "working": "She's on it",
+      "done": "Done",
+      "sources": "Sources",
+      "files": "Files",
+      "memory": "Remembered for later",
+      "stopped": "Reply stopped.",
+      "errorGeneric": "The reply didn't go through. Try again.",
+      "errorSession": "Your session expired. Sign in again.",
+      "errorUnavailable": "DONNA isn't responding right now. Try again in a moment.",
+      "errorTooMany": "Too many requests in a short time. Wait a minute.",
+      "retry": "Try again",
+      "loadError": "This conversation can't be found or is no longer accessible.",
+      "backHome": "New conversation",
+      "questionLabel": "DONNA needs a detail",
+      "suggestions": [
+        "What's on my calendar this week?",
+        "Summarize the important emails I got today.",
+        "Remind me tomorrow at 9 am to call the firm."
+      ],
+      "uploading": "Uploading files…",
+      "stepRead": "Reading your request",
+      "stepAnswer": "Writing the reply",
+      "stepFiles": "Reading the attached files",
+      "draftEmail": "Email draft",
+      "draftEvent": "Event awaiting approval",
+      "to": "To",
+      "awaiting": "Waiting for your approval",
+      "eventActions": {
+        "create": "Create event",
+        "update": "Update event",
+        "delete": "Delete event"
+      },
+      "stepsCount": "{n} steps",
+      "hideSteps": "Hide steps",
+      "showSteps": "Show steps",
+      "optionsLabel": "Suggested replies",
+      "webSearch": "Web search",
+      "webSearchOn": "Web search on",
+      "webSearchOff": "Turn on web search"
+    },
+    "tools": {
+      "remember_fact": "Remembering a detail",
+      "update_fact": "Updating a remembered detail",
+      "forget_fact": "Forgetting a detail",
+      "set_reminder": "Scheduling a reminder",
+      "cancel_reminder": "Cancelling a reminder",
+      "ask_user": "Asking for a detail",
+      "search_emails": "Searching your email",
+      "list_upcoming_events": "Reading your calendar",
+      "propose_email": "Drafting an email",
+      "propose_calendar_event": "Preparing a calendar event",
+      "cancel_action": "Cancelling an action",
+      "save_generated_document": "Creating a document",
+      "web_search": "Searching the web",
+      "delegate_to_subagent": "In-depth analysis",
+      "wa_status": "Checking WhatsApp",
+      "wa_chats": "Reading your WhatsApp chats",
+      "wa_context": "Reading a WhatsApp chat",
+      "wa_search": "Searching WhatsApp",
+      "wa_send": "Drafting a WhatsApp message",
+      "wa_media": "Preparing a WhatsApp attachment",
+      "wa_voice": "Preparing a voice note",
+      "wa_react": "Reacting in WhatsApp",
+      "wa_read": "Chat marked as read",
+      "search_drive_files": "Searching Google Drive",
+      "read_drive_file": "Reading a Drive file",
+      "fallback": "Using a tool"
+    },
+    "panel": {
+      "label": "Activity panel",
+      "activity": "In progress",
+      "idle": "The steps of your next request will show up here.",
+      "live": "Live",
+      "finished": "Done",
+      "pending": "Awaiting approval",
+      "pendingEmpty": "Nothing is waiting for your approval.",
+      "approve": "Approve",
+      "decline": "Cancel",
+      "approved": "Approved",
+      "declined": "Cancelled",
+      "actionError": "The action couldn't be processed. Try again.",
+      "kinds": {
+        "send_email": "Email",
+        "calendar_event": "Calendar"
+      },
+      "connectors": "Connectors",
+      "google": "Google",
+      "googleDetail": "Gmail and Google Calendar",
+      "connected": "Connected",
+      "notConnected": "Not connected",
+      "connect": "Connect",
+      "gmail": "Gmail",
+      "calendar": "Calendar",
+      "drive": "Drive",
+      "allowDrive": "Allow Drive",
+      "whatsapp": "WhatsApp",
+      "whatsappDetail": "Workspace number",
+      "notPaired": "Not paired",
+      "unavailable": "Unavailable",
+      "reconnect": "Reconnect",
+      "googleDrive": "Google Drive",
+      "googleCalendar": "Google Calendar",
+      "gmailDetail": "Read and draft emails",
+      "calendarDetail": "Check and propose meetings",
+      "driveDetail": "Search and read files",
+      "whatsappRow": "WhatsApp",
+      "authorize": "Authorize"
+    }
+  }
+}

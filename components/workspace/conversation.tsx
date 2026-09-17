@@ -1,0 +1,765 @@
+"use client";
+
+import Link from "next/link";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { Locale } from "@/i18n/config";
+import type { Dictionary } from "@/app/[lang]/dictionaries";
+import { DonnaMark } from "@/components/brand/donna-mark";
+import { actionIdFrom, readChatStream } from "@/lib/chat-stream";
+import {
+  fileHref,
+  type AttachmentOut,
+  type ChatMessage,
+  type SourceOut,
+  type Step,
+  type ToolCall,
+} from "@/lib/workspace-types";
+import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, GlobeIcon, PaperclipIcon, SendIcon, StopIcon } from "./icons";
+import { Markdown } from "./markdown";
+import { StepDot, stepLabel } from "./side-panel";
+import { useWorkspace } from "./workspace-provider";
+
+type WorkspaceDict = Dictionary["workspace"];
+type ErrorKind = NonNullable<ChatMessage["error"]>;
+
+const uid = () => crypto.randomUUID();
+const PROPOSALS = new Set(["propose_email", "propose_calendar_event"]);
+const MAX_FILES = 5;
+
+const errorFromStatus = (status: number): ErrorKind =>
+  status === 401 ? "session" : status === 429 ? "tooMany" : status >= 500 || status === 0 ? "unavailable" : "generic";
+
+export function Conversation({
+  lang,
+  dict,
+  conversationId,
+  initialMessages,
+  firstName,
+  initials,
+  loadError = false,
+}: {
+  lang: Locale;
+  dict: WorkspaceDict;
+  conversationId: string | null;
+  initialMessages: ChatMessage[];
+  firstName: string | null;
+  initials: string;
+  loadError?: boolean;
+}) {
+  const { upsertConversation, refreshConversations, refreshPending, setActivity } = useWorkspace();
+  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
+  const [busy, setBusy] = useState(false);
+  const conversationRef = useRef(conversationId);
+  const abortRef = useRef<AbortController | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
+
+  // Le fil reste collé en bas pendant la rédaction, sauf si l'utilisateur remonte lire.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
+  }, [messages]);
+
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  const send = useCallback(
+    async (text: string, files: File[], webSearch = false) => {
+      const message = text.trim();
+      if ((!message && !files.length) || busy) return;
+      setBusy(true);
+      stickToBottom.current = true;
+
+      const assistantId = uid();
+      let steps: Step[] = [{ id: uid(), key: files.length ? "files" : "read", status: "running", at: Date.now() }];
+      const update = (patch: Partial<ChatMessage> | ((m: ChatMessage) => Partial<ChatMessage>)) =>
+        setMessages((list) =>
+          list.map((m) => (m.id === assistantId ? { ...m, ...(typeof patch === "function" ? patch(m) : patch) } : m)),
+        );
+      const setSteps = (next: Step[], status: "running" | "done" | "error" = "running") => {
+        steps = next;
+        update({ steps: next });
+        setActivity({ status, steps: next });
+      };
+      const finishSteps = () => steps.map((s) => (s.status === "running" ? { ...s, status: "done" as const } : s));
+
+      setMessages((list) => [
+        ...list,
+        { id: uid(), role: "user", content: message, createdAt: Date.now(), attachments: [], localFiles: files.map((f) => f.name) },
+        { id: assistantId, role: "assistant", content: "", createdAt: Date.now(), attachments: [], steps, tools: [], status: "streaming" },
+      ]);
+      setActivity({ status: "running", steps });
+
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const isNew = conversationRef.current === null;
+      let proposed = false;
+
+      const onConversation = (id: string) => {
+        if (!id || conversationRef.current) return;
+        conversationRef.current = id;
+        window.history.replaceState(null, "", `/${lang}/app/c/${id}`);
+        upsertConversation({ id, title: (message || files[0]?.name || dict.meta.newTitle).slice(0, 60), created_at: new Date().toISOString() });
+      };
+
+      try {
+        if (files.length) {
+          // Fichiers joints : route non diffusée en continu (extraction, transcription, RAG).
+          const form = new FormData();
+          if (message) form.set("message", message);
+          if (conversationRef.current) form.set("conversation_id", conversationRef.current);
+          if (webSearch) form.set("web_search", "true");
+          for (const file of files) form.append("files", file);
+          const response = await fetch("/api/donna/chat/upload", { method: "POST", body: form, signal: controller.signal });
+          if (!response.ok) throw Object.assign(new Error("http"), { kind: errorFromStatus(response.status) });
+          const data = (await response.json()) as {
+            conversation_id: string;
+            reply: string;
+            question: string | null;
+            options: string[];
+            sources: SourceOut[];
+            memory_notes: string[];
+            attachments: AttachmentOut[];
+          };
+          onConversation(data.conversation_id);
+          const tools: ToolCall[] = data.question
+            ? [{ name: "ask_user", arguments: { question: data.question, options: data.options }, result: "" }]
+            : [];
+          setSteps([...finishSteps(), { id: uid(), key: "answer", status: "done", at: Date.now() }], "done");
+          update({ content: data.reply, sources: data.sources, memory: data.memory_notes, attachments: data.attachments, tools, status: "done" });
+        } else {
+          const response = await fetch("/api/donna/chat/stream", {
+            method: "POST",
+            headers: { "content-type": "application/json", accept: "text/event-stream" },
+            body: JSON.stringify({ message, conversation_id: conversationRef.current, web_search: webSearch }),
+            signal: controller.signal,
+          });
+          if (!response.ok) throw Object.assign(new Error("http"), { kind: errorFromStatus(response.status) });
+
+          let answering = false;
+          let finished = false;
+          for await (const event of readChatStream(response)) {
+            if (event.type === "start") onConversation(event.conversationId);
+            else if (event.type === "delta") {
+              if (!answering) {
+                answering = true;
+                setSteps([...finishSteps(), { id: uid(), key: "answer", status: "running", at: Date.now() }]);
+              }
+              update((m) => ({ content: m.content + event.content }));
+            } else if (event.type === "sources") {
+              update({ sources: event.sources });
+            } else if (event.type === "tool_start") {
+              // Étape affichée « en cours » pendant l'exécution de l'outil.
+              answering = false;
+              setSteps([...finishSteps(), { id: uid(), key: event.name, status: "running", at: Date.now() }]);
+            } else if (event.type === "tool_call") {
+              answering = false;
+              if (PROPOSALS.has(event.call.name)) proposed = true;
+              const index = steps.findLastIndex((s) => s.key === event.call.name && s.status === "running");
+              setSteps(
+                index >= 0
+                  ? steps.map((s, i) => (i === index ? { ...s, status: "done" as const } : s))
+                  : [...finishSteps(), { id: uid(), key: event.call.name, status: "done", at: Date.now() }],
+              );
+              update((m) => ({ tools: [...(m.tools ?? []), event.call] }));
+            } else if (event.type === "error") {
+              throw Object.assign(new Error("stream"), { kind: "generic" as ErrorKind });
+            } else if (event.type === "done") {
+              finished = true;
+              setSteps(finishSteps(), "done");
+              update({ sources: event.sources, memory: event.memory, attachments: event.attachments, status: "done" });
+            }
+          }
+          if (!finished) throw Object.assign(new Error("interrupted"), { kind: "generic" as ErrorKind });
+        }
+      } catch (error) {
+        if (controller.signal.aborted) {
+          setSteps(finishSteps(), "done");
+          update({ status: "stopped" });
+        } else {
+          const kind = (error as { kind?: ErrorKind }).kind ?? "unavailable";
+          setSteps(finishSteps(), "error");
+          update({ status: "error", error: kind });
+        }
+      } finally {
+        abortRef.current = null;
+        setBusy(false);
+        if (proposed) void refreshPending();
+        // Le titre définitif est généré en arrière-plan par le backend quelques secondes plus tard.
+        if (isNew && conversationRef.current) window.setTimeout(() => void refreshConversations(), 6000);
+      }
+    },
+    [busy, dict.meta.newTitle, lang, refreshConversations, refreshPending, setActivity, upsertConversation],
+  );
+
+  const retry = (index: number) => {
+    const question = messages[index - 1];
+    if (!question || question.role !== "user") return;
+    setMessages((list) => list.filter((_, i) => i !== index && i !== index - 1));
+    void send(question.content, []);
+  };
+
+  const empty = messages.length === 0;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div
+        ref={scrollRef}
+        onScroll={(event) => {
+          const el = event.currentTarget;
+          stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+        }}
+        className="scrollbar-none min-h-0 flex-1 overflow-y-auto"
+      >
+        <div className="mx-auto flex w-full max-w-[46rem] flex-col gap-7 px-5 pt-8 pb-10 md:px-8">
+          {loadError ? (
+            <div className="mt-16 flex flex-col items-center gap-4 text-center">
+              <p className="text-message text-ink-2">{dict.chat.loadError}</p>
+              <Link href={`/${lang}/app`} className="rounded-button bg-bordeaux-700 px-4 py-2.5 text-label font-medium text-white no-underline hover:bg-bordeaux-900 hover:text-white">
+                {dict.chat.backHome}
+              </Link>
+            </div>
+          ) : empty ? (
+            <EmptyState dict={dict} firstName={firstName} onPick={(text) => void send(text, [])} />
+          ) : (
+            messages.map((m, index) =>
+              m.role === "user" ? (
+                <UserMessage key={m.id} lang={lang} message={m} initials={initials} label={dict.chat.you} />
+              ) : (
+                <AssistantMessage
+                  key={m.id}
+                  lang={lang}
+                  dict={dict}
+                  message={m}
+                  last={index === messages.length - 1}
+                  busy={busy}
+                  onAnswer={(text) => void send(text, [])}
+                  onRetry={() => retry(index)}
+                />
+              ),
+            )
+          )}
+        </div>
+      </div>
+
+      {!loadError && (
+        <Composer dict={dict} busy={busy} onSend={send} onStop={() => abortRef.current?.abort()} autoFocus={empty} />
+      )}
+    </div>
+  );
+}
+
+/* ── Accueil d'une nouvelle conversation ─────────────────────────────────────────── */
+
+function EmptyState({ dict, firstName, onPick }: { dict: WorkspaceDict; firstName: string | null; onPick: (text: string) => void }) {
+  return (
+    <div className="mt-[10vh] flex flex-col items-center text-center">
+      <span className="demo-halo inline-flex rounded-full">
+        <DonnaMark size={56} variant="circle" label="" />
+      </span>
+      <h1 className="mt-6 font-brand text-greeting font-light text-bordeaux-900">
+        {firstName ? `${dict.chat.greeting} ${firstName},` : `${dict.chat.greeting},`}
+      </h1>
+      <p className="mt-1 text-panel-title text-ink-2">{dict.chat.prompt}</p>
+      <ul className="mt-10 flex w-full max-w-[34rem] flex-col gap-2">
+        {dict.chat.suggestions.map((suggestion) => (
+          <li key={suggestion}>
+            <button
+              type="button"
+              onClick={() => onPick(suggestion)}
+              className="w-full rounded-card border border-border bg-surface px-4 py-3 text-left text-label text-ink-2 transition-[border-color,color] duration-(--duration-fast) hover:border-bordeaux-700/30 hover:text-ink"
+            >
+              {suggestion}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ── Messages ────────────────────────────────────────────────────────────────────── */
+
+function Time({ lang, at }: { lang: Locale; at: number | null }) {
+  if (!at) return null;
+  return (
+    <time dateTime={new Date(at).toISOString()} className="text-meta text-ink-3 tabular-nums" suppressHydrationWarning>
+      {new Intl.DateTimeFormat(lang, { hour: "2-digit", minute: "2-digit" }).format(at)}
+    </time>
+  );
+}
+
+function UserMessage({ lang, message, initials, label }: { lang: Locale; message: ChatMessage; initials: string; label: string }) {
+  const files = [...(message.localFiles ?? []), ...message.attachments.map((a) => a.original_name)];
+  return (
+    <div className="flex justify-end gap-3">
+      <div className="flex max-w-[85%] flex-col items-end gap-1.5">
+        <div className="rounded-panel rounded-tr-badge bg-active px-4 py-3">
+          <p className="sr-only">{label} :</p>
+          {message.content && <p className="text-message whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">{message.content}</p>}
+          {files.length > 0 && (
+            <ul className={`flex flex-wrap gap-1.5 ${message.content ? "mt-2" : ""}`}>
+              {files.map((name) => (
+                <li key={name} className="inline-flex items-center gap-1.5 rounded-badge bg-white px-2 py-1 text-meta text-ink-2">
+                  <FileIcon size={14} />
+                  {name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <Time lang={lang} at={message.createdAt} />
+      </div>
+      <span aria-hidden className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-peche-100 text-meta font-medium text-bordeaux-900">
+        {initials}
+      </span>
+    </div>
+  );
+}
+
+function AssistantMessage({
+  lang,
+  dict,
+  message,
+  last,
+  busy,
+  onAnswer,
+  onRetry,
+}: {
+  lang: Locale;
+  dict: WorkspaceDict;
+  message: ChatMessage;
+  last: boolean;
+  busy: boolean;
+  onAnswer: (text: string) => void;
+  onRetry: () => void;
+}) {
+  const { chat } = dict;
+  const streaming = message.status === "streaming";
+  const tools = message.tools ?? [];
+  const question = tools.findLast((t) => t.name === "ask_user");
+  const proposals = tools.filter((t) => PROPOSALS.has(t.name));
+
+  return (
+    <div className="flex gap-3">
+      <span className="relative mt-0.5 inline-flex size-8 shrink-0 items-center justify-center">
+        {streaming && <span aria-hidden className="demo-ring absolute inset-0 rounded-full" />}
+        <DonnaMark size={28} variant="circle" label="DONNA" />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
+        {message.steps && message.steps.length > 0 && <StepsCard lang={lang} dict={dict} message={message} />}
+
+        {message.content ? (
+          <div aria-live={streaming ? "polite" : undefined}>
+            <Markdown>{message.content}</Markdown>
+            {streaming && <span aria-hidden className="demo-caret ml-0.5 inline-block h-4 w-px translate-y-0.5 bg-bordeaux-700" />}
+          </div>
+        ) : null}
+
+        {proposals.map((call) => (
+          <ActionCard key={call.result} lang={lang} dict={dict} call={call} />
+        ))}
+
+        {question && (
+          <QuestionCard dict={dict} call={question} disabled={busy || !last} onAnswer={onAnswer} />
+        )}
+
+        {message.attachments.length > 0 && (
+          <div>
+            <p className="text-meta text-ink-3">{chat.files}</p>
+            <ul className="mt-1.5 flex flex-wrap gap-2">
+              {message.attachments.map((file) => (
+                <li key={file.id}>
+                  <a href={fileHref(file.file_url)} className="inline-flex items-center gap-2 rounded-button border border-border bg-white px-3 py-2 text-label text-ink no-underline hover:border-bordeaux-700/30 hover:text-ink">
+                    <FileIcon size={16} className="text-bordeaux-700" />
+                    {file.original_name}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {message.sources && message.sources.length > 0 && <Sources dict={dict} sources={message.sources} />}
+
+        {message.memory && message.memory.length > 0 && (
+          <p className="inline-flex items-start gap-1.5 text-secondary text-ink-2">
+            <CheckIcon size={15} className="mt-px shrink-0 text-success" />
+            <span>
+              {chat.memory} : {message.memory.join(" · ")}
+            </span>
+          </p>
+        )}
+
+        {message.status === "stopped" && <p className="text-secondary text-ink-3">{chat.stopped}</p>}
+        {message.status === "error" && (
+          <div role="alert" className="flex flex-wrap items-center gap-3 rounded-card bg-danger/[0.06] px-3.5 py-2.5 text-label text-danger">
+            <span>
+              {message.error === "session"
+                ? chat.errorSession
+                : message.error === "tooMany"
+                  ? chat.errorTooMany
+                  : message.error === "unavailable"
+                    ? chat.errorUnavailable
+                    : chat.errorGeneric}
+            </span>
+            {message.error === "session" ? (
+              <Link href={`/${lang}/login?next=/${lang}/app`} className="font-medium text-danger underline hover:text-danger">
+                {dict.panel.connect}
+              </Link>
+            ) : (
+              last &&
+              !busy && (
+                <button type="button" onClick={onRetry} className="font-medium underline">
+                  {chat.retry}
+                </button>
+              )
+            )}
+          </div>
+        )}
+
+        {!streaming && <Time lang={lang} at={message.createdAt} />}
+      </div>
+    </div>
+  );
+}
+
+/** Étapes réelles du traitement (événements du flux), repliables une fois terminé. */
+function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict; message: ChatMessage }) {
+  const streaming = message.status === "streaming";
+  const [open, setOpen] = useState(true);
+  const steps = message.steps ?? [];
+  const expanded = streaming || open;
+
+  return (
+    <div className="rounded-panel bg-surface shadow-card">
+      <div className="flex items-center justify-between gap-3 px-4 py-3">
+        <p className="text-label font-medium text-ink">{streaming ? dict.chat.working : dict.chat.done}</p>
+        {!streaming && (
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            className="inline-flex items-center gap-1 text-meta text-ink-2 hover:text-ink"
+          >
+            {open ? dict.chat.hideSteps : dict.chat.stepsCount.replace("{n}", String(steps.length))}
+            <ChevronIcon size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+          </button>
+        )}
+      </div>
+      {expanded && (
+        <ol className="flex flex-col gap-2 border-t border-border px-4 py-3">
+          {steps.map((step) => (
+            <li key={step.id} className="flex items-center gap-2.5 text-secondary">
+              <StepDot status={step.status} />
+              <span className={`flex-1 ${step.status === "done" ? "text-ink-2" : "text-ink"}`}>{stepLabel(dict, step.key)}</span>
+              <Time lang={lang} at={step.at} />
+            </li>
+          ))}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+const text = (value: unknown) => (typeof value === "string" ? value : "");
+
+/** Brouillon proposé par DONNA (email ou agenda) : rien ne part sans validation. */
+function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; call: ToolCall }) {
+  const { pending, decisions, decideAction } = useWorkspace();
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const id = actionIdFrom(call.result);
+  if (!id) return null;
+
+  const decision = decisions[id];
+  const awaiting = !decision && pending.some((a) => a.id === id);
+  const args = call.arguments;
+  const isEmail = call.name === "propose_email";
+  const eventAction = text(args.action) as keyof WorkspaceDict["chat"]["eventActions"];
+  const when = [text(args.start_datetime), text(args.end_datetime)]
+    .filter(Boolean)
+    .map((value) => {
+      const date = new Date(value);
+      return Number.isNaN(date.getTime())
+        ? value
+        : new Intl.DateTimeFormat(lang, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(date);
+    })
+    .join(" → ");
+
+  const decide = async (choice: "confirm" | "cancel") => {
+    setBusy(true);
+    setFailed(false);
+    const ok = await decideAction(id, choice);
+    setBusy(false);
+    setFailed(!ok);
+  };
+
+  return (
+    <div className="rounded-panel border border-border bg-ivoire-50 p-4">
+      <div className="flex items-center justify-between gap-3 text-meta">
+        <span className="font-medium text-ink">{isEmail ? dict.chat.draftEmail : dict.chat.draftEvent}</span>
+        {decision ? (
+          <span className={`inline-flex items-center gap-1 ${decision === "confirm" ? "text-success-ink" : "text-ink-3"}`}>
+            {decision === "confirm" ? <CheckIcon size={14} /> : <CloseIcon size={14} />}
+            {decision === "confirm" ? dict.panel.approved : dict.panel.declined}
+          </span>
+        ) : (
+          awaiting && (
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-bordeaux-700">
+              <span className="pending-dot size-1.5 rounded-full bg-bordeaux-700" />
+              {dict.chat.awaiting}
+            </span>
+          )
+        )}
+      </div>
+      {isEmail ? (
+        <>
+          <p className="mt-3 text-meta text-ink-3">
+            {dict.chat.to} : {text(args.to)}
+          </p>
+          <p className="mt-0.5 text-label font-medium text-ink">{text(args.subject)}</p>
+          <p className="mt-2 text-secondary leading-5 whitespace-pre-wrap text-ink-2">{text(args.body)}</p>
+        </>
+      ) : (
+        <>
+          <p className="mt-3 text-meta text-ink-3">{dict.chat.eventActions[eventAction] ?? eventAction}</p>
+          {text(args.title) && <p className="mt-0.5 text-label font-medium text-ink">{text(args.title)}</p>}
+          {when && <p className="mt-1 text-secondary text-ink-2">{when}</p>}
+          {text(args.description) && <p className="mt-2 text-secondary whitespace-pre-wrap text-ink-2">{text(args.description)}</p>}
+        </>
+      )}
+      {failed && <p className="mt-3 text-secondary text-danger">{dict.panel.actionError}</p>}
+      {awaiting && (
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void decide("confirm")}
+            className="rounded-button bg-bordeaux-700 px-3.5 py-2 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60"
+          >
+            {dict.panel.approve}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void decide("cancel")}
+            className="rounded-button bg-fill px-3.5 py-2 text-label font-medium text-ink hover:bg-active disabled:opacity-60"
+          >
+            {dict.panel.decline}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function QuestionCard({
+  dict,
+  call,
+  disabled,
+  onAnswer,
+}: {
+  dict: WorkspaceDict;
+  call: ToolCall;
+  disabled: boolean;
+  onAnswer: (text: string) => void;
+}) {
+  const options = Array.isArray(call.arguments.options) ? (call.arguments.options as unknown[]).map(String) : [];
+  return (
+    <div className="rounded-panel border border-rose-300/60 bg-white p-4">
+      <p className="text-meta text-bordeaux-700">{dict.chat.questionLabel}</p>
+      <p className="mt-1 text-message text-ink">{text(call.arguments.question)}</p>
+      {options.length > 0 && (
+        <div role="group" aria-label={dict.chat.optionsLabel} className="mt-3 flex flex-wrap gap-2">
+          {options.map((option) => (
+            <button
+              key={option}
+              type="button"
+              disabled={disabled}
+              onClick={() => onAnswer(option)}
+              className="rounded-full border border-border bg-surface px-3 py-1.5 text-label text-ink hover:border-bordeaux-700/40 hover:bg-white disabled:opacity-50"
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] }) {
+  // Un document peut apparaître plusieurs fois (plusieurs extraits) : une puce par document.
+  const unique = sources.filter((s, i) => sources.findIndex((o) => o.doc_id === s.doc_id) === i);
+  return (
+    <div>
+      <p className="text-meta text-ink-3">{dict.chat.sources}</p>
+      <ul className="mt-1.5 flex flex-wrap gap-2">
+        {unique.map((source) => (
+          <li key={source.doc_id}>
+            <a
+              href={fileHref(source.file_url)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={source.excerpt}
+              className="inline-flex max-w-[16rem] items-center gap-1.5 rounded-full border border-border bg-white px-2.5 py-1 text-meta text-ink-2 no-underline hover:border-bordeaux-700/30 hover:text-ink"
+            >
+              <FileIcon size={14} className="shrink-0 text-bordeaux-700" />
+              <span className="truncate">{source.original_name}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/* ── Zone de saisie ──────────────────────────────────────────────────────────────── */
+
+function Composer({
+  dict,
+  busy,
+  onSend,
+  onStop,
+  autoFocus,
+}: {
+  dict: WorkspaceDict;
+  busy: boolean;
+  onSend: (text: string, files: File[], webSearch: boolean) => Promise<void>;
+  onStop: () => void;
+  autoFocus: boolean;
+}) {
+  const [value, setValue] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  // Reste actif d'un message à l'autre, jusqu'à ce que l'utilisateur le désactive.
+  const [webSearch, setWebSearch] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  // Hauteur ajustée au contenu, plafonnée (défilement au-delà).
+  useLayoutEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
+  }, [value]);
+
+  const submit = () => {
+    if (busy || (!value.trim() && !files.length)) return;
+    const [text, attached] = [value, files];
+    setValue("");
+    setFiles([]);
+    void onSend(text, attached, webSearch);
+  };
+
+  const canSend = !busy && (value.trim().length > 0 || files.length > 0);
+
+  return (
+    <div className="px-4 pb-4 md:px-8">
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          submit();
+        }}
+        className="mx-auto w-full max-w-[46rem] rounded-panel border border-border bg-white shadow-float focus-within:border-bordeaux-700/40"
+      >
+        {files.length > 0 && (
+          <ul className="flex flex-wrap gap-2 px-4 pt-3">
+            {files.map((file, index) => (
+              <li key={`${file.name}-${index}`} className="inline-flex items-center gap-1.5 rounded-badge bg-active py-1 pr-1 pl-2 text-meta text-ink-2">
+                <FileIcon size={14} />
+                <span className="max-w-[12rem] truncate">{file.name}</span>
+                <button
+                  type="button"
+                  aria-label={`${dict.chat.removeFile} ${file.name}`}
+                  onClick={() => setFiles((list) => list.filter((_, i) => i !== index))}
+                  className="flex size-5 items-center justify-center rounded-badge hover:bg-white hover:text-ink"
+                >
+                  <CloseIcon size={12} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        <label htmlFor="composer" className="sr-only">
+          {dict.chat.placeholder}
+        </label>
+        <textarea
+          id="composer"
+          ref={textareaRef}
+          rows={1}
+          autoFocus={autoFocus}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault();
+              submit();
+            }
+          }}
+          placeholder={dict.chat.placeholder}
+          className="scrollbar-none block max-h-[220px] w-full resize-none bg-transparent px-4 pt-3.5 pb-2 text-message text-ink outline-none placeholder:text-ink-3 focus-visible:shadow-none"
+        />
+        <div className="flex items-center justify-between px-2.5 pb-2.5">
+          <div className="flex items-center gap-1">
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              hidden
+              onChange={(event) => {
+                const picked = Array.from(event.target.files ?? []);
+                setFiles((list) => [...list, ...picked].slice(0, MAX_FILES));
+                event.target.value = "";
+              }}
+            />
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => fileRef.current?.click()}
+              aria-label={dict.chat.attach}
+              title={dict.chat.attach}
+              className="flex size-9 items-center justify-center rounded-button text-ink-2 hover:bg-active hover:text-ink disabled:opacity-50"
+            >
+              <PaperclipIcon size={19} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setWebSearch((v) => !v)}
+              aria-pressed={webSearch}
+              title={webSearch ? dict.chat.webSearchOn : dict.chat.webSearchOff}
+              className={`inline-flex h-9 items-center gap-1.5 rounded-button px-2.5 text-label transition-colors ${
+                webSearch ? "bg-bordeaux-700/10 font-medium text-bordeaux-700" : "text-ink-2 hover:bg-active hover:text-ink"
+              }`}
+            >
+              <GlobeIcon size={18} />
+              <span className={webSearch ? "" : "sr-only"}>{dict.chat.webSearch}</span>
+            </button>
+          </div>
+          {busy ? (
+            <button
+              type="button"
+              onClick={onStop}
+              aria-label={dict.chat.stop}
+              title={dict.chat.stop}
+              className="flex size-9 items-center justify-center rounded-button bg-ink text-white hover:bg-bordeaux-900"
+            >
+              <StopIcon size={16} />
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={!canSend}
+              aria-label={dict.chat.send}
+              title={dict.chat.send}
+              className="flex size-9 items-center justify-center rounded-button bg-bordeaux-700 text-white transition-colors hover:bg-bordeaux-900 disabled:bg-pending disabled:text-ink-3"
+            >
+              <SendIcon size={18} />
+            </button>
+          )}
+        </div>
+      </form>
+      <p className="mt-2 text-center text-meta text-ink-3">{dict.chat.disclaimer}</p>
+    </div>
+  );
+}
