@@ -54,6 +54,21 @@ export async function postJson<T>(url: string, body: unknown, ip?: string | null
   }
 }
 
+/** Aperçu public d'une invitation projet (pas d'auth requise, comme oauth/providers). */
+export type ProjectInvitePreview = { project_name: string; email: string; role: string; status: string };
+
+export async function getInvitePreview(token: string): Promise<ProjectInvitePreview | null> {
+  try {
+    const response = await fetch(`${BACKEND_URL}/app/chat/projects/invites/${encodeURIComponent(token)}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    });
+    return response.ok ? ((await response.json()) as ProjectInvitePreview) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Fournisseurs OAuth réellement configurés côté backend ; liste vide si l'API ne répond pas. */
 export async function getOAuthProviders(): Promise<string[]> {
   try {

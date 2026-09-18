@@ -19,11 +19,16 @@ export function commonError(result: Extract<BackendResult<unknown>, { ok: false 
   return null;
 }
 
-/** Cible de retour après connexion : uniquement une page de l'application, dans la même langue. */
+/** Cible de retour après connexion : une page de l'application, ou l'aperçu
+ * d'une invitation projet (voir app/[lang]/projects/invites/[token]/page.tsx),
+ * toujours dans la même langue. */
 export function safeNext(lang: Locale, next: unknown): string {
   const home = `/${lang}/app`;
+  const allowedPrefixes = [home, `/${lang}/projects/invites`];
   if (typeof next !== "string") return home;
-  return next === home || next.startsWith(`${home}/`) || next.startsWith(`${home}?`) ? next : home;
+  return allowedPrefixes.some((prefix) => next === prefix || next.startsWith(`${prefix}/`) || next.startsWith(`${prefix}?`))
+    ? next
+    : home;
 }
 
 /**

@@ -9,7 +9,14 @@ import { COOKIES, MAX_AGE, cookieOptions } from "@/lib/session-cookies";
  * le flux SSE de /chat/stream) sont retransmises telles quelles, sans mise en mémoire.
  * Seules les routes utiles à l'interface passent : pas d'accès générique à l'API.
  */
-const ALLOWED = [/^chat(\/|$)/, /^rag\/documents\/[^/]+\/file$/, /^auth\/oauth\/me\/accounts$/];
+const ALLOWED = [
+  /^chat(\/|$)/,
+  /^rag\/documents\/[^/]+\/file$/,
+  /^auth\/oauth\/me\/accounts$/,
+  /^profile(\/|$)/,
+  /^auth\/ws\/ticket$/,
+  /^rag\/documents$/,
+];
 
 // En-têtes de réponse relayés (le reste — cookies backend, CORS — reste côté serveur).
 const RESPONSE_HEADERS = ["content-type", "content-disposition", "content-length", "cache-control"];

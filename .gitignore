@@ -44,3 +44,6 @@ next-env.d.ts
 # fichiers d'assistants générés localement par `next dev`
 /AGENTS.md
 /CLAUDE.md
+
+# Superdesign — fichiers temporaires (HTML importé manuellement)
+/.superdesign/tmp/

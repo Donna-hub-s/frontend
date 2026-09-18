@@ -1,7 +1,35 @@
 // Types partagés par les composants de l'espace de travail (navigateur).
-import type { AttachmentOut, ConnectorsOut, ConversationOut, PendingActionOut, SearchHitOut, SourceOut } from "./api";
+import type {
+  AttachmentOut,
+  ConnectorsOut,
+  ConversationOut,
+  PendingActionOut,
+  ProfileOut,
+  ProjectDocumentOut,
+  ProjectFactOut,
+  ProjectInviteOut,
+  ProjectMemberOut,
+  ProjectOut,
+  ProjectRole,
+  SearchHitOut,
+  SourceOut,
+} from "./api";
 
-export type { AttachmentOut, ConnectorsOut, ConversationOut, PendingActionOut, SearchHitOut, SourceOut };
+export type {
+  AttachmentOut,
+  ConnectorsOut,
+  ConversationOut,
+  PendingActionOut,
+  ProfileOut,
+  ProjectDocumentOut,
+  ProjectFactOut,
+  ProjectInviteOut,
+  ProjectMemberOut,
+  ProjectOut,
+  ProjectRole,
+  SearchHitOut,
+  SourceOut,
+};
 
 export type StepStatus = "running" | "done";
 
@@ -15,6 +43,27 @@ export type Step = {
 };
 
 export type ToolCall = { name: string; arguments: Record<string, unknown>; result: string };
+
+/** Document personnel (hors-projet) — backend/app/rag/src/schemas.py::DocumentOut,
+ * GET /app/rag/documents (menu @ du composer, voir conversation.tsx). */
+export type PersonalDocumentOut = {
+  id: string;
+  original_name: string;
+  status: string;
+  chunk_count: number;
+  error: string | null;
+  created_at: string;
+};
+
+/** Mention « @ » insérée dans le composer — voir conversation.tsx::detectTrigger.
+ * `label` est le texte littéralement inséré (`@Nom`), utilisé pour savoir si la
+ * mention est encore présente au moment d'envoyer (texte brut, pas de puce). */
+export type MentionKind = "document" | "project";
+export type Mention = { id: string; label: string; kind: MentionKind };
+/** Ce qui part réellement dans la requête (ChatRequest.mentioned_document_ids/
+ * mentioned_project_id) — un seul projet mentionné à la fois, comme le backend. */
+export type MentionSelection = { documentIds: string[]; projectId: string | null };
+export const EMPTY_MENTIONS: MentionSelection = { documentIds: [], projectId: null };
 
 export type ChatMessage = {
   id: string;
@@ -42,3 +91,7 @@ export function parseBackendDate(value: string | null | undefined): number | nul
 
 /** URL d'un fichier backend (/app/…) servie par la passerelle /api/donna/…. */
 export const fileHref = (fileUrl: string) => fileUrl.replace(/^\/app\//, "/api/donna/");
+
+/** sessionStorage : message tapé sur la page projet (project-detail.tsx), consommé
+ * une fois par la nouvelle conversation (conversation.tsx) dès son montage. */
+export const PROJECT_DRAFT_KEY = "donna:project-draft";

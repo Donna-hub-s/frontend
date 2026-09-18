@@ -49,7 +49,15 @@ export type AttachmentOut = {
 
 export type SourceOut = { doc_id: string; original_name: string; excerpt: string; file_url: string };
 
-export type ConversationOut = { id: string; title: string; created_at: string | null };
+export type ConversationOut = {
+  id: string;
+  title: string;
+  created_at: string | null;
+  // Absents des mises à jour optimistes locales (voir conversation.tsx::upsertConversation) —
+  // toujours présents quand la donnée vient du backend (GET /app/chat/).
+  project_id?: string | null;
+  updated_at?: string;
+};
 
 export type MessageOut = {
   role: "user" | "assistant" | string;
@@ -85,7 +93,67 @@ export type SearchHitOut = {
   snippet: string;
 };
 
-export const listConversations = async () => (await getJson<ConversationOut[]>("/app/chat/")) ?? [];
+/** GET/PATCH /app/profile/me (backend/app/profile/src/schemas.py::ProfileOut). */
+export type ProfileOut = {
+  display_name: string | null;
+  avatar_url: string | null;
+  timezone: string;
+  language: string | null;
+  preferred_llm_provider: string | null;
+  preferred_tts_voice: string | null;
+  default_force_web_search: boolean;
+  notify_reminders_email: boolean;
+  notify_reminders_whatsapp: boolean;
+  whatsapp_notify_number: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectRole = "owner" | "editor" | "viewer";
+
+/** backend/app/chat/src/schemas.py::ProjectOut. */
+export type ProjectOut = {
+  id: string;
+  name: string;
+  description: string | null;
+  instructions: string | null;
+  conversations_count: number;
+  member_count: number;
+  document_count: number;
+  context_chunks_used: number;
+  context_chunks_limit: number;
+  my_role: ProjectRole | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ProjectMemberOut = { user_id: string; role: ProjectRole; invited_by: string; joined_at: string };
+
+export type ProjectInviteOut = {
+  id: string;
+  project_id: string;
+  email: string;
+  role: ProjectRole;
+  status: string;
+  expires_at: string;
+  created_at: string;
+  token: string | null;
+};
+
+export type ProjectFactOut = { id: string; fact: string; created_by: string; created_at: string };
+
+/** backend/app/chat/src/schemas.py::ProjectDocumentOut. */
+export type ProjectDocumentOut = {
+  id: string;
+  original_name: string;
+  status: string;
+  chunk_count: number;
+  error: string | null;
+  created_at: string;
+};
+
+export const listConversations = async (projectId?: string) =>
+  (await getJson<ConversationOut[]>(`/app/chat/${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ""}`)) ?? [];
 
 export const getMessages = (conversationId: string) =>
   getJson<MessageOut[]>(`/app/chat/${encodeURIComponent(conversationId)}/messages`);
@@ -99,3 +167,21 @@ export const getConnectors = () => getJson<ConnectorsOut>("/app/chat/connectors"
 export const getMe = () => getJson<{ id: string; email: string }>("/app/auth/me");
 
 export const getTenant = (tenantId: string) => getJson<TenantOut>(`/app/auth/tenants/${encodeURIComponent(tenantId)}`);
+
+export const getProfile = () => getJson<ProfileOut>("/app/profile/me");
+
+export const listProjects = async () => (await getJson<ProjectOut[]>("/app/chat/projects")) ?? [];
+
+export const getProject = (projectId: string) => getJson<ProjectOut>(`/app/chat/projects/${encodeURIComponent(projectId)}`);
+
+export const listProjectMembers = async (projectId: string) =>
+  (await getJson<ProjectMemberOut[]>(`/app/chat/projects/${encodeURIComponent(projectId)}/members`)) ?? [];
+
+export const listProjectInvites = async (projectId: string) =>
+  (await getJson<ProjectInviteOut[]>(`/app/chat/projects/${encodeURIComponent(projectId)}/invites`)) ?? [];
+
+export const listProjectFacts = async (projectId: string) =>
+  (await getJson<ProjectFactOut[]>(`/app/chat/projects/${encodeURIComponent(projectId)}/memory/facts`)) ?? [];
+
+export const listProjectDocuments = async (projectId: string) =>
+  (await getJson<ProjectDocumentOut[]>(`/app/chat/projects/${encodeURIComponent(projectId)}/documents`)) ?? [];

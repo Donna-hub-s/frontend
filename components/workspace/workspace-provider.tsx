@@ -1,9 +1,17 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import type { ConversationOut, PendingActionOut, Step } from "@/lib/workspace-types";
+import { useProjectCapacityWs } from "@/lib/use-project-ws";
+import type { ConversationOut, MentionSelection, PendingActionOut, ProjectOut, Step } from "@/lib/workspace-types";
 
 type Activity = { status: "idle" | "running" | "done" | "error"; steps: Step[] };
+
+/** Message tapé sur la page projet (project-detail.tsx), consommé une seule fois
+ * par la nouvelle conversation (conversation.tsx) dès son montage. En mémoire
+ * (pas sessionStorage) : /app/* partage le même WorkspaceProvider tout au long
+ * de la navigation client, ce qui permet de faire transiter de vrais File —
+ * impossible à sérialiser. */
+type ProjectDraft = { message: string; files: File[]; webSearch: boolean; mentions: MentionSelection };
 
 type WorkspaceValue = {
   conversations: ConversationOut[];
@@ -20,6 +28,12 @@ type WorkspaceValue = {
   /** Fenêtre de recherche (Ctrl+K / ⌘K). */
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
+  projects: ProjectOut[];
+  upsertProject: (project: ProjectOut) => void;
+  removeProject: (id: string) => void;
+  refreshProjects: () => Promise<void>;
+  projectDraft: ProjectDraft | null;
+  setProjectDraft: (draft: ProjectDraft | null) => void;
 };
 
 const WorkspaceContext = createContext<WorkspaceValue | null>(null);
@@ -43,10 +57,15 @@ async function getJson<T>(path: string): Promise<T | null> {
 export function WorkspaceProvider({
   initialConversations,
   initialPending,
+  initialProjects,
+  wsBaseUrl = null,
   children,
 }: {
   initialConversations: ConversationOut[];
   initialPending: PendingActionOut[];
+  initialProjects: ProjectOut[];
+  /** Base ws(s)://... du backend, dérivée côté serveur (voir app/[lang]/app/layout.tsx) — null si non configurée (notifications temps réel simplement désactivées). */
+  wsBaseUrl?: string | null;
   children: ReactNode;
 }) {
   const [conversations, setConversations] = useState(initialConversations);
@@ -54,6 +73,8 @@ export function WorkspaceProvider({
   const [decisions, setDecisions] = useState<Record<string, "confirm" | "cancel">>({});
   const [activity, setActivity] = useState<Activity>({ status: "idle", steps: [] });
   const [searchOpen, setSearchOpen] = useState(false);
+  const [projects, setProjects] = useState(initialProjects);
+  const [projectDraft, setProjectDraft] = useState<ProjectDraft | null>(null);
 
   const upsertConversation = useCallback((conversation: ConversationOut) => {
     setConversations((list) => {
@@ -94,6 +115,37 @@ export function WorkspaceProvider({
     [refreshPending],
   );
 
+  const upsertProject = useCallback((project: ProjectOut) => {
+    setProjects((list) => {
+      const rest = list.filter((p) => p.id !== project.id);
+      const existing = list.find((p) => p.id === project.id);
+      return existing ? list.map((p) => (p.id === project.id ? { ...p, ...project } : p)) : [project, ...rest];
+    });
+  }, []);
+
+  const removeProject = useCallback((id: string) => {
+    setProjects((list) => list.filter((p) => p.id !== id));
+  }, []);
+
+  const refreshProjects = useCallback(async () => {
+    const list = await getJson<ProjectOut[]>("/api/donna/chat/projects");
+    if (list) setProjects(list);
+  }, []);
+
+  const patchProjectCapacity = useCallback((projectId: string, contextChunksUsed: number) => {
+    setProjects((list) =>
+      list.map((p) => (p.id === projectId ? { ...p, context_chunks_used: contextChunksUsed } : p)),
+    );
+  }, []);
+
+  useProjectCapacityWs(
+    wsBaseUrl,
+    useCallback(
+      ({ projectId, contextChunksUsed }) => patchProjectCapacity(projectId, contextChunksUsed),
+      [patchProjectCapacity],
+    ),
+  );
+
   const value = useMemo(
     () => ({
       conversations,
@@ -108,8 +160,30 @@ export function WorkspaceProvider({
       setActivity,
       searchOpen,
       setSearchOpen,
+      projects,
+      upsertProject,
+      removeProject,
+      refreshProjects,
+      projectDraft,
+      setProjectDraft,
     }),
-    [conversations, upsertConversation, removeConversation, refreshConversations, pending, refreshPending, decideAction, decisions, activity, searchOpen],
+    [
+      conversations,
+      upsertConversation,
+      removeConversation,
+      refreshConversations,
+      pending,
+      refreshPending,
+      decideAction,
+      decisions,
+      activity,
+      searchOpen,
+      projects,
+      upsertProject,
+      removeProject,
+      refreshProjects,
+      projectDraft,
+    ],
   );
 
   return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;

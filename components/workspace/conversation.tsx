@@ -1,20 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { DonnaMark } from "@/components/brand/donna-mark";
 import { actionIdFrom, readChatStream } from "@/lib/chat-stream";
 import {
+  EMPTY_MENTIONS,
   fileHref,
   type AttachmentOut,
   type ChatMessage,
+  type Mention,
+  type MentionKind,
+  type MentionSelection,
+  type PersonalDocumentOut,
   type SourceOut,
   type Step,
   type ToolCall,
 } from "@/lib/workspace-types";
-import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, GlobeIcon, PaperclipIcon, SendIcon, StopIcon } from "./icons";
+import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, SendIcon, StopIcon } from "./icons";
 import { Markdown } from "./markdown";
 import { StepDot, stepLabel } from "./side-panel";
 import { useWorkspace } from "./workspace-provider";
@@ -37,6 +42,8 @@ export function Conversation({
   firstName,
   initials,
   loadError = false,
+  projectId,
+  projectName,
 }: {
   lang: Locale;
   dict: WorkspaceDict;
@@ -45,8 +52,11 @@ export function Conversation({
   firstName: string | null;
   initials: string;
   loadError?: boolean;
+  /** Nouvelle conversation démarrée depuis une page de projet (voir app/[lang]/app/page.tsx?project=). */
+  projectId?: string;
+  projectName?: string;
 }) {
-  const { upsertConversation, refreshConversations, refreshPending, setActivity } = useWorkspace();
+  const { upsertConversation, refreshConversations, refreshPending, setActivity, projectDraft, setProjectDraft } = useWorkspace();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [busy, setBusy] = useState(false);
   const conversationRef = useRef(conversationId);
@@ -63,7 +73,7 @@ export function Conversation({
   useEffect(() => () => abortRef.current?.abort(), []);
 
   const send = useCallback(
-    async (text: string, files: File[], webSearch = false) => {
+    async (text: string, files: File[], webSearch = false, mentions: MentionSelection = EMPTY_MENTIONS) => {
       const message = text.trim();
       if ((!message && !files.length) || busy) return;
       setBusy(true);
@@ -107,7 +117,10 @@ export function Conversation({
           const form = new FormData();
           if (message) form.set("message", message);
           if (conversationRef.current) form.set("conversation_id", conversationRef.current);
+          else if (projectId) form.set("project_id", projectId);
           if (webSearch) form.set("web_search", "true");
+          if (mentions.projectId) form.set("mentioned_project_id", mentions.projectId);
+          if (mentions.documentIds.length) form.set("mentioned_document_ids", JSON.stringify(mentions.documentIds));
           for (const file of files) form.append("files", file);
           const response = await fetch("/api/donna/chat/upload", { method: "POST", body: form, signal: controller.signal });
           if (!response.ok) throw Object.assign(new Error("http"), { kind: errorFromStatus(response.status) });
@@ -130,7 +143,14 @@ export function Conversation({
           const response = await fetch("/api/donna/chat/stream", {
             method: "POST",
             headers: { "content-type": "application/json", accept: "text/event-stream" },
-            body: JSON.stringify({ message, conversation_id: conversationRef.current, web_search: webSearch }),
+            body: JSON.stringify({
+              message,
+              conversation_id: conversationRef.current,
+              project_id: conversationRef.current ? undefined : projectId,
+              web_search: webSearch,
+              mentioned_project_id: mentions.projectId,
+              mentioned_document_ids: mentions.documentIds,
+            }),
             signal: controller.signal,
           });
           if (!response.ok) throw Object.assign(new Error("http"), { kind: errorFromStatus(response.status) });
@@ -188,8 +208,22 @@ export function Conversation({
         if (isNew && conversationRef.current) window.setTimeout(() => void refreshConversations(), 6000);
       }
     },
-    [busy, dict.meta.newTitle, lang, refreshConversations, refreshPending, setActivity, upsertConversation],
+    [busy, dict.meta.newTitle, lang, projectId, refreshConversations, refreshPending, setActivity, upsertConversation],
   );
+
+  // Brouillon déposé depuis la page projet (project-detail.tsx, même Composer
+  // que le chat) — consommé une seule fois au montage, jamais rejoué. En
+  // mémoire (WorkspaceProvider), pas sessionStorage : un File ne se sérialise
+  // pas, et /app/* garde le même provider tout au long de la navigation client.
+  useEffect(() => {
+    if (!projectId || !projectDraft) return;
+    const { message, files, webSearch, mentions } = projectDraft;
+    setProjectDraft(null);
+    // queueMicrotask : évite d'appeler setState (via send) de façon synchrone
+    // dans le corps de l'effet (react-hooks/set-state-in-effect).
+    queueMicrotask(() => void send(message, files, webSearch, mentions));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, projectDraft]);
 
   const retry = (index: number) => {
     const question = messages[index - 1];
@@ -202,6 +236,14 @@ export function Conversation({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {projectId && projectName && (
+        <Link
+          href={`/${lang}/app/projects/${projectId}`}
+          className="mx-auto mt-3 flex w-fit items-center gap-1.5 rounded-badge bg-peche-100 px-2.5 py-1 text-meta font-medium text-bordeaux-900 no-underline hover:bg-peche-100/70"
+        >
+          {projectName}
+        </Link>
+      )}
       <div
         ref={scrollRef}
         onScroll={(event) => {
@@ -616,7 +658,32 @@ function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] 
 
 /* ── Zone de saisie ──────────────────────────────────────────────────────────────── */
 
-function Composer({
+type MenuState = { trigger: "@" | "/"; query: string; start: number; kind?: MentionKind };
+/** Données pures (pas de closure) — la sélection réelle passe par
+ * handleMenuSelect, seul point où l'on touche les refs (textareaRef via
+ * focusAt), pour rester dans un vrai gestionnaire d'événement plutôt que
+ * dans une valeur calculée pendant le rendu (react-hooks/refs). */
+type MenuAction =
+  | { type: "mention"; mention: Mention }
+  | { type: "web" }
+  | { type: "clear" }
+  | { type: "shortcut"; kind: MentionKind };
+type MenuItem = { id: string; label: string; kind: "project" | "document" | "command"; action: MenuAction };
+
+/** Repère un déclencheur "@"/"/" en cours de frappe juste avant le curseur —
+ * précédé d'un début de chaîne ou d'un espace, sans espace entre lui et le
+ * curseur (sinon ce n'est plus le même "mot"). Pas de suivi de position en
+ * pixels : le menu s'ancre au-dessus du composer, pas au curseur (voir
+ * le rendu plus bas — simplification délibérée, textarea plein texte). */
+function detectTrigger(value: string, caret: number): { trigger: "@" | "/"; query: string; start: number } | null {
+  const head = value.slice(0, caret);
+  const match = /(?:^|\s)([@/])([^\s@/]*)$/.exec(head);
+  if (!match) return null;
+  const query = match[2];
+  return { trigger: match[1] as "@" | "/", query, start: caret - query.length - 1 };
+}
+
+export function Composer({
   dict,
   busy,
   onSend,
@@ -625,16 +692,247 @@ function Composer({
 }: {
   dict: WorkspaceDict;
   busy: boolean;
-  onSend: (text: string, files: File[], webSearch: boolean) => Promise<void>;
+  onSend: (text: string, files: File[], webSearch: boolean, mentions: MentionSelection) => Promise<void>;
   onStop: () => void;
   autoFocus: boolean;
 }) {
+  const { projects } = useWorkspace();
   const [value, setValue] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   // Reste actif d'un message à l'autre, jusqu'à ce que l'utilisateur le désactive.
   const [webSearch, setWebSearch] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [micError, setMicError] = useState<"permission" | "transcribe" | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<BlobPart[]>([]);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+
+  // Commandes "/" et mentions "@" — voir detectTrigger ci-dessus. `mentions`
+  // trace ce qui a été inséré ({id, label: "@Nom", kind}) ; au moment
+  // d'envoyer, seules celles dont le libellé est encore présent dans le
+  // texte comptent (texte brut, pas de puce — un backspace suffit à retirer
+  // une mention). Un seul projet mentionné à la fois, comme le backend
+  // (mentioned_project_id est singulier).
+  const [menu, setMenu] = useState<MenuState | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [mentions, setMentions] = useState<Mention[]>([]);
+  const [personalDocs, setPersonalDocs] = useState<PersonalDocumentOut[] | null>(null);
+  const docsFetchedRef = useRef(false);
+
+  const ensurePersonalDocs = useCallback(() => {
+    if (docsFetchedRef.current) return;
+    docsFetchedRef.current = true;
+    void (async () => {
+      try {
+        const response = await fetch("/api/donna/rag/documents", { cache: "no-store" });
+        if (response.ok) setPersonalDocs((await response.json()) as PersonalDocumentOut[]);
+      } catch {
+        // Silencieux — le menu @ retombe sur les projets seuls.
+      }
+    })();
+  }, []);
+
+  const syncMenu = useCallback(
+    (nextValue: string, caret: number) => {
+      const trigger = detectTrigger(nextValue, caret);
+      if (!trigger) {
+        setMenu(null);
+        return;
+      }
+      setMenu((prev) => ({
+        ...trigger,
+        // Le type forcé par un raccourci /project ou /document (voir plus bas)
+        // survit tant que le déclencheur reste le même "@" en cours de frappe.
+        kind: prev && prev.trigger === "@" && prev.start === trigger.start ? prev.kind : undefined,
+      }));
+      setActiveIndex(0);
+      if (trigger.trigger === "@") ensurePersonalDocs();
+    },
+    [ensurePersonalDocs],
+  );
+
+  const focusAt = useCallback((pos: number) => {
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(pos, pos);
+    });
+  }, []);
+
+  const insertToken = useCallback(
+    (token: string) => {
+      if (!menu) return;
+      const end = menu.start + 1 + menu.query.length;
+      const before = value.slice(0, menu.start);
+      const after = value.slice(end);
+      setValue(`${before}${token}${after}`);
+      setMenu(null);
+      focusAt(before.length + token.length);
+    },
+    [menu, value, focusAt],
+  );
+
+  const selectMention = useCallback(
+    (item: Mention) => {
+      insertToken(`${item.label} `);
+      setMentions((list) => {
+        const withoutId = list.filter((m) => m.id !== item.id);
+        return item.kind === "project" ? [...withoutId.filter((m) => m.kind !== "project"), item] : [...withoutId, item];
+      });
+    },
+    [insertToken],
+  );
+
+  const runSlashShortcut = useCallback(
+    (kind: MentionKind) => {
+      if (!menu) return;
+      const end = menu.start + 1 + menu.query.length;
+      const before = value.slice(0, menu.start);
+      const after = value.slice(end);
+      setValue(`${before}@${after}`);
+      setMenu({ trigger: "@", query: "", start: before.length, kind });
+      setActiveIndex(0);
+      ensurePersonalDocs();
+      focusAt(before.length + 1);
+    },
+    [menu, value, ensurePersonalDocs, focusAt],
+  );
+
+  const menuItems: MenuItem[] = useMemo(() => {
+    if (!menu) return [];
+    if (menu.trigger === "/") {
+      const commands: MenuItem[] = [
+        { id: "web", label: dict.chat.cmdWeb, kind: "command", action: { type: "web" } },
+        { id: "clear", label: dict.chat.cmdClear, kind: "command", action: { type: "clear" } },
+        { id: "project", label: dict.chat.cmdProject, kind: "command", action: { type: "shortcut", kind: "project" } },
+        { id: "document", label: dict.chat.cmdDocument, kind: "command", action: { type: "shortcut", kind: "document" } },
+      ];
+      return commands.filter((item) => !menu.query || item.label.toLowerCase().includes(menu.query.toLowerCase()));
+    }
+    const q = menu.query.trim().toLowerCase();
+    const items: MenuItem[] = [];
+    if (menu.kind !== "document") {
+      for (const p of projects) {
+        if (q && !p.name.toLowerCase().includes(q)) continue;
+        const mention: Mention = { id: p.id, label: `@${p.name}`, kind: "project" };
+        items.push({ id: `project:${p.id}`, label: mention.label, kind: "project", action: { type: "mention", mention } });
+      }
+    }
+    if (menu.kind !== "project") {
+      for (const d of personalDocs ?? []) {
+        if (q && !d.original_name.toLowerCase().includes(q)) continue;
+        const mention: Mention = { id: d.id, label: `@${d.original_name}`, kind: "document" };
+        items.push({ id: `document:${d.id}`, label: mention.label, kind: "document", action: { type: "mention", mention } });
+      }
+    }
+    return items.slice(0, 8);
+  }, [menu, projects, personalDocs, dict.chat]);
+
+  // Seul point d'exécution réel des actions du menu — appelé depuis de vrais
+  // gestionnaires d'événement (onClick, Entrée), jamais pendant le rendu :
+  // c'est ici, et seulement ici, que les refs (via insertToken/focusAt) sont
+  // effectivement touchées.
+  const handleMenuSelect = useCallback(
+    (item: MenuItem) => {
+      switch (item.action.type) {
+        case "mention":
+          selectMention(item.action.mention);
+          break;
+        case "web":
+          setWebSearch((v) => !v);
+          insertToken("");
+          break;
+        case "clear":
+          setValue("");
+          setFiles([]);
+          setMentions([]);
+          setMenu(null);
+          break;
+        case "shortcut":
+          runSlashShortcut(item.action.kind);
+          break;
+      }
+    },
+    [selectMention, insertToken, runSlashShortcut],
+  );
+
+  // Délégation d'événement sur le <ul> plutôt qu'un onClick recréé à chaque
+  // itération du .map() ci-dessous — un handler stable (useCallback) évite
+  // que react-hooks/refs voie une fermeture touchant une ref (via
+  // handleMenuSelect) recréée pendant le rendu de la liste.
+  const handleMenuListClick = useCallback(
+    (event: React.MouseEvent<HTMLUListElement>) => {
+      const row = (event.target as HTMLElement).closest<HTMLElement>("[data-item-id]");
+      const id = row?.dataset.itemId;
+      const item = menuItems.find((m) => m.id === id);
+      if (item) handleMenuSelect(item);
+    },
+    [menuItems, handleMenuSelect],
+  );
+
+  // Micro du composer — transcription via /app/chat/transcribe (Whisper
+  // local, voir backend/app/chat/src/transcribe.py). Le texte reconnu vient
+  // compléter la saisie, jamais envoyé automatiquement : l'utilisateur
+  // relit/édite avant d'envoyer, comme tout ce qu'il tape lui-même.
+  const stopTracks = () => {
+    audioStreamRef.current?.getTracks().forEach((track) => track.stop());
+    audioStreamRef.current = null;
+  };
+
+  useEffect(() => stopTracks, []);
+
+  const handleRecordingStop = useCallback(async () => {
+    const blob = new Blob(audioChunksRef.current, { type: mediaRecorderRef.current?.mimeType || "audio/webm" });
+    audioChunksRef.current = [];
+    if (!blob.size) return;
+    setTranscribing(true);
+    try {
+      const form = new FormData();
+      form.append("audio", blob, "recording.webm");
+      const response = await fetch("/api/donna/chat/transcribe", { method: "POST", body: form });
+      if (!response.ok) throw new Error();
+      const { text } = (await response.json()) as { text: string };
+      if (text) setValue((current) => (current.trim() ? `${current.trim()} ${text}` : text));
+    } catch {
+      setMicError("transcribe");
+    } finally {
+      setTranscribing(false);
+    }
+  }, []);
+
+  const toggleRecording = async () => {
+    if (transcribing) return;
+    if (recording) {
+      mediaRecorderRef.current?.stop();
+      stopTracks();
+      setRecording(false);
+      return;
+    }
+    setMicError(null);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setMicError("permission");
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+      const recorder = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => void handleRecordingStop();
+      mediaRecorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch {
+      setMicError("permission");
+    }
+  };
 
   // Hauteur ajustée au contenu, plafonnée (défilement au-delà).
   useLayoutEffect(() => {
@@ -647,9 +945,16 @@ function Composer({
   const submit = () => {
     if (busy || (!value.trim() && !files.length)) return;
     const [text, attached] = [value, files];
+    const activeMentions = mentions.filter((m) => text.includes(m.label));
+    const selection: MentionSelection = {
+      documentIds: activeMentions.filter((m) => m.kind === "document").map((m) => m.id),
+      projectId: activeMentions.find((m) => m.kind === "project")?.id ?? null,
+    };
     setValue("");
     setFiles([]);
-    void onSend(text, attached, webSearch);
+    setMentions([]);
+    setMenu(null);
+    void onSend(text, attached, webSearch, selection);
   };
 
   const canSend = !busy && (value.trim().length > 0 || files.length > 0);
@@ -661,8 +966,37 @@ function Composer({
           event.preventDefault();
           submit();
         }}
-        className="mx-auto w-full max-w-[46rem] rounded-panel border border-border bg-white shadow-float focus-within:border-bordeaux-700/40"
+        className="relative mx-auto w-full max-w-[46rem] rounded-panel border border-border bg-white shadow-float focus-within:border-bordeaux-700/40"
       >
+        {menu && (
+          <ul
+            role="listbox"
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={handleMenuListClick}
+            className="scrollbar-none absolute bottom-full left-0 right-0 z-10 mb-2 max-h-64 overflow-y-auto rounded-panel border border-border bg-white p-1.5 shadow-float"
+          >
+            {menuItems.length ? (
+              menuItems.map((item, index) => (
+                <li
+                  key={item.id}
+                  data-item-id={item.id}
+                  role="option"
+                  aria-selected={index === activeIndex}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  className={`flex cursor-pointer items-center gap-2 rounded-nav px-2.5 py-2 text-label ${
+                    index === activeIndex ? "bg-active text-ink" : "text-ink-2"
+                  }`}
+                >
+                  {item.kind === "project" && <FolderIcon size={16} className="shrink-0 text-bordeaux-700" />}
+                  {item.kind === "document" && <FileIcon size={16} className="shrink-0 text-ink-3" />}
+                  <span className="truncate">{item.label}</span>
+                </li>
+              ))
+            ) : (
+              <li className="px-2.5 py-2 text-label text-ink-3">{dict.chat.mentionNoResults}</li>
+            )}
+          </ul>
+        )}
         {files.length > 0 && (
           <ul className="flex flex-wrap gap-2 px-4 pt-3">
             {files.map((file, index) => (
@@ -690,13 +1024,40 @@ function Composer({
           rows={1}
           autoFocus={autoFocus}
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => {
+            setValue(event.target.value);
+            syncMenu(event.target.value, event.target.selectionStart ?? event.target.value.length);
+          }}
           onKeyDown={(event) => {
+            if (menu && menuItems.length) {
+              if (event.key === "ArrowDown") {
+                event.preventDefault();
+                setActiveIndex((i) => (i + 1) % menuItems.length);
+                return;
+              }
+              if (event.key === "ArrowUp") {
+                event.preventDefault();
+                setActiveIndex((i) => (i - 1 + menuItems.length) % menuItems.length);
+                return;
+              }
+              if (event.key === "Enter" || event.key === "Tab") {
+                event.preventDefault();
+                const item = menuItems[activeIndex];
+                if (item) handleMenuSelect(item);
+                return;
+              }
+            }
+            if (menu && event.key === "Escape") {
+              event.preventDefault();
+              setMenu(null);
+              return;
+            }
             if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();
               submit();
             }
           }}
+          onBlur={() => setMenu(null)}
           placeholder={dict.chat.placeholder}
           className="scrollbar-none block max-h-[220px] w-full resize-none bg-transparent px-4 pt-3.5 pb-2 text-message text-ink outline-none placeholder:text-ink-3 focus-visible:shadow-none"
         />
@@ -722,6 +1083,19 @@ function Composer({
               className="flex size-9 items-center justify-center rounded-button text-ink-2 hover:bg-active hover:text-ink disabled:opacity-50"
             >
               <PaperclipIcon size={19} />
+            </button>
+            <button
+              type="button"
+              disabled={busy || transcribing}
+              onClick={() => void toggleRecording()}
+              aria-pressed={recording}
+              aria-label={recording ? dict.chat.micStop : dict.chat.micStart}
+              title={recording ? dict.chat.micStop : dict.chat.micStart}
+              className={`flex size-9 items-center justify-center rounded-button transition-colors disabled:opacity-50 ${
+                recording ? "animate-pulse bg-danger/10 text-danger" : "text-ink-2 hover:bg-active hover:text-ink"
+              }`}
+            >
+              <MicIcon size={18} />
             </button>
             <button
               type="button"
@@ -759,6 +1133,12 @@ function Composer({
           )}
         </div>
       </form>
+      {transcribing && <p className="mt-2 text-center text-meta text-ink-3">{dict.chat.micTranscribing}</p>}
+      {micError && (
+        <p className="mt-2 text-center text-meta text-danger">
+          {micError === "permission" ? dict.chat.micPermissionError : dict.chat.micTranscribeError}
+        </p>
+      )}
       <p className="mt-2 text-center text-meta text-ink-3">{dict.chat.disclaimer}</p>
     </div>
   );

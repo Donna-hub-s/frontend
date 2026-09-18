@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { DonnaLockup } from "@/components/brand/donna-mark";
-import type { ConnectorsOut, ConversationOut, PendingActionOut } from "@/lib/workspace-types";
+import type { ConnectorsOut, ConversationOut, PendingActionOut, ProjectOut } from "@/lib/workspace-types";
 import { ChevronIcon, MenuIcon } from "./icons";
 import { SearchPalette } from "./search-palette";
 import { ConnectorRows, SidePanel } from "./side-panel";
@@ -20,6 +20,8 @@ export function WorkspaceShell({
   connectors,
   conversations,
   pending,
+  projects,
+  wsBaseUrl = null,
   children,
 }: {
   lang: Locale;
@@ -29,16 +31,24 @@ export function WorkspaceShell({
   connectors: ConnectorsOut | null;
   conversations: ConversationOut[];
   pending: PendingActionOut[];
+  projects: ProjectOut[];
+  wsBaseUrl?: string | null;
   children: ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <WorkspaceProvider initialConversations={conversations} initialPending={pending}>
+    <WorkspaceProvider
+      initialConversations={conversations}
+      initialPending={pending}
+      initialProjects={projects}
+      wsBaseUrl={wsBaseUrl}
+    >
       <div className="flex h-dvh overflow-hidden bg-page">
         <Sidebar
           lang={lang}
           labels={dict.sidebar}
+          projectLabels={dict.projects}
           languageLabel={languageLabel}
           account={account}
           open={sidebarOpen}

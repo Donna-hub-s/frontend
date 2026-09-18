@@ -9,7 +9,8 @@ import { DonnaLockup } from "@/components/brand/donna-mark";
 import { LanguageSwitch } from "@/components/language-switch";
 import { logout } from "@/lib/auth-actions";
 import { parseBackendDate, type ConversationOut } from "@/lib/workspace-types";
-import { ChatIcon, ChevronIcon, CloseIcon, ComposeIcon, LogoutIcon, MoreIcon, SearchIcon } from "./icons";
+import { ChatIcon, ChevronIcon, CloseIcon, ComposeIcon, LogoutIcon, MoreIcon, SearchIcon, SettingsIcon } from "./icons";
+import { ProjectSidebarSection } from "./project-list";
 import { useWorkspace } from "./workspace-provider";
 
 type Labels = Dictionary["workspace"]["sidebar"];
@@ -50,6 +51,7 @@ function groupByDate(conversations: ConversationOut[]): Group[] {
 export function Sidebar({
   lang,
   labels,
+  projectLabels,
   languageLabel,
   account,
   open,
@@ -57,6 +59,7 @@ export function Sidebar({
 }: {
   lang: Locale;
   labels: Labels;
+  projectLabels: Dictionary["workspace"]["projects"];
   languageLabel: string;
   account: Account;
   open: boolean;
@@ -69,6 +72,7 @@ export function Sidebar({
   const shortcut = useShortcutLabel();
 
   const activeId = pathname.match(/\/app\/c\/([^/]+)/)?.[1];
+  const activeProjectId = pathname.match(/\/app\/projects\/([^/]+)/)?.[1];
 
   return (
     <>
@@ -128,18 +132,25 @@ export function Sidebar({
         </div>
 
         <nav aria-label={labels.conversations} className="scrollbar-none mt-5 flex-1 overflow-y-auto px-2 pb-4">
-          <p className="px-2.5 pb-1.5 text-caps font-medium text-ink-3 uppercase">{labels.conversations}</p>
+          <ProjectSidebarSection
+            lang={lang}
+            labels={labels}
+            projectLabels={projectLabels}
+            activeId={activeProjectId}
+            onNavigate={onClose}
+          />
+          <p className="mt-4 px-2.5 pb-1.5 text-caps font-medium text-ink-3 uppercase">{labels.conversations}</p>
           {!conversations.length ? (
             <p className="px-2.5 py-2 text-secondary text-ink-3">{labels.empty}</p>
           ) : mounted ? (
             groupByDate(conversations).map((group) => (
               <div key={group.key} className="mt-2 first:mt-0">
                 <p className="px-2.5 pt-2 pb-1 text-meta text-ink-3">{labels[group.key]}</p>
-                <ConversationList lang={lang} items={group.items} activeId={activeId} labels={labels} onNavigate={onClose} />
+                <ConversationList lang={lang} items={group.items} activeId={activeId} labels={labels} projectLabels={projectLabels} onNavigate={onClose} />
               </div>
             ))
           ) : (
-            <ConversationList lang={lang} items={conversations} activeId={activeId} labels={labels} onNavigate={onClose} />
+            <ConversationList lang={lang} items={conversations} activeId={activeId} labels={labels} projectLabels={projectLabels} onNavigate={onClose} />
           )}
         </nav>
 
@@ -154,12 +165,14 @@ function ConversationList({
   items,
   activeId,
   labels,
+  projectLabels,
   onNavigate,
 }: {
   lang: Locale;
   items: ConversationOut[];
   activeId?: string;
   labels: Labels;
+  projectLabels: Dictionary["workspace"]["projects"];
   onNavigate: () => void;
 }) {
   return (
@@ -171,6 +184,7 @@ function ConversationList({
           conversation={conversation}
           active={conversation.id === activeId}
           labels={labels}
+          projectLabels={projectLabels}
           onNavigate={onNavigate}
         />
       ))}
@@ -183,20 +197,23 @@ function ConversationItem({
   conversation,
   active,
   labels,
+  projectLabels,
   onNavigate,
 }: {
   lang: Locale;
   conversation: ConversationOut;
   active: boolean;
   labels: Labels;
+  projectLabels: Dictionary["workspace"]["projects"];
   onNavigate: () => void;
 }) {
-  const { upsertConversation, removeConversation } = useWorkspace();
+  const { projects, upsertConversation, removeConversation } = useWorkspace();
   const pathname = usePathname();
   const router = useRouter();
-  const [mode, setMode] = useState<"idle" | "menu" | "rename" | "delete">("idle");
+  const [mode, setMode] = useState<"idle" | "menu" | "rename" | "delete" | "move">("idle");
   const [title, setTitle] = useState(conversation.title);
   const [busy, setBusy] = useState(false);
+  const [moveError, setMoveError] = useState(false);
   const itemRef = useRef<HTMLLIElement>(null);
 
   // Fermeture du menu au clic extérieur ou sur Échap.
@@ -238,6 +255,20 @@ function ConversationItem({
     removeConversation(conversation.id);
     // Conversation ouverte supprimée : retour à une nouvelle conversation.
     if (pathname.includes(`/app/c/${conversation.id}`)) router.push(`/${lang}/app`);
+  };
+
+  const moveTo = async (projectId: string | null) => {
+    setBusy(true);
+    setMoveError(false);
+    const response = await fetch(`/api/donna/chat/${encodeURIComponent(conversation.id)}`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId ?? "" }),
+    }).catch(() => null);
+    setBusy(false);
+    if (!response?.ok) return setMoveError(true);
+    upsertConversation({ ...conversation, project_id: projectId });
+    setMode("idle");
   };
 
   if (mode === "rename") {
@@ -296,7 +327,7 @@ function ConversationItem({
       </button>
 
       {mode === "menu" && (
-        <div role="menu" className="absolute top-full right-1 z-10 mt-1 w-40 rounded-card bg-white p-1 shadow-float">
+        <div role="menu" className="absolute top-full right-1 z-10 mt-1 w-48 rounded-card bg-white p-1 shadow-float">
           <button
             role="menuitem"
             type="button"
@@ -311,11 +342,57 @@ function ConversationItem({
           <button
             role="menuitem"
             type="button"
+            onClick={() => {
+              setMoveError(false);
+              setMode("move");
+            }}
+            className="flex w-full rounded-badge px-2.5 py-2 text-left text-label text-ink hover:bg-active"
+          >
+            {projectLabels.moveToProject}
+          </button>
+          {conversation.project_id && (
+            <button
+              role="menuitem"
+              type="button"
+              disabled={busy}
+              onClick={() => void moveTo(null)}
+              className="flex w-full rounded-badge px-2.5 py-2 text-left text-label text-ink hover:bg-active disabled:opacity-60"
+            >
+              {projectLabels.removeFromProject}
+            </button>
+          )}
+          <button
+            role="menuitem"
+            type="button"
             onClick={() => setMode("delete")}
             className="flex w-full rounded-badge px-2.5 py-2 text-left text-label text-danger hover:bg-danger/[0.06]"
           >
             {labels.delete}
           </button>
+        </div>
+      )}
+      {mode === "move" && (
+        <div role="menu" aria-label={projectLabels.moveToProjectTitle} className="absolute top-full right-1 left-1 z-10 mt-1 max-h-64 overflow-y-auto rounded-card bg-white p-1 shadow-float">
+          <p className="px-2.5 py-1.5 text-meta font-medium text-ink-3">{projectLabels.moveToProjectTitle}</p>
+          {moveError && <p className="px-2.5 pb-1.5 text-meta text-danger">{projectLabels.moveError}</p>}
+          {!projects.filter((p) => p.id !== conversation.project_id).length ? (
+            <p className="px-2.5 py-2 text-secondary text-ink-3">{projectLabels.noOtherProjects}</p>
+          ) : (
+            projects
+              .filter((p) => p.id !== conversation.project_id)
+              .map((project) => (
+                <button
+                  key={project.id}
+                  role="menuitem"
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void moveTo(project.id)}
+                  className="flex w-full truncate rounded-badge px-2.5 py-2 text-left text-label text-ink hover:bg-active disabled:opacity-60"
+                >
+                  {project.name}
+                </button>
+              ))
+          )}
         </div>
       )}
       {mode === "delete" && (
@@ -364,6 +441,15 @@ function AccountMenu({ lang, labels, languageLabel, account }: { lang: Locale; l
           <div className="mt-2 flex items-center justify-between px-1">
             <span className="text-secondary text-ink-2">{languageLabel}</span>
             <LanguageSwitch current={lang} label={languageLabel} />
+          </div>
+          <div className="mt-1.5 border-t border-border pt-1.5">
+            <Link
+              href={`/${lang}/app/settings`}
+              className="flex w-full items-center gap-2.5 rounded-badge px-2 py-2 text-left text-label text-ink no-underline hover:bg-active"
+            >
+              <SettingsIcon size={17} className="text-ink-2" />
+              {labels.settings}
+            </Link>
           </div>
           <form action={logout} className="mt-1.5 border-t border-border pt-1.5">
             <input type="hidden" name="lang" value={lang} />
