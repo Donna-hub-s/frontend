@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { DonnaOrb } from "@/components/brand/donna-orb";
 
 export const metadata: Metadata = { title: "Fondations · DONNA" };
 
@@ -195,6 +196,21 @@ export default function FondationsPage() {
             </div>
             <span className="text-secondary font-semibold">shadow-halo-success</span>
           </div>
+        </div>
+      </Section>
+
+      <Section title="Orbe — états">
+        <div className="grid grid-cols-5 gap-6">
+          {(["idle", "listening", "thinking", "working", "answering"] as const).map((state) => (
+            <div key={state} className="flex flex-col items-center gap-3">
+              <DonnaOrb state={state} size={120} />
+              <div className="flex items-end gap-3">
+                <DonnaOrb state={state} size={56} />
+                <DonnaOrb state={state} size={32} />
+              </div>
+              <span className="text-secondary font-semibold">{state}</span>
+            </div>
+          ))}
         </div>
       </Section>
     </main>

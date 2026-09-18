@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "DONNA — l'assistante de direction qui prépare, vous validez",
-    "description": "Emails, WhatsApp, agenda, rappels, documents : DONNA prépare le travail de vos équipes comme le vôtre, et n'envoie rien sans accord."
+    "description": "Emails, agenda, rappels, documents : DONNA prépare le travail de vos équipes comme le vôtre, et n'envoie rien sans accord."
   },
   "nav": {
     "label": "Navigation principale",
@@ -17,7 +17,7 @@
   },
   "hero": {
     "title": "Elle prépare. Vous validez.",
-    "subtitle": "Pour vous comme pour votre entreprise, DONNA travaille dans vos emails, WhatsApp, agenda et documents. Elle lit, cherche, rédige et planifie, puis soumet à votre accord tout ce qui doit partir.",
+    "subtitle": "Pour vous comme pour votre entreprise, DONNA travaille dans vos emails, votre agenda et vos documents, et vous préviens par WhatsApp quand un rappel arrive. Elle lit, cherche, rédige et planifie, puis soumet à votre accord tout ce qui doit partir.",
     "ctaPrimary": "Continuer avec Google",
     "ctaSecondary": "Voir ce qu'elle fait",
     "note": "Accès limité aux outils que vous connectez, révocable à tout moment."
@@ -62,18 +62,6 @@
         ]
       },
       {
-        "id": "whatsapp",
-        "tab": "WhatsApp",
-        "title": "WhatsApp, dans la même conversation",
-        "example": "Réponds à Rachel que je confirme pour jeudi.",
-        "image": "whatsapp",
-        "points": [
-          "Elle lit vos discussions et cherche dans l'historique",
-          "Elle prépare le message, la photo, le document ou la note vocale",
-          "Rien n'est envoyé sans votre approbation, et les envois restent espacés pour protéger votre numéro"
-        ]
-      },
-      {
         "id": "agenda",
         "tab": "Agenda et rappels",
         "title": "Votre temps, tenu à votre place",
@@ -83,7 +71,8 @@
           "Elle vous montre vos prochains rendez-vous",
           "Elle crée, déplace ou annule un événement après votre accord",
           "Ses rappels arrivent à l'heure, même quand l'application est fermée",
-          "Un rappel sans date ? Elle le ressort au bon moment"
+          "Un rappel sans date ? Elle le ressort au bon moment",
+          "Vous choisissez de les recevoir aussi par WhatsApp"
         ]
       },
       {
@@ -146,7 +135,7 @@
       },
       {
         "title": "Validez ce qui doit partir",
-        "body": "Emails, rendez-vous et messages WhatsApp vous sont soumis. Un clic pour envoyer, un clic pour annuler.",
+        "body": "Emails et rendez-vous vous sont soumis. Un clic pour envoyer, un clic pour annuler.",
         "image": "approve"
       }
     ]
@@ -186,11 +175,11 @@
     "items": [
       {
         "q": "À quoi DONNA a-t-elle accès ?",
-        "a": "Uniquement aux outils que vous connectez, comme Gmail et Google Agenda, à WhatsApp si votre entreprise l'active, et aux documents que vous lui confiez. Vous pouvez retirer un accès à tout moment."
+        "a": "Uniquement aux outils que vous connectez, comme Gmail et Google Agenda, et aux documents que vous lui confiez. Elle peut aussi vous prévenir par WhatsApp quand un rappel arrive, si vous l'activez dans vos paramètres. Vous pouvez retirer un accès à tout moment."
       },
       {
         "q": "Peut-elle envoyer un email ou un message sans me demander ?",
-        "a": "Non. Emails, invitations et messages WhatsApp restent des brouillons jusqu'à votre validation dans l'interface."
+        "a": "Non. Emails et invitations restent des brouillons jusqu'à votre validation dans l'interface. Le seul message qu'elle envoie de sa propre initiative est un rappel WhatsApp que vous avez vous-même programmé."
       },
       {
         "q": "Que se passe-t-il quand elle se trompe ?",
@@ -217,7 +206,6 @@
   },
   "illustrations": {
     "emails": "Un homme consulte ses emails sur un grand téléphone",
-    "whatsapp": "Une conversation de messagerie entre deux personnes",
     "calendar": "Une femme tient un calendrier",
     "documents": "Des documents examinés à la loupe",
     "production": "Un homme présente un graphique de données",
@@ -492,17 +480,9 @@
       "save_generated_document": "Création d'un document",
       "web_search": "Recherche sur le web",
       "delegate_to_subagent": "Analyse approfondie",
-      "wa_status": "Vérification de WhatsApp",
-      "wa_chats": "Lecture de vos discussions WhatsApp",
-      "wa_context": "Lecture d'une discussion WhatsApp",
-      "wa_search": "Recherche dans WhatsApp",
-      "wa_send": "Préparation d'un message WhatsApp",
-      "wa_media": "Préparation d'un envoi WhatsApp",
-      "wa_voice": "Préparation d'une note vocale",
-      "wa_react": "Réaction dans WhatsApp",
-      "wa_read": "Discussion marquée comme lue",
       "search_drive_files": "Recherche dans Google Drive",
       "read_drive_file": "Lecture d'un fichier Drive",
+      "create_document": "Rédaction du document",
       "fallback": "Utilisation d'un outil"
     },
     "panel": {
@@ -614,8 +594,8 @@
       "edit": "Modifier",
       "documentsTitle": "Base de connaissances",
       "documentsEmpty": "Aucun document pour l'instant.",
-      "dropzoneHint": "Glissez vos fichiers ici, ou cliquez pour en choisir",
-      "dropzoneTypes": "PDF, Word, texte ou images",
+      "dropzoneHint": "Ajouter des fichiers",
+      "dropzoneTypes": "PDF, Word, Excel, texte ou images. Vous pouvez aussi les glisser ici.",
       "uploadError": "Impossible d'ajouter ce fichier.",
       "deleteDocument": "Supprimer",
       "deleteDocumentError": "Impossible de supprimer ce document.",
@@ -632,31 +612,151 @@
       "searchNone": "Aucun projet ne correspond.",
       "homeLabel": "Accueil",
       "filterSectionTitle": "Filtrer",
-      "totalFiles": "{n} fichier(s) au total"
+      "totalFiles": "{n} fichier(s) au total",
+      "addDescription": "Ajouter une description",
+      "share": "Partager",
+      "shareTitle": "Partager « {name} »",
+      "shareHint": "Les membres voient les conversations, fichiers et instructions du projet.",
+      "close": "Fermer",
+      "more": "Plus d'options",
+      "editDetails": "Renommer et décrire",
+      "conversationsTitle": "Conversations",
+      "add": "Ajouter",
+      "instructionsEmptyHint": "Expliquez à DONNA le contexte du projet, le ton attendu ou les règles à suivre. Elle en tiendra compte dans chaque conversation.",
+      "filesTitle": "Fichiers",
+      "addFiles": "Ajouter des fichiers",
+      "capacityLabel": "Contexte utilisé",
+      "capacityPercent": "{n} % du contexte du projet utilisé",
+      "uploading": "Envoi de {n} fichier(s)…",
+      "docStatus": {
+        "pending": "En attente",
+        "processing": "Analyse…",
+        "failed": "Échec"
+      },
+      "memoryPrivateHint": "Visible seulement par les membres de ce projet.",
+      "memoryEmptyHint": "Ajoutez les faits que DONNA doit toujours garder en tête : noms, chiffres clés, décisions.",
+      "invite": "Inviter",
+      "invitesPending": "Invitations en attente",
+      "memberUnknown": "Membre",
+      "deleteTitle": "Supprimer « {name} » ?"
     },
     "settings": {
       "title": "Paramètres",
-      "back": "Retour à l'espace de travail",
-      "profileSection": "Profil",
       "displayNameLabel": "Nom affiché",
-      "avatarUrlLabel": "URL de l'avatar",
+      "avatarUrlLabel": "Photo de profil",
       "timezoneLabel": "Fuseau horaire",
-      "languageLabel": "Langue préférée",
-      "languageHint": "Préférence enregistrée sur votre profil — pour changer la langue de l'interface, utilisez le sélecteur dans le menu du compte.",
-      "languageNone": "Non définie",
-      "chatPreferencesSection": "Préférences de chat",
-      "ttsVoiceLabel": "Voix de synthèse (TTS)",
-      "ttsVoiceHint": "Nom du fichier de voix Piper (ex. fr_FR-siwis-medium). Laisser vide pour la voix par défaut.",
-      "defaultWebSearchLabel": "Recherche web activée par défaut",
-      "notificationsSection": "Notifications de rappel",
-      "notifyEmailLabel": "Par email",
-      "notifyWhatsappLabel": "Par WhatsApp",
-      "whatsappNumberLabel": "Numéro WhatsApp (avec indicatif)",
+      "languageLabel": "Langue des réponses",
+      "languageHint": "La langue de l'interface se change dans le menu du compte.",
+      "languageNone": "Selon la question",
+      "ttsVoiceLabel": "Voix de lecture",
+      "ttsVoiceHint": "Nom d'une voix Piper installée (ex. fr_FR-siwis-medium). Vide : voix par défaut.",
+      "defaultWebSearchLabel": "Recherche web à chaque question",
+      "notifyEmailLabel": "Rappels par email",
+      "notifyWhatsappLabel": "Rappels par WhatsApp",
+      "whatsappNumberLabel": "Votre numéro WhatsApp (avec indicatif)",
       "save": "Enregistrer",
       "saving": "Enregistrement…",
       "saved": "Préférences enregistrées.",
       "saveError": "Impossible d'enregistrer vos préférences.",
-      "invalidTimezone": "Fuseau horaire invalide (format IANA attendu, ex. Europe/Paris)."
+      "invalidTimezone": "Fuseau horaire invalide (format IANA attendu, ex. Europe/Paris).",
+      "close": "Fermer",
+      "cancel": "Annuler",
+      "unsaved": "Modifications non enregistrées",
+      "loading": "Chargement…",
+      "loadError": "Impossible de charger vos paramètres. Réessayez dans un instant.",
+      "navProfile": "Profil",
+      "navPreferences": "Préférences",
+      "navNotifications": "Notifications",
+      "navConnectors": "Connecteurs",
+      "profileHint": "Comment DONNA vous nomme, et l'heure qu'elle utilise pour vos rappels et rendez-vous.",
+      "displayNameHint": "Utilisé par DONNA pour s'adresser à vous.",
+      "avatarHint": "Lien https vers une image. Laissez vide pour afficher vos initiales.",
+      "timezoneNow": "Il est {time} dans ce fuseau.",
+      "timezoneDevice": "Utiliser celui de cet appareil ({zone})",
+      "preferencesHint": "Le comportement par défaut de DONNA dans vos conversations.",
+      "defaultWebSearchHint": "Désactivé, DONNA ne cherche sur le web que lorsque vous l'activez dans la zone de saisie.",
+      "notificationsHint": "Comment DONNA vous prévient quand un rappel arrive à échéance.",
+      "notifyEmailHint": "Envoyés à {email}.",
+      "notifyWhatsappHint": "Envoyés depuis le numéro WhatsApp de votre espace, s'il est activé.",
+      "connectorsHint": "Les services que DONNA peut consulter pour vous. Rien n'est envoyé sans votre accord.",
+      "navSecurity": "Sécurité",
+      "securityHint": "Le mot de passe, la double authentification, les appareils connectés et les comptes liés à ce compte.",
+      "passwordTitle": "Mot de passe",
+      "currentPasswordLabel": "Mot de passe actuel",
+      "newPasswordLabel": "Nouveau mot de passe",
+      "confirmPasswordLabel": "Confirmer le nouveau mot de passe",
+      "passwordHint": "Au moins 8 caractères, avec une majuscule et un chiffre.",
+      "passwordMismatch": "Les deux mots de passe ne correspondent pas.",
+      "passwordChangeAction": "Changer le mot de passe",
+      "passwordChanging": "Modification…",
+      "passwordChanged": "Mot de passe modifié.",
+      "passwordSetAction": "Définir un mot de passe",
+      "passwordSetHint": "Ce compte a été créé avec Google (ou un autre fournisseur) et n'a pas encore de mot de passe.",
+      "noPasswordSet": "Aucun mot de passe défini",
+      "mfaTitle": "Double authentification",
+      "mfaHint": "Un code à usage unique, généré par une application comme Google Authenticator, en plus du mot de passe.",
+      "mfaEnabledBadge": "Activée",
+      "mfaDisabledBadge": "Désactivée",
+      "mfaEnable": "Activer",
+      "mfaDisable": "Désactiver",
+      "mfaDisabling": "Désactivation…",
+      "mfaDisableConfirm": "Désactiver la double authentification ? Votre compte sera protégé par le seul mot de passe.",
+      "mfaScanHint": "Scannez ce code avec votre application d'authentification, ou saisissez la clé à la main.",
+      "mfaSecretLabel": "Clé (saisie manuelle)",
+      "mfaCodeLabel": "Code à 6 chiffres",
+      "mfaCodePlaceholder": "000000",
+      "mfaConfirmAction": "Confirmer l’activation",
+      "mfaConfirming": "Vérification…",
+      "mfaInvalidCode": "Code invalide. Réessayez.",
+      "mfaBackupCodesTitle": "Codes de secours",
+      "mfaBackupCodesHint": "À utiliser si vous perdez l'accès à votre application d'authentification. Chaque code ne sert qu'une fois — notez-les dans un endroit sûr, ils ne seront plus jamais affichés.",
+      "mfaBackupCodesSavedLabel": "Je les ai notés",
+      "mfaRegenerateBackupCodes": "Régénérer les codes de secours",
+      "mfaRegenerating": "Régénération…",
+      "mfaBackupCodesRegeneratedHint": "Nouveaux codes générés — les précédents ne fonctionnent plus.",
+      "sessionsTitle": "Appareils connectés",
+      "sessionsHint": "Les sessions actives sur ce compte, tous appareils confondus.",
+      "sessionsEmpty": "Aucune autre session active.",
+      "sessionCurrentBadge": "Cet appareil",
+      "sessionUnknownDevice": "Appareil inconnu",
+      "sessionLastSeen": "Vu le {date}",
+      "sessionRevoke": "Déconnecter",
+      "sessionRevoking": "Déconnexion…",
+      "sessionRevokeAllOthers": "Déconnecter tous les autres appareils",
+      "sessionRevokeAllConfirm": "Déconnecter tous les autres appareils ? Ils devront se reconnecter.",
+      "linkedAccountsTitle": "Comptes liés",
+      "linkedAccountsHint": "Les comptes utilisés pour vous connecter à DONNA.",
+      "linkedAccountsEmpty": "Aucun compte lié.",
+      "linkedAccountConnect": "Connecter",
+      "linkedAccountUnlink": "Délier",
+      "linkedAccountUnlinkConfirm": "Délier ce compte ? Vous ne pourrez plus l’utiliser pour vous connecter.",
+      "linkedSince": "Lié le {date}",
+      "loadFailed": "Certaines informations de sécurité n’ont pas pu être chargées."
+    },
+    "viewer": {
+      "title": "Aperçu du fichier",
+      "close": "Fermer",
+      "download": "Télécharger",
+      "open": "Aperçu de {name}",
+      "loading": "Ouverture du fichier…",
+      "loadError": "Le fichier n'a pas pu être ouvert. Vous pouvez le télécharger.",
+      "parseError": "Ce fichier ne peut pas être affiché ici. Téléchargez-le pour l'ouvrir.",
+      "tooLarge": "Fichier trop volumineux pour l'aperçu (plus de 20 Mo). Téléchargez-le pour l'ouvrir.",
+      "unsupported": "Pas d'aperçu pour ce type de fichier. Téléchargez-le pour l'ouvrir.",
+      "truncatedText": "Aperçu limité au début du fichier.",
+      "truncatedRows": "Aperçu limité aux {n} premières lignes.",
+      "emptySheet": "Cette feuille est vide.",
+      "sheets": "Feuilles",
+      "kinds": {
+        "pdf": "Document PDF",
+        "image": "Image",
+        "docx": "Document Word",
+        "xlsx": "Classeur Excel",
+        "csv": "Tableau CSV",
+        "markdown": "Texte Markdown",
+        "text": "Fichier texte",
+        "other": "Fichier"
+      }
     }
   },
   "invite": {

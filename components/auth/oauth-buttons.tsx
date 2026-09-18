@@ -2,9 +2,10 @@ import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { GoogleIcon } from "@/components/landing/hero";
 
-type Provider = keyof Dictionary["auth"]["providers"];
+export type Provider = keyof Dictionary["auth"]["providers"];
 
-function ProviderIcon({ provider }: { provider: Provider }) {
+/** Réutilisée par settings-dialog.tsx (comptes liés) : mêmes icônes qu'à la connexion. */
+export function ProviderIcon({ provider }: { provider: Provider }) {
   switch (provider) {
     case "google":
       return <GoogleIcon />;
@@ -32,7 +33,7 @@ function ProviderIcon({ provider }: { provider: Provider }) {
   }
 }
 
-const isProvider = (value: string, dict: Dictionary): value is Provider => Object.hasOwn(dict.auth.providers, value);
+export const isProvider = (value: string, dict: Dictionary): value is Provider => Object.hasOwn(dict.auth.providers, value);
 
 /**
  * Un bouton par fournisseur réellement configuré côté backend (GET /app/auth/oauth/providers) :

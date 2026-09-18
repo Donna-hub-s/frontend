@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { DonnaMark } from "@/components/brand/donna-mark";
+import { DonnaOrb } from "@/components/brand/donna-orb";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 
 type Demo = Dictionary["demo"];
@@ -145,9 +146,8 @@ export function HeroDemo({ demo }: { demo: Demo }) {
               p === 0 ? "opacity-100" : "pointer-events-none -translate-y-3 opacity-0"
             }`}
           >
-            <span className="demo-halo relative inline-flex rounded-full">
-              <DonnaMark size={56} variant="circle" label="" />
-            </span>
+            {/* Orbe : disponible, puis « écoute » pendant la saisie de la demande. */}
+            <DonnaOrb state={chars > 0 && !reduced ? "listening" : "idle"} size={64} />
             <p className="font-brand text-[1.1875rem] font-light text-bordeaux-900">{demo.greeting}</p>
           </div>
 
@@ -159,13 +159,9 @@ export function HeroDemo({ demo }: { demo: Demo }) {
 
               {p >= 2 && (
                 <div className="demo-in flex gap-3">
-                  <span className="relative mt-0.5 inline-flex size-[30px] shrink-0 items-center justify-center">
-                    <span
-                      className={`demo-ring absolute inset-0 rounded-full transition-opacity duration-500 ${
-                        working ? "opacity-100" : "opacity-0"
-                      }`}
-                    />
-                    <DonnaMark size={26} variant="circle" label="" />
+                  <span className="mt-0.5 inline-flex size-[30px] shrink-0 items-center justify-center">
+                    {/* Réfléchit, agit pendant les étapes, puis répond avec le brouillon. */}
+                    <DonnaOrb state={p === 2 ? "thinking" : working ? "working" : "answering"} size={30} />
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col gap-3">
                     <p className="text-secondary font-medium text-ink">{demo.thinking}</p>

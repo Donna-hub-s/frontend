@@ -5,6 +5,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { DonnaMark } from "@/components/brand/donna-mark";
+import { DonnaOrb, type OrbState } from "@/components/brand/donna-orb";
+import { FileLink } from "./file-viewer";
 import { actionIdFrom, readChatStream } from "@/lib/chat-stream";
 import {
   EMPTY_MENTIONS,
@@ -29,6 +31,7 @@ type ErrorKind = NonNullable<ChatMessage["error"]>;
 
 const uid = () => crypto.randomUUID();
 const PROPOSALS = new Set(["propose_email", "propose_calendar_event"]);
+
 const MAX_FILES = 5;
 
 const errorFromStatus = (status: number): ErrorKind =>
@@ -59,6 +62,8 @@ export function Conversation({
   const { upsertConversation, refreshConversations, refreshPending, setActivity, projectDraft, setProjectDraft } = useWorkspace();
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [busy, setBusy] = useState(false);
+  // L'orbe de l'accueil « écoute » dès que l'utilisateur écrit.
+  const [composing, setComposing] = useState(false);
   const conversationRef = useRef(conversationId);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -268,7 +273,7 @@ export function Conversation({
               </Link>
             </div>
           ) : empty ? (
-            <EmptyState dict={dict} firstName={firstName} onPick={(text) => void send(text, [])} />
+            <EmptyState dict={dict} firstName={firstName} listening={composing} onPick={(text) => void send(text, [])} />
           ) : (
             messages.map((m, index) =>
               m.role === "user" ? (
@@ -291,7 +296,14 @@ export function Conversation({
       </div>
 
       {!loadError && (
-        <Composer dict={dict} busy={busy} onSend={send} onStop={() => abortRef.current?.abort()} autoFocus={empty} />
+        <Composer
+          dict={dict}
+          busy={busy}
+          onSend={send}
+          onStop={() => abortRef.current?.abort()}
+          onComposingChange={setComposing}
+          autoFocus={empty}
+        />
       )}
     </div>
   );
@@ -299,12 +311,20 @@ export function Conversation({
 
 /* ── Accueil d'une nouvelle conversation ─────────────────────────────────────────── */
 
-function EmptyState({ dict, firstName, onPick }: { dict: WorkspaceDict; firstName: string | null; onPick: (text: string) => void }) {
+function EmptyState({
+  dict,
+  firstName,
+  listening,
+  onPick,
+}: {
+  dict: WorkspaceDict;
+  firstName: string | null;
+  listening: boolean;
+  onPick: (text: string) => void;
+}) {
   return (
     <div className="mt-[10vh] flex flex-col items-center text-center">
-      <span className="demo-halo inline-flex rounded-full">
-        <DonnaMark size={56} variant="circle" label="" />
-      </span>
+      <DonnaOrb state={listening ? "listening" : "idle"} size={76} />
       <h1 className="mt-6 font-brand text-greeting font-light text-bordeaux-900">
         {firstName ? `${dict.chat.greeting} ${firstName},` : `${dict.chat.greeting},`}
       </h1>
@@ -338,19 +358,28 @@ function Time({ lang, at }: { lang: Locale; at: number | null }) {
 }
 
 function UserMessage({ lang, message, initials, label }: { lang: Locale; message: ChatMessage; initials: string; label: string }) {
-  const files = [...(message.localFiles ?? []), ...message.attachments.map((a) => a.original_name)];
+  const chip = "inline-flex items-center gap-1.5 rounded-badge bg-white px-2 py-1 text-meta text-ink-2";
+  const hasFiles = Boolean(message.localFiles?.length || message.attachments.length);
   return (
     <div className="flex justify-end gap-3">
       <div className="flex max-w-[85%] flex-col items-end gap-1.5">
         <div className="rounded-panel rounded-tr-badge bg-active px-4 py-3">
           <p className="sr-only">{label} :</p>
           {message.content && <p className="text-message whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">{message.content}</p>}
-          {files.length > 0 && (
+          {hasFiles && (
             <ul className={`flex flex-wrap gap-1.5 ${message.content ? "mt-2" : ""}`}>
-              {files.map((name) => (
-                <li key={name} className="inline-flex items-center gap-1.5 rounded-badge bg-white px-2 py-1 text-meta text-ink-2">
+              {message.localFiles?.map((name) => (
+                <li key={`local-${name}`} className={chip}>
                   <FileIcon size={14} />
                   {name}
+                </li>
+              ))}
+              {message.attachments.map((file) => (
+                <li key={file.id}>
+                  <FileLink url={fileHref(file.file_url)} name={file.original_name} className={`${chip} no-underline hover:text-ink`}>
+                    <FileIcon size={14} />
+                    {file.original_name}
+                  </FileLink>
                 </li>
               ))}
             </ul>
@@ -390,9 +419,12 @@ function AssistantMessage({
 
   return (
     <div className="flex gap-3">
-      <span className="relative mt-0.5 inline-flex size-8 shrink-0 items-center justify-center">
-        {streaming && <span aria-hidden className="demo-ring absolute inset-0 rounded-full" />}
-        <DonnaMark size={28} variant="circle" label="DONNA" />
+      <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center">
+        {streaming ? (
+          <DonnaOrb state={liveOrbState(message)} size={32} label="DONNA" />
+        ) : (
+          <DonnaMark size={28} variant="circle" label="DONNA" />
+        )}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         {visibleSteps(message.steps ?? []).length > 0 && <StepsCard lang={lang} dict={dict} message={message} />}
@@ -418,10 +450,14 @@ function AssistantMessage({
             <ul className="mt-1.5 flex flex-wrap gap-2">
               {message.attachments.map((file) => (
                 <li key={file.id}>
-                  <a href={fileHref(file.file_url)} className="inline-flex items-center gap-2 rounded-button border border-border bg-white px-3 py-2 text-label text-ink no-underline hover:border-bordeaux-700/30 hover:text-ink">
+                  <FileLink
+                    url={fileHref(file.file_url)}
+                    name={file.original_name}
+                    className="inline-flex items-center gap-2 rounded-button border border-border bg-white px-3 py-2 text-label text-ink no-underline hover:border-bordeaux-700/30 hover:text-ink"
+                  >
                     <FileIcon size={16} className="text-bordeaux-700" />
                     {file.original_name}
-                  </a>
+                  </FileLink>
                 </li>
               ))}
             </ul>
@@ -470,6 +506,14 @@ function AssistantMessage({
       </div>
     </div>
   );
+}
+
+/** État de l'orbe pendant une réponse : elle réfléchit, agit (outil en cours), puis répond. */
+function liveOrbState(message: ChatMessage): OrbState {
+  const running = (message.steps ?? []).find((step) => step.status === "running");
+  if (running && running.key !== "read" && running.key !== "answer") return "working";
+  if (message.content) return "answering";
+  return "thinking";
 }
 
 /** Étapes réelles du traitement (événements du flux), repliables une fois terminé. */
@@ -646,16 +690,15 @@ function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] 
       <ul className="mt-1.5 flex flex-wrap gap-2">
         {unique.map((source) => (
           <li key={source.doc_id}>
-            <a
-              href={fileHref(source.file_url)}
-              target="_blank"
-              rel="noopener noreferrer"
+            <FileLink
+              url={fileHref(source.file_url)}
+              name={source.original_name}
               title={source.excerpt}
               className="inline-flex max-w-[16rem] items-center gap-1.5 rounded-full border border-border bg-white px-2.5 py-1 text-meta text-ink-2 no-underline hover:border-bordeaux-700/30 hover:text-ink"
             >
               <FileIcon size={14} className="shrink-0 text-bordeaux-700" />
               <span className="truncate">{source.original_name}</span>
-            </a>
+            </FileLink>
           </li>
         ))}
       </ul>
@@ -695,12 +738,14 @@ export function Composer({
   busy,
   onSend,
   onStop,
+  onComposingChange,
   autoFocus,
 }: {
   dict: WorkspaceDict;
   busy: boolean;
   onSend: (text: string, files: File[], webSearch: boolean, mentions: MentionSelection) => Promise<void>;
   onStop: () => void;
+  onComposingChange?: (composing: boolean) => void;
   autoFocus: boolean;
 }) {
   const { projects } = useWorkspace();
@@ -961,6 +1006,7 @@ export function Composer({
     setFiles([]);
     setMentions([]);
     setMenu(null);
+    onComposingChange?.(false);
     void onSend(text, attached, webSearch, selection);
   };
 
@@ -1034,6 +1080,7 @@ export function Composer({
           onChange={(event) => {
             setValue(event.target.value);
             syncMenu(event.target.value, event.target.selectionStart ?? event.target.value.length);
+            onComposingChange?.(event.target.value.trim().length > 0);
           }}
           onKeyDown={(event) => {
             if (menu && menuItems.length) {

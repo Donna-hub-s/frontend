@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "DONNA — the executive assistant that prepares, you approve",
-    "description": "Email, WhatsApp, calendar, reminders, documents: DONNA prepares the work for you and your teams, and sends nothing without approval."
+    "description": "Email, calendar, reminders, documents: DONNA prepares the work for your team and yourself, and sends nothing without approval."
   },
   "nav": {
     "label": "Main navigation",
@@ -17,7 +17,7 @@
   },
   "hero": {
     "title": "She prepares. You approve.",
-    "subtitle": "For you and for your company, DONNA works in your email, WhatsApp, calendar and documents. She reads, searches, drafts and schedules, then brings you everything that needs to go out.",
+    "subtitle": "For you and for your company, DONNA works across your email, calendar and files, and can ping you on WhatsApp when a reminder is due. She reads, searches, drafts and plans, then submits anything that needs to go out for your approval.",
     "ctaPrimary": "Continue with Google",
     "ctaSecondary": "See what she does",
     "note": "Access is limited to the tools you connect, and you can revoke it anytime."
@@ -62,18 +62,6 @@
         ]
       },
       {
-        "id": "whatsapp",
-        "tab": "WhatsApp",
-        "title": "WhatsApp, in the same conversation",
-        "example": "Tell Rachel I'm confirmed for Thursday.",
-        "image": "whatsapp",
-        "points": [
-          "She reads your chats and searches their history",
-          "She prepares the message, photo, document or voice note",
-          "Nothing is sent without your approval, and sends stay spaced out to protect your number"
-        ]
-      },
-      {
         "id": "agenda",
         "tab": "Calendar & reminders",
         "title": "Your time, kept for you",
@@ -83,7 +71,8 @@
           "She shows you your upcoming meetings",
           "She creates, moves or cancels an event once you approve",
           "Her reminders arrive on time, even when the app is closed",
-          "No date yet? She brings it up at the right moment"
+          "No date yet? She brings it up at the right moment",
+          "You can also choose to get them on WhatsApp"
         ]
       },
       {
@@ -146,7 +135,7 @@
       },
       {
         "title": "Approve what goes out",
-        "body": "Emails, meetings and WhatsApp messages come to you first. One click to send, one click to cancel.",
+        "body": "Emails and meetings are submitted to you. One click to send, one click to cancel.",
         "image": "approve"
       }
     ]
@@ -186,11 +175,11 @@
     "items": [
       {
         "q": "What can DONNA access?",
-        "a": "Only the tools you connect, such as Gmail and Google Calendar, WhatsApp if your company enables it, and the documents you share with her. You can remove any access at any time."
+        "a": "Only the tools you connect, like Gmail and Google Calendar, and the files you give her. She can also ping you on WhatsApp when a reminder is due, if you turn that on in your settings. You can revoke access at any time."
       },
       {
         "q": "Can she send an email or message without asking me?",
-        "a": "No. Emails, invites and WhatsApp messages stay drafts until you approve them in the app."
+        "a": "No. Emails and invitations stay as drafts until you approve them in the interface. The only message she sends on her own is a WhatsApp reminder you scheduled yourself."
       },
       {
         "q": "What happens when she gets it wrong?",
@@ -217,7 +206,6 @@
   },
   "illustrations": {
     "emails": "A man checking email on a large phone",
-    "whatsapp": "A messaging conversation between two people",
     "calendar": "A woman holding a calendar",
     "documents": "Documents examined under a magnifying glass",
     "production": "A man presenting a data chart",
@@ -492,17 +480,9 @@
       "save_generated_document": "Creating a document",
       "web_search": "Searching the web",
       "delegate_to_subagent": "In-depth analysis",
-      "wa_status": "Checking WhatsApp",
-      "wa_chats": "Reading your WhatsApp chats",
-      "wa_context": "Reading a WhatsApp chat",
-      "wa_search": "Searching WhatsApp",
-      "wa_send": "Drafting a WhatsApp message",
-      "wa_media": "Preparing a WhatsApp attachment",
-      "wa_voice": "Preparing a voice note",
-      "wa_react": "Reacting in WhatsApp",
-      "wa_read": "Chat marked as read",
       "search_drive_files": "Searching Google Drive",
       "read_drive_file": "Reading a Drive file",
+      "create_document": "Writing the document",
       "fallback": "Using a tool"
     },
     "panel": {
@@ -614,8 +594,8 @@
       "edit": "Edit",
       "documentsTitle": "Knowledge base",
       "documentsEmpty": "No documents yet.",
-      "dropzoneHint": "Drag files here, or click to choose",
-      "dropzoneTypes": "PDF, Word, text or images",
+      "dropzoneHint": "Add files",
+      "dropzoneTypes": "PDF, Word, Excel, text or images. You can also drop them here.",
       "uploadError": "Couldn't add this file.",
       "deleteDocument": "Delete",
       "deleteDocumentError": "Couldn't delete this document.",
@@ -632,31 +612,151 @@
       "searchNone": "No project matches.",
       "homeLabel": "Home",
       "filterSectionTitle": "Filter",
-      "totalFiles": "{n} file(s) total"
+      "totalFiles": "{n} file(s) total",
+      "addDescription": "Add a description",
+      "share": "Share",
+      "shareTitle": "Share “{name}”",
+      "shareHint": "Members see the project's conversations, files and instructions.",
+      "close": "Close",
+      "more": "More options",
+      "editDetails": "Rename and describe",
+      "conversationsTitle": "Conversations",
+      "add": "Add",
+      "instructionsEmptyHint": "Tell DONNA about the project's context, the expected tone or the rules to follow. She will use them in every conversation.",
+      "filesTitle": "Files",
+      "addFiles": "Add files",
+      "capacityLabel": "Context used",
+      "capacityPercent": "{n}% of the project context used",
+      "uploading": "Uploading {n} file(s)…",
+      "docStatus": {
+        "pending": "Waiting",
+        "processing": "Analysing…",
+        "failed": "Failed"
+      },
+      "memoryPrivateHint": "Only visible to this project's members.",
+      "memoryEmptyHint": "Add the facts DONNA should always keep in mind: names, key figures, decisions.",
+      "invite": "Invite",
+      "invitesPending": "Pending invitations",
+      "memberUnknown": "Member",
+      "deleteTitle": "Delete “{name}”?"
     },
     "settings": {
       "title": "Settings",
-      "back": "Back to workspace",
-      "profileSection": "Profile",
       "displayNameLabel": "Display name",
-      "avatarUrlLabel": "Avatar URL",
+      "avatarUrlLabel": "Profile picture",
       "timezoneLabel": "Time zone",
-      "languageLabel": "Preferred language",
-      "languageHint": "Preference saved on your profile — to change the interface language, use the switch in the account menu.",
-      "languageNone": "Not set",
-      "chatPreferencesSection": "Chat preferences",
-      "ttsVoiceLabel": "Text-to-speech voice",
-      "ttsVoiceHint": "Piper voice file name (e.g. fr_FR-siwis-medium). Leave empty for the default voice.",
-      "defaultWebSearchLabel": "Web search on by default",
-      "notificationsSection": "Reminder notifications",
-      "notifyEmailLabel": "By email",
-      "notifyWhatsappLabel": "By WhatsApp",
-      "whatsappNumberLabel": "WhatsApp number (with country code)",
+      "languageLabel": "Answer language",
+      "languageHint": "The interface language is set from the account menu.",
+      "languageNone": "Match the question",
+      "ttsVoiceLabel": "Reading voice",
+      "ttsVoiceHint": "Name of an installed Piper voice (e.g. en_US-amy-medium). Empty: default voice.",
+      "defaultWebSearchLabel": "Search the web for every question",
+      "notifyEmailLabel": "Email reminders",
+      "notifyWhatsappLabel": "WhatsApp reminders",
+      "whatsappNumberLabel": "Your WhatsApp number (with country code)",
       "save": "Save",
       "saving": "Saving…",
       "saved": "Preferences saved.",
       "saveError": "Couldn't save your preferences.",
-      "invalidTimezone": "Invalid time zone (IANA format expected, e.g. Europe/Paris)."
+      "invalidTimezone": "Invalid time zone (IANA format expected, e.g. Europe/Paris).",
+      "close": "Close",
+      "cancel": "Cancel",
+      "unsaved": "Unsaved changes",
+      "loading": "Loading…",
+      "loadError": "Your settings could not be loaded. Try again in a moment.",
+      "navProfile": "Profile",
+      "navPreferences": "Preferences",
+      "navNotifications": "Notifications",
+      "navConnectors": "Connectors",
+      "profileHint": "How DONNA addresses you, and the time zone used for your reminders and meetings.",
+      "displayNameHint": "Used by DONNA when talking to you.",
+      "avatarHint": "An https link to an image. Leave empty to show your initials.",
+      "timezoneNow": "It is {time} in this time zone.",
+      "timezoneDevice": "Use this device's time zone ({zone})",
+      "preferencesHint": "How DONNA behaves by default in your conversations.",
+      "defaultWebSearchHint": "When off, DONNA only searches the web when you turn it on in the message box.",
+      "notificationsHint": "How DONNA lets you know when a reminder is due.",
+      "notifyEmailHint": "Sent to {email}.",
+      "notifyWhatsappHint": "Sent from your workspace's WhatsApp number, when enabled.",
+      "connectorsHint": "The services DONNA can look at for you. Nothing is sent without your approval.",
+      "navSecurity": "Security",
+      "securityHint": "Your password, two-factor authentication, connected devices and accounts linked to this account.",
+      "passwordTitle": "Password",
+      "currentPasswordLabel": "Current password",
+      "newPasswordLabel": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "passwordHint": "At least 8 characters, with an uppercase letter and a digit.",
+      "passwordMismatch": "The two passwords do not match.",
+      "passwordChangeAction": "Change password",
+      "passwordChanging": "Changing…",
+      "passwordChanged": "Password changed.",
+      "passwordSetAction": "Set a password",
+      "passwordSetHint": "This account was created with Google (or another provider) and has no password yet.",
+      "noPasswordSet": "No password set",
+      "mfaTitle": "Two-factor authentication",
+      "mfaHint": "A one-time code, generated by an app like Google Authenticator, on top of your password.",
+      "mfaEnabledBadge": "Enabled",
+      "mfaDisabledBadge": "Disabled",
+      "mfaEnable": "Enable",
+      "mfaDisable": "Disable",
+      "mfaDisabling": "Disabling…",
+      "mfaDisableConfirm": "Disable two-factor authentication? Your account will only be protected by your password.",
+      "mfaScanHint": "Scan this code with your authenticator app, or enter the key by hand.",
+      "mfaSecretLabel": "Key (manual entry)",
+      "mfaCodeLabel": "6-digit code",
+      "mfaCodePlaceholder": "000000",
+      "mfaConfirmAction": "Confirm activation",
+      "mfaConfirming": "Checking…",
+      "mfaInvalidCode": "Invalid code. Try again.",
+      "mfaBackupCodesTitle": "Backup codes",
+      "mfaBackupCodesHint": "Use these if you lose access to your authenticator app. Each code works once — save them somewhere safe, they won't be shown again.",
+      "mfaBackupCodesSavedLabel": "I've saved them",
+      "mfaRegenerateBackupCodes": "Regenerate backup codes",
+      "mfaRegenerating": "Regenerating…",
+      "mfaBackupCodesRegeneratedHint": "New codes generated — the old ones no longer work.",
+      "sessionsTitle": "Connected devices",
+      "sessionsHint": "Active sessions on this account, across all devices.",
+      "sessionsEmpty": "No other active session.",
+      "sessionCurrentBadge": "This device",
+      "sessionUnknownDevice": "Unknown device",
+      "sessionLastSeen": "Last seen {date}",
+      "sessionRevoke": "Sign out",
+      "sessionRevoking": "Signing out…",
+      "sessionRevokeAllOthers": "Sign out all other devices",
+      "sessionRevokeAllConfirm": "Sign out all other devices? They will need to sign in again.",
+      "linkedAccountsTitle": "Linked accounts",
+      "linkedAccountsHint": "The accounts used to sign in to DONNA.",
+      "linkedAccountsEmpty": "No linked account.",
+      "linkedAccountConnect": "Connect",
+      "linkedAccountUnlink": "Unlink",
+      "linkedAccountUnlinkConfirm": "Unlink this account? You won't be able to use it to sign in anymore.",
+      "linkedSince": "Linked on {date}",
+      "loadFailed": "Some security information could not be loaded."
+    },
+    "viewer": {
+      "title": "File preview",
+      "close": "Close",
+      "download": "Download",
+      "open": "Preview {name}",
+      "loading": "Opening file…",
+      "loadError": "The file could not be opened. You can download it.",
+      "parseError": "This file cannot be shown here. Download it to open it.",
+      "tooLarge": "File too large to preview (over 20 MB). Download it to open it.",
+      "unsupported": "No preview for this file type. Download it to open it.",
+      "truncatedText": "Preview limited to the start of the file.",
+      "truncatedRows": "Preview limited to the first {n} rows.",
+      "emptySheet": "This sheet is empty.",
+      "sheets": "Sheets",
+      "kinds": {
+        "pdf": "PDF document",
+        "image": "Image",
+        "docx": "Word document",
+        "xlsx": "Excel workbook",
+        "csv": "CSV table",
+        "markdown": "Markdown text",
+        "text": "Text file",
+        "other": "File"
+      }
     }
   },
   "invite": {

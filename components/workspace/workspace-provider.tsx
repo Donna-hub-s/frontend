@@ -2,7 +2,16 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useProjectCapacityWs } from "@/lib/use-project-ws";
-import type { ConversationOut, MentionSelection, PendingActionOut, ProjectOut, Step } from "@/lib/workspace-types";
+import type {
+  ConversationOut,
+  MentionSelection,
+  PendingActionOut,
+  ProjectOut,
+  Step,
+} from "@/lib/workspace-types";
+
+/** Fichier ouvert dans la visionneuse (file-viewer.tsx). `url` : chemin /api/donna/… */
+export type FilePreview = { url: string; name: string };
 
 type Activity = { status: "idle" | "running" | "done" | "error"; steps: Step[] };
 
@@ -25,6 +34,11 @@ type WorkspaceValue = {
   decisions: Record<string, "confirm" | "cancel">;
   activity: Activity;
   setActivity: (activity: Activity) => void;
+  preview: FilePreview | null;
+  setPreview: (file: FilePreview | null) => void;
+  /** Fenêtre des paramètres (settings-dialog.tsx). */
+  settingsOpen: boolean;
+  setSettingsOpen: (open: boolean) => void;
   /** Fenêtre de recherche (Ctrl+K / ⌘K). */
   searchOpen: boolean;
   setSearchOpen: (open: boolean) => void;
@@ -73,6 +87,8 @@ export function WorkspaceProvider({
   const [decisions, setDecisions] = useState<Record<string, "confirm" | "cancel">>({});
   const [activity, setActivity] = useState<Activity>({ status: "idle", steps: [] });
   const [searchOpen, setSearchOpen] = useState(false);
+  const [preview, setPreview] = useState<FilePreview | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [projects, setProjects] = useState(initialProjects);
   const [projectDraft, setProjectDraft] = useState<ProjectDraft | null>(null);
 
@@ -160,6 +176,10 @@ export function WorkspaceProvider({
       setActivity,
       searchOpen,
       setSearchOpen,
+      preview,
+      setPreview,
+      settingsOpen,
+      setSettingsOpen,
       projects,
       upsertProject,
       removeProject,
@@ -178,6 +198,8 @@ export function WorkspaceProvider({
       decisions,
       activity,
       searchOpen,
+      preview,
+      settingsOpen,
       projects,
       upsertProject,
       removeProject,

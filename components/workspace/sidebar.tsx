@@ -418,6 +418,7 @@ function ConversationItem({
 }
 
 function AccountMenu({ lang, labels, languageLabel, account }: { lang: Locale; labels: Labels; languageLabel: string; account: Account }) {
+  const { setSettingsOpen } = useWorkspace();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -443,13 +444,17 @@ function AccountMenu({ lang, labels, languageLabel, account }: { lang: Locale; l
             <LanguageSwitch current={lang} label={languageLabel} />
           </div>
           <div className="mt-1.5 border-t border-border pt-1.5">
-            <Link
-              href={`/${lang}/app/settings`}
-              className="flex w-full items-center gap-2.5 rounded-badge px-2 py-2 text-left text-label text-ink no-underline hover:bg-active"
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                setSettingsOpen(true);
+              }}
+              className="flex w-full items-center gap-2.5 rounded-badge px-2 py-2 text-left text-label text-ink hover:bg-active"
             >
               <SettingsIcon size={17} className="text-ink-2" />
               {labels.settings}
-            </Link>
+            </button>
           </div>
           <form action={logout} className="mt-1.5 border-t border-border pt-1.5">
             <input type="hidden" name="lang" value={lang} />

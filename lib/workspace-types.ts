@@ -36,7 +36,7 @@ export type StepStatus = "running" | "done";
 /** Étape visible du traitement : lecture, appel d'outil, rédaction. */
 export type Step = {
   id: string;
-  /** « read », « answer », « files », ou nom d'outil backend (search_emails, wa_send…). */
+  /** « read », « answer », « files », ou nom d'outil backend (search_emails, search_drive_files…). */
   key: string;
   status: StepStatus;
   at: number;

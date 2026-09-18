@@ -13,9 +13,16 @@ const ALLOWED = [
   /^chat(\/|$)/,
   /^rag\/documents\/[^/]+\/file$/,
   /^auth\/oauth\/me\/accounts$/,
+  /^auth\/oauth\/[^/]+\/unlink$/,
   /^profile(\/|$)/,
   /^auth\/ws\/ticket$/,
   /^rag\/documents$/,
+  // Fenêtre des paramètres, onglet Sécurité (settings-dialog.tsx).
+  /^auth\/me$/,
+  /^auth\/sessions(\/[^/]+)?$/,
+  /^auth\/mfa\/(setup|enable|verify|backup-codes\/regenerate)$/,
+  /^auth\/mfa\/?$/,
+  /^auth\/password\/(change|set)$/,
 ];
 
 // En-têtes de réponse relayés (le reste — cookies backend, CORS — reste côté serveur).

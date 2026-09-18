@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { WorkspaceShell } from "@/components/workspace/shell";
 import { isLocale } from "@/i18n/config";
 import { getClaims, getConnectors, getTenant, listConversations, listPendingActions, listProjects } from "@/lib/api";
+import { getOAuthProviders } from "@/lib/backend";
 import { accountIdentity } from "@/lib/workspace-server";
 import { getDictionary } from "../dictionaries";
 
@@ -27,7 +28,7 @@ export default async function WorkspaceLayout({ children, params }: LayoutProps<
   if (!isLocale(lang)) notFound();
 
   const claims = await getClaims();
-  const [dict, conversations, pending, identity, connectors, tenant, projects] = await Promise.all([
+  const [dict, conversations, pending, identity, connectors, tenant, projects, oauthProviders] = await Promise.all([
     getDictionary(lang),
     listConversations(),
     listPendingActions(),
@@ -35,6 +36,7 @@ export default async function WorkspaceLayout({ children, params }: LayoutProps<
     getConnectors(),
     claims?.tenant_id ? getTenant(claims.tenant_id) : Promise.resolve(null),
     listProjects(),
+    getOAuthProviders(),
   ]);
 
   return (
@@ -47,6 +49,7 @@ export default async function WorkspaceLayout({ children, params }: LayoutProps<
       conversations={conversations}
       pending={pending}
       projects={projects}
+      oauthProviders={oauthProviders}
       wsBaseUrl={wsBaseUrl()}
     >
       {children}

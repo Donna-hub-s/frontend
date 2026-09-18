@@ -43,7 +43,7 @@ export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: Work
   const { panel } = dict;
 
   return (
-    <aside aria-label={panel.label} className="scrollbar-none hidden w-[20rem] shrink-0 flex-col gap-4 overflow-y-auto border-l border-border bg-page p-4 xl:flex">
+    <aside aria-label={panel.label} className="scrollbar-none hidden w-[20rem] shrink-0 flex-col gap-4 overflow-y-auto bg-page p-4 xl:flex">
       <section className="rounded-panel bg-surface">
         <header className="flex items-center justify-between border-b border-border px-4 py-3.5">
           <h2 className="text-panel-title font-medium text-ink">{panel.activity}</h2>

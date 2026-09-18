@@ -168,3 +168,57 @@ export const MicIcon = (p: IconProps) => (
     <path d="M10 15v2.5M7 17.5h6" />
   </Icon>
 );
+export const DownloadIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M10 3.5v9M6 8.5l4 4 4-4" />
+    <path d="M4.5 14.5v1a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-1" />
+  </Icon>
+);
+export const UserIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="10" cy="7" r="3.2" />
+    <path d="M3.8 16.8a6.4 6.4 0 0 1 12.4 0" />
+  </Icon>
+);
+export const BellIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M5.2 13.5V9a4.8 4.8 0 0 1 9.6 0v4.5l1.4 1.8H3.8l1.4-1.8Z" />
+    <path d="M8.3 17.3a1.9 1.9 0 0 0 3.4 0" />
+  </Icon>
+);
+export const SlidersIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M4 6h7M15 6h1M4 14h1M9 14h7" />
+    <circle cx="13" cy="6" r="2" />
+    <circle cx="7" cy="14" r="2" />
+  </Icon>
+);
+export const PlugIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M7.5 3v3.5M12.5 3v3.5M5.5 6.5h9v2.8a4.5 4.5 0 0 1-9 0V6.5ZM10 13.8V17" />
+  </Icon>
+);
+export const ExternalIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M11.5 3.5h5v5M16.5 3.5 9.5 10.5" />
+    <path d="M14.5 11.5v3a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3" />
+  </Icon>
+);
+export const ShieldIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M10 2.8 16 5v4.3c0 4-2.5 7-6 8.7-3.5-1.7-6-4.7-6-8.7V5l6-2.2Z" />
+    <path d="M7.3 10 9.2 11.9 12.7 8.2" />
+  </Icon>
+);
+export const LaptopIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="4" y="4.5" width="12" height="8" rx="1.2" />
+    <path d="M2.5 16h15M8.5 16v-1.5M11.5 16v-1.5" />
+  </Icon>
+);
+export const KeyIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="7" cy="13" r="3.3" />
+    <path d="M9.3 10.7 15.5 4.5M13 7l2 2M15.5 4.5 17.5 6.5" />
+  </Icon>
+);

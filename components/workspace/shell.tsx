@@ -9,6 +9,8 @@ import { ChevronIcon, MenuIcon } from "./icons";
 import { SearchPalette } from "./search-palette";
 import { ConnectorRows, SidePanel } from "./side-panel";
 import { Sidebar, type Account } from "./sidebar";
+import { FileViewer } from "./file-viewer";
+import { SettingsDialog } from "./settings-dialog";
 import { WorkspaceProvider } from "./workspace-provider";
 
 /** Cadre de l'espace de travail : barre latérale | conversation | panneau d'activité. */
@@ -21,6 +23,7 @@ export function WorkspaceShell({
   conversations,
   pending,
   projects,
+  oauthProviders,
   wsBaseUrl = null,
   children,
 }: {
@@ -32,6 +35,8 @@ export function WorkspaceShell({
   conversations: ConversationOut[];
   pending: PendingActionOut[];
   projects: ProjectOut[];
+  /** Fournisseurs OAuth réellement configurés côté backend (comptes liés, settings-dialog.tsx). */
+  oauthProviders: string[];
   wsBaseUrl?: string | null;
   children: ReactNode;
 }) {
@@ -76,6 +81,8 @@ export function WorkspaceShell({
         <SidePanel lang={lang} dict={dict} connectors={connectors} />
       </div>
       <SearchPalette lang={lang} labels={dict.sidebar} />
+      <SettingsDialog lang={lang} dict={dict} account={account} connectors={connectors} oauthProviders={oauthProviders} />
+      <FileViewer lang={lang} labels={dict.viewer} />
     </WorkspaceProvider>
   );
 }

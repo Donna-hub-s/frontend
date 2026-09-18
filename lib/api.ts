@@ -127,7 +127,7 @@ export type ProjectOut = {
   updated_at: string;
 };
 
-export type ProjectMemberOut = { user_id: string; role: ProjectRole; invited_by: string; joined_at: string };
+export type ProjectMemberOut = { user_id: string; email: string | null; role: ProjectRole; invited_by: string; joined_at: string };
 
 export type ProjectInviteOut = {
   id: string;
