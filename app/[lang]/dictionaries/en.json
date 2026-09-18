@@ -474,7 +474,8 @@
       "cmdClear": "Clear draft",
       "cmdProject": "Mention a project…",
       "cmdDocument": "Mention a document…",
-      "mentionNoResults": "No results"
+      "mentionNoResults": "No results",
+      "stepRag": "Searching your documents"
     },
     "tools": {
       "remember_fact": "Remembering a detail",

@@ -474,7 +474,8 @@
       "cmdClear": "Vider le brouillon",
       "cmdProject": "Mentionner un projet…",
       "cmdDocument": "Mentionner un document…",
-      "mentionNoResults": "Aucun résultat"
+      "mentionNoResults": "Aucun résultat",
+      "stepRag": "Recherche dans vos documents"
     },
     "tools": {
       "remember_fact": "Mémorisation d'une information",

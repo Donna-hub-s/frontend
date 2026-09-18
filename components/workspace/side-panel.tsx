@@ -9,7 +9,14 @@ import { useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
 
+/** Étapes techniques (lecture de la demande, rédaction) : jamais affichées seules —
+ * une question simple ne déclenche aucun panneau d'étapes. */
+export const TECHNICAL_STEPS = new Set(["read", "answer"]);
+
+export const visibleSteps = (steps: Step[]) => steps.filter((step) => !TECHNICAL_STEPS.has(step.key));
+
 export const stepLabel = (dict: WorkspaceDict, key: string) => {
+  if (key === "rag") return dict.chat.stepRag;
   if (key === "read") return dict.chat.stepRead;
   if (key === "answer") return dict.chat.stepAnswer;
   if (key === "files") return dict.chat.stepFiles;
@@ -37,7 +44,7 @@ export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: Work
 
   return (
     <aside aria-label={panel.label} className="scrollbar-none hidden w-[20rem] shrink-0 flex-col gap-4 overflow-y-auto border-l border-border bg-page p-4 xl:flex">
-      <section className="rounded-panel bg-surface shadow-card">
+      <section className="rounded-panel bg-surface">
         <header className="flex items-center justify-between border-b border-border px-4 py-3.5">
           <h2 className="text-panel-title font-medium text-ink">{panel.activity}</h2>
           {activity.status === "running" && (
@@ -70,7 +77,7 @@ export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: Work
         )}
       </section>
 
-      <section className="rounded-panel bg-surface shadow-card">
+      <section className="rounded-panel bg-surface">
         <header className="flex items-center justify-between border-b border-border px-4 py-3.5">
           <h2 className="text-panel-title font-medium text-ink">{panel.pending}</h2>
           {pending.length > 0 && (
@@ -88,7 +95,7 @@ export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: Work
         )}
       </section>
 
-      <section className="rounded-panel bg-surface shadow-card">
+      <section className="rounded-panel bg-surface">
         <header className="border-b border-border px-4 py-3.5">
           <h2 className="text-panel-title font-medium text-ink">{panel.connectors}</h2>
         </header>

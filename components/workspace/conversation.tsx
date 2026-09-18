@@ -21,7 +21,7 @@ import {
 } from "@/lib/workspace-types";
 import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, SendIcon, StopIcon } from "./icons";
 import { Markdown } from "./markdown";
-import { StepDot, stepLabel } from "./side-panel";
+import { StepDot, stepLabel, visibleSteps } from "./side-panel";
 import { useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
@@ -88,7 +88,10 @@ export function Conversation({
       const setSteps = (next: Step[], status: "running" | "done" | "error" = "running") => {
         steps = next;
         update({ steps: next });
-        setActivity({ status, steps: next });
+        // Panneau d'activité : rien pour une question simple (lecture puis rédaction) ;
+        // il ne s'ouvre que si DONNA cherche dans vos documents ou utilise un outil.
+        const shown = visibleSteps(next);
+        setActivity(shown.length ? { status, steps: shown } : { status: "idle", steps: [] });
       };
       const finishSteps = () => steps.map((s) => (s.status === "running" ? { ...s, status: "done" as const } : s));
 
@@ -166,7 +169,11 @@ export function Conversation({
               }
               update((m) => ({ content: m.content + event.content }));
             } else if (event.type === "sources") {
+              // Recherche documentaire effectuée avant l'ouverture du flux : étape rétroactive.
               update({ sources: event.sources });
+              if (event.sources.length) {
+                setSteps([{ id: uid(), key: "rag", status: "done", at: Date.now() }, ...finishSteps()]);
+              }
             } else if (event.type === "tool_start") {
               // Étape affichée « en cours » pendant l'exécution de l'outil.
               answering = false;
@@ -388,7 +395,7 @@ function AssistantMessage({
         <DonnaMark size={28} variant="circle" label="DONNA" />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-3">
-        {message.steps && message.steps.length > 0 && <StepsCard lang={lang} dict={dict} message={message} />}
+        {visibleSteps(message.steps ?? []).length > 0 && <StepsCard lang={lang} dict={dict} message={message} />}
 
         {message.content ? (
           <div aria-live={streaming ? "polite" : undefined}>
@@ -469,7 +476,7 @@ function AssistantMessage({
 function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict; message: ChatMessage }) {
   const streaming = message.status === "streaming";
   const [open, setOpen] = useState(true);
-  const steps = message.steps ?? [];
+  const steps = visibleSteps(message.steps ?? []);
   const expanded = streaming || open;
 
   return (
