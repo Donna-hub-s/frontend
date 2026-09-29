@@ -3,7 +3,8 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { locales, localeNames, type Locale } from "@/i18n/config";
-import type { ConnectorsOut, ProfileOut } from "@/lib/workspace-types";
+import type { ConnectorsOut, ProfileOut, SkillKey } from "@/lib/workspace-types";
+import { SKILL_KEYS } from "@/lib/workspace-types";
 import { Dialog } from "./dialog";
 import { BellIcon, CloseIcon, PlugIcon, ShieldIcon, SlidersIcon, UserIcon } from "./icons";
 import { SecurityPane } from "./security-pane";
@@ -12,7 +13,7 @@ import { useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
 type Labels = WorkspaceDict["settings"];
-type Tab = "profile" | "security" | "preferences" | "notifications" | "connectors";
+type Tab = "profile" | "security" | "preferences" | "skills" | "notifications" | "connectors";
 type Account = { name: string; email: string; initials: string; workspace: string | null };
 
 /** Champs modifiables de GET/PATCH /app/profile/me. */
@@ -26,7 +27,7 @@ type Draft = {
   notify_reminders_email: boolean;
   notify_reminders_whatsapp: boolean;
   whatsapp_notify_number: string;
-};
+} & { [K in SkillKey]: boolean };
 
 const toDraft = (p: ProfileOut): Draft => ({
   display_name: p.display_name ?? "",
@@ -38,6 +39,13 @@ const toDraft = (p: ProfileOut): Draft => ({
   notify_reminders_email: p.notify_reminders_email,
   notify_reminders_whatsapp: p.notify_reminders_whatsapp,
   whatsapp_notify_number: p.whatsapp_notify_number ?? "",
+  enable_web_search: p.enable_web_search,
+  enable_sub_agents: p.enable_sub_agents,
+  enable_reminders: p.enable_reminders,
+  enable_memory: p.enable_memory,
+  enable_email_calendar: p.enable_email_calendar,
+  enable_drive: p.enable_drive,
+  enable_create_document: p.enable_create_document,
 });
 
 const fieldClass =
@@ -123,20 +131,22 @@ function SettingsBody({
     if (!draft) return;
     setBusy(true);
     setStatus("idle");
+    const body: Record<string, unknown> = {
+      display_name: draft.display_name.trim() || null,
+      avatar_url: draft.avatar_url.trim() || null,
+      timezone: draft.timezone.trim() || "UTC",
+      language: draft.language || null,
+      preferred_tts_voice: draft.preferred_tts_voice.trim() || null,
+      default_force_web_search: draft.default_force_web_search,
+      notify_reminders_email: draft.notify_reminders_email,
+      notify_reminders_whatsapp: draft.notify_reminders_whatsapp,
+      whatsapp_notify_number: draft.whatsapp_notify_number.trim() || null,
+    };
+    for (const key of SKILL_KEYS) body[key] = draft[key];
     const response = await fetch("/api/donna/profile/me", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        display_name: draft.display_name.trim() || null,
-        avatar_url: draft.avatar_url.trim() || null,
-        timezone: draft.timezone.trim() || "UTC",
-        language: draft.language || null,
-        preferred_tts_voice: draft.preferred_tts_voice.trim() || null,
-        default_force_web_search: draft.default_force_web_search,
-        notify_reminders_email: draft.notify_reminders_email,
-        notify_reminders_whatsapp: draft.notify_reminders_whatsapp,
-        whatsapp_notify_number: draft.whatsapp_notify_number.trim() || null,
-      }),
+      body: JSON.stringify(body),
     }).catch(() => null);
     setBusy(false);
     if (response?.ok) {
@@ -149,6 +159,7 @@ function SettingsBody({
     { key: "profile", label: labels.navProfile, icon: <UserIcon size={17} /> },
     { key: "security", label: labels.navSecurity, icon: <ShieldIcon size={17} /> },
     { key: "preferences", label: labels.navPreferences, icon: <SlidersIcon size={17} /> },
+    { key: "skills", label: labels.navSkills, icon: <SlidersIcon size={17} /> },
     { key: "notifications", label: labels.navNotifications, icon: <BellIcon size={17} /> },
     { key: "connectors", label: labels.navConnectors, icon: <PlugIcon size={17} /> },
   ];
@@ -213,6 +224,8 @@ function SettingsBody({
             <ProfilePane lang={lang} labels={labels} account={account} draft={draft} update={update} />
           ) : tab === "preferences" ? (
             <PreferencesPane labels={labels} draft={draft} update={update} />
+          ) : tab === "skills" ? (
+            <SkillsPane labels={labels} draft={draft} update={update} />
           ) : (
             <NotificationsPane labels={labels} account={account} draft={draft} update={update} />
           )}
@@ -393,6 +406,26 @@ function PreferencesPane({ labels, draft, update }: PaneProps) {
           <input id={id} value={draft.preferred_tts_voice} onChange={(e) => update("preferred_tts_voice", e.target.value)} placeholder="fr_FR-siwis-medium" className={fieldClass} />
         )}
       </Field>
+    </Pane>
+  );
+}
+
+function SkillsPane({ labels, draft, update }: PaneProps) {
+  return (
+    <Pane title={labels.navSkills} hint={labels.skillsHint}>
+      {SKILL_KEYS.map((key, index) => {
+        const copy = labels.skill[key];
+        return (
+          <div key={key} className={index > 0 ? "border-t border-border" : undefined}>
+            <Toggle
+              label={copy.label}
+              hint={copy.description}
+              checked={draft[key]}
+              onChange={(value) => update(key, value)}
+            />
+          </div>
+        );
+      })}
     </Pane>
   );
 }

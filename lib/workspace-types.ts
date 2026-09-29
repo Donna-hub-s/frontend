@@ -31,6 +31,30 @@ export type {
   SourceOut,
 };
 
+/** Clé de skill = nom d'un champ `enable_*` de ProfileOut (./api). */
+export type SkillKey =
+  | "enable_web_search"
+  | "enable_sub_agents"
+  | "enable_reminders"
+  | "enable_memory"
+  | "enable_email_calendar"
+  | "enable_drive"
+  | "enable_create_document";
+
+/** Ordre d'affichage des skills. Vit ici et pas dans ./api : ce module est
+ * côté navigateur, ./api est `server-only` (un réexport de valeur l'y
+ * entraînerait). Les libellés sont dans les dictionnaires
+ * (settings.skill.<clé>), voir settings-dialog.tsx. */
+export const SKILL_KEYS: SkillKey[] = [
+  "enable_web_search",
+  "enable_memory",
+  "enable_reminders",
+  "enable_email_calendar",
+  "enable_drive",
+  "enable_create_document",
+  "enable_sub_agents",
+];
+
 export type StepStatus = "running" | "done";
 
 /** Étape visible du traitement : lecture, appel d'outil, rédaction. */

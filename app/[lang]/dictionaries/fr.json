@@ -668,6 +668,17 @@
       "navPreferences": "Préférences",
       "navNotifications": "Notifications",
       "navConnectors": "Connecteurs",
+      "navSkills": "Compétences",
+      "skillsHint": "Ce que DONNA peut faire dans vos conversations. Une compétence désactivée retire ses outils à DONNA : elle ne pourra plus l'utiliser tant qu'elle est inactive. Cela ne retire aucun droit d'accès à vos données.",
+      "skill": {
+        "enable_web_search": { "label": "Recherche web", "description": "Chercher sur Internet pendant une conversation." },
+        "enable_memory": { "label": "Mémoire", "description": "Retenir des informations vous concernant et les retrouver plus tard." },
+        "enable_reminders": { "label": "Rappels", "description": "Programmer des rappels et les annuler." },
+        "enable_email_calendar": { "label": "E-mail et agenda", "description": "Consulter vos e-mails et votre agenda, préparer un envoi ou un rendez-vous. L'envoi reste toujours soumis à votre confirmation." },
+        "enable_drive": { "label": "Google Drive", "description": "Rechercher, lire et joindre des fichiers de votre Drive." },
+        "enable_create_document": { "label": "Création de documents", "description": "Rédiger des documents Word, Excel ou PDF à votre demande." },
+        "enable_sub_agents": { "label": "Sous-agents", "description": "Déléguer un travail long ou spécialisé (analyse, rédaction) à un agent dédié." }
+      },
       "profileHint": "Comment DONNA vous nomme, et l'heure qu'elle utilise pour vos rappels et rendez-vous.",
       "displayNameHint": "Utilisé par DONNA pour s'adresser à vous.",
       "avatarHint": "Lien https vers une image. Laissez vide pour afficher vos initiales.",

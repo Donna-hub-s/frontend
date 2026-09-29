@@ -668,6 +668,17 @@
       "navPreferences": "Preferences",
       "navNotifications": "Notifications",
       "navConnectors": "Connectors",
+      "navSkills": "Skills",
+      "skillsHint": "What DONNA can do in your conversations. Turning a skill off removes its tools from DONNA: she can no longer use it while it is off. This does not withdraw any access rights to your data.",
+      "skill": {
+        "enable_web_search": { "label": "Web search", "description": "Search the web during a conversation." },
+        "enable_memory": { "label": "Memory", "description": "Remember information about you and recall it later." },
+        "enable_reminders": { "label": "Reminders", "description": "Set and cancel reminders." },
+        "enable_email_calendar": { "label": "Email and calendar", "description": "Browse your email and calendar, draft a message or a meeting. Sending always still requires your approval." },
+        "enable_drive": { "label": "Google Drive", "description": "Search, read and attach files from your Drive." },
+        "enable_create_document": { "label": "Document creation", "description": "Write Word, Excel or PDF documents on request." },
+        "enable_sub_agents": { "label": "Sub-agents", "description": "Delegate long or specialised work (analysis, writing) to a dedicated agent." }
+      },
       "profileHint": "How DONNA addresses you, and the time zone used for your reminders and meetings.",
       "displayNameHint": "Used by DONNA when talking to you.",
       "avatarHint": "An https link to an image. Leave empty to show your initials.",

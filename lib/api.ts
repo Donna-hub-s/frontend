@@ -105,6 +105,20 @@ export type ProfileOut = {
   notify_reminders_email: boolean;
   notify_reminders_whatsapp: boolean;
   whatsapp_notify_number: string | null;
+  theme: string;
+  date_format: string;
+  measurement_system: string;
+  /** Skills activables — clés alignées sur `_SKILL_TOOLS`
+   * (backend/app/chat/src/tools.py). Une skill désactivée retire ses outils
+   * au modèle ; ne peut qu'enlever, jamais accorder (les droits viennent de
+   * xauth). Toutes vraies par défaut. */
+  enable_web_search: boolean;
+  enable_sub_agents: boolean;
+  enable_reminders: boolean;
+  enable_memory: boolean;
+  enable_email_calendar: boolean;
+  enable_drive: boolean;
+  enable_create_document: boolean;
   created_at: string;
   updated_at: string;
 };
