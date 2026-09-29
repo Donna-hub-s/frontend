@@ -4,16 +4,15 @@ import { useState, type ReactNode } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { GmailIcon, GoogleCalendarIcon, GoogleDriveIcon, WhatsAppIcon } from "./brand-icons";
+import { visibleSteps } from "@/lib/chat-run";
 import { parseBackendDate, type ConnectorsOut, type PendingActionOut, type Step } from "@/lib/workspace-types";
 import { useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
 
-/** Étapes techniques (lecture de la demande, rédaction) : jamais affichées seules —
- * une question simple ne déclenche aucun panneau d'étapes. */
-export const TECHNICAL_STEPS = new Set(["read", "answer"]);
-
-export const visibleSteps = (steps: Step[]) => steps.filter((step) => !TECHNICAL_STEPS.has(step.key));
+// Défini avec l'orchestration du flux (lib/chat-run) : le provider en a besoin
+// pour alimenter le panneau sans créer de cycle d'import.
+export { visibleSteps };
 
 export const stepLabel = (dict: WorkspaceDict, key: string) => {
   if (key === "rag") return dict.chat.stepRag;

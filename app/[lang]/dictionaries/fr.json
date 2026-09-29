@@ -391,6 +391,19 @@
       "signOut": "Se déconnecter",
       "owner": "Espace de travail",
       "inMessages": "Dans les messages",
+      "preview": {
+        "loading": "Chargement de l'aperçu…",
+        "empty": "Aucun message dans cette conversation.",
+        "you": "Vous",
+        "donna": "Donna"
+      },
+      "groupBy": "Trier les conversations",
+      "byDate": "Date",
+      "byProject": "Projet",
+      "noProject": "Sans projet",
+      "unread": "conversation(s) non lue(s)",
+      "newResponse": "Nouvelle réponse de Donna",
+      "newQuestion": "Donna pose une question",
       "searching": "Recherche…",
       "searchPlaceholder": "Rechercher une conversation ou un message…",
       "searchTitles": "Conversations",
@@ -463,7 +476,8 @@
       "cmdProject": "Mentionner un projet…",
       "cmdDocument": "Mentionner un document…",
       "mentionNoResults": "Aucun résultat",
-      "stepRag": "Recherche dans vos documents"
+      "stepRag": "Recherche dans vos documents",
+      "jumpToLatest": "Aller au plus récent"
     },
     "tools": {
       "remember_fact": "Mémorisation d'une information",

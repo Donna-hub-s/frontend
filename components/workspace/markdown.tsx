@@ -2,11 +2,35 @@
 
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { isBareUrlLink, LinkCard, linkCardData } from "./link-card";
+
+/** Un paragraphe réduit à un seul lien « nu » (le texte EST l'URL) devient une
+ * carte ; c'est la forme que prend une source citée par DONNA. On inspecte le
+ * nœud hast plutôt que les children React : c'est structurel, et insensible à
+ * la façon dont react-markdown découpe le texte. */
+function bareUrlHref(node: unknown): string | undefined {
+  const children = (node as { children?: unknown[] } | undefined)?.children;
+  if (!Array.isArray(children) || children.length !== 1) return undefined;
+  const child = children[0] as { type?: string; tagName?: string; properties?: { href?: string }; children?: unknown[] } | undefined;
+  if (child?.type !== "element" || child.tagName !== "a") return undefined;
+  const href = child.properties?.href;
+  // Le texte visible doit être l'URL elle-même, pas un titre ancré dessus.
+  const text = (child.children ?? [])
+    .map((c) => (c as { value?: string }).value ?? "")
+    .join("")
+    .trim();
+  return isBareUrlLink(href, text) ? href : undefined;
+}
 
 // Rendu des réponses de DONNA. Pas de HTML brut (react-markdown l'ignore par défaut) :
 // le contenu vient d'un modèle et peut refléter des données externes (emails, pages web).
 const components: Components = {
-  p: ({ children }) => <p className="my-3 first:mt-0 last:mb-0">{children}</p>,
+  p: ({ children, node }) => {
+    const href = bareUrlHref(node);
+    const card = linkCardData(href);
+    if (card) return <LinkCard data={card} />;
+    return <p className="my-3 first:mt-0 last:mb-0">{children}</p>;
+  },
   a: ({ href, children }) => (
     <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="underline decoration-rose-300 underline-offset-2">
       {children}

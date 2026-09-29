@@ -7,35 +7,27 @@ import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { DonnaMark } from "@/components/brand/donna-mark";
 import { DonnaOrb, type OrbState } from "@/components/brand/donna-orb";
 import { FileLink } from "./file-viewer";
-import { actionIdFrom, readChatStream } from "@/lib/chat-stream";
+import { actionIdFrom } from "@/lib/chat-stream";
+import { EMPTY_MENTIONS, PROPOSALS, uid, visibleSteps } from "@/lib/chat-run";
+import { useStickToBottom } from "@/lib/use-stick-to-bottom";
 import {
-  EMPTY_MENTIONS,
   fileHref,
-  type AttachmentOut,
   type ChatMessage,
   type Mention,
   type MentionKind,
   type MentionSelection,
   type PersonalDocumentOut,
   type SourceOut,
-  type Step,
   type ToolCall,
 } from "@/lib/workspace-types";
 import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, SendIcon, StopIcon } from "./icons";
 import { Markdown } from "./markdown";
-import { StepDot, stepLabel, visibleSteps } from "./side-panel";
+import { StepDot, stepLabel } from "./side-panel";
 import { useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
-type ErrorKind = NonNullable<ChatMessage["error"]>;
-
-const uid = () => crypto.randomUUID();
-const PROPOSALS = new Set(["propose_email", "propose_calendar_event"]);
 
 const MAX_FILES = 5;
-
-const errorFromStatus = (status: number): ErrorKind =>
-  status === 401 ? "session" : status === 429 ? "tooMany" : status >= 500 || status === 0 ? "unavailable" : "generic";
 
 export function Conversation({
   lang,
@@ -59,169 +51,73 @@ export function Conversation({
   projectId?: string;
   projectName?: string;
 }) {
-  const { upsertConversation, refreshConversations, refreshPending, setActivity, projectDraft, setProjectDraft } = useWorkspace();
-  const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
-  const [busy, setBusy] = useState(false);
+  const {
+    send: sendRun,
+    stop,
+    dropMessages,
+    threads,
+    registerThread,
+    releaseThread,
+    resolveThreadKey,
+    setActiveKey,
+    markRead,
+    projectDraft,
+    setProjectDraft,
+  } = useWorkspace();
+  // Fil du provider : l'identifiant de conversation, ou un identifiant local
+  // stable tant que le backend ne l'a pas créée. Le fil survit au démontage,
+  // donc un flux continue quand l'utilisateur ouvre une autre conversation.
+  // Après une création, l'URL bascule sur /c/<id> et la route remonte ce
+  // composant : resolveThreadKey rattrape alors la clé locale qui porte le flux,
+  // sinon la vue repartirait d'un fil vide jusqu'au prochain rechargement.
+  const [localKey] = useState(uid);
+  const threadKey = conversationId ? resolveThreadKey(conversationId) : localKey;
+
+  const thread = threads[threadKey];
+  const messages = thread?.messages ?? initialMessages;
+  const busy = thread?.busy ?? false;
   // L'orbe de l'accueil « écoute » dès que l'utilisateur écrit.
   const [composing, setComposing] = useState(false);
-  const conversationRef = useRef(conversationId);
-  const abortRef = useRef<AbortController | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const stickToBottom = useRef(true);
+  // Le collage en bas repart à chaque conversation (resetKey), pas à chaque
+  // changement de route.
+  const { scrollRef, contentRef, pending: unseenBelow, toBottom, onScroll, stick } = useStickToBottom(conversationId);
 
-  // Le fil reste collé en bas pendant la rédaction, sauf si l'utilisateur remonte lire.
-  useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
-  }, [messages]);
-
-  useEffect(() => () => abortRef.current?.abort(), []);
+  // Déclaration du fil et conversation à l'écran : c'est elle qui alimente le
+  // panneau d'activité et qui est considérée comme lue. Le nettoyage NE coupe
+  // surtout pas le flux, qui vit dans le provider.
+  useEffect(() => {
+    registerThread(threadKey, conversationId, initialMessages);
+    setActiveKey(threadKey);
+    markRead(threadKey);
+    return () => {
+      setActiveKey(null);
+      releaseThread(threadKey);
+    };
+    // `initialMessages` n'est lu qu'à la déclaration : le rejouer écraserait le fil.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [threadKey, conversationId, setActiveKey, markRead, releaseThread, registerThread]);
 
   const send = useCallback(
     async (text: string, files: File[], webSearch = false, mentions: MentionSelection = EMPTY_MENTIONS) => {
       const message = text.trim();
       if ((!message && !files.length) || busy) return;
-      setBusy(true);
-      stickToBottom.current = true;
-
-      const assistantId = uid();
-      let steps: Step[] = [{ id: uid(), key: files.length ? "files" : "read", status: "running", at: Date.now() }];
-      const update = (patch: Partial<ChatMessage> | ((m: ChatMessage) => Partial<ChatMessage>)) =>
-        setMessages((list) =>
-          list.map((m) => (m.id === assistantId ? { ...m, ...(typeof patch === "function" ? patch(m) : patch) } : m)),
-        );
-      const setSteps = (next: Step[], status: "running" | "done" | "error" = "running") => {
-        steps = next;
-        update({ steps: next });
-        // Panneau d'activité : rien pour une question simple (lecture puis rédaction) ;
-        // il ne s'ouvre que si DONNA cherche dans vos documents ou utilise un outil.
-        const shown = visibleSteps(next);
-        setActivity(shown.length ? { status, steps: shown } : { status: "idle", steps: [] });
-      };
-      const finishSteps = () => steps.map((s) => (s.status === "running" ? { ...s, status: "done" as const } : s));
-
-      setMessages((list) => [
-        ...list,
-        { id: uid(), role: "user", content: message, createdAt: Date.now(), attachments: [], localFiles: files.map((f) => f.name) },
-        { id: assistantId, role: "assistant", content: "", createdAt: Date.now(), attachments: [], steps, tools: [], status: "streaming" },
-      ]);
-      setActivity({ status: "running", steps });
-
-      const controller = new AbortController();
-      abortRef.current = controller;
-      const isNew = conversationRef.current === null;
-      let proposed = false;
-
-      const onConversation = (id: string) => {
-        if (!id || conversationRef.current) return;
-        conversationRef.current = id;
-        window.history.replaceState(null, "", `/${lang}/app/c/${id}`);
-        upsertConversation({ id, title: (message || files[0]?.name || dict.meta.newTitle).slice(0, 60), created_at: new Date().toISOString() });
-      };
-
-      try {
-        if (files.length) {
-          // Fichiers joints : route non diffusée en continu (extraction, transcription, RAG).
-          const form = new FormData();
-          if (message) form.set("message", message);
-          if (conversationRef.current) form.set("conversation_id", conversationRef.current);
-          else if (projectId) form.set("project_id", projectId);
-          if (webSearch) form.set("web_search", "true");
-          if (mentions.projectId) form.set("mentioned_project_id", mentions.projectId);
-          if (mentions.documentIds.length) form.set("mentioned_document_ids", JSON.stringify(mentions.documentIds));
-          for (const file of files) form.append("files", file);
-          const response = await fetch("/api/donna/chat/upload", { method: "POST", body: form, signal: controller.signal });
-          if (!response.ok) throw Object.assign(new Error("http"), { kind: errorFromStatus(response.status) });
-          const data = (await response.json()) as {
-            conversation_id: string;
-            reply: string;
-            question: string | null;
-            options: string[];
-            sources: SourceOut[];
-            memory_notes: string[];
-            attachments: AttachmentOut[];
-          };
-          onConversation(data.conversation_id);
-          const tools: ToolCall[] = data.question
-            ? [{ name: "ask_user", arguments: { question: data.question, options: data.options }, result: "" }]
-            : [];
-          setSteps([...finishSteps(), { id: uid(), key: "answer", status: "done", at: Date.now() }], "done");
-          update({ content: data.reply, sources: data.sources, memory: data.memory_notes, attachments: data.attachments, tools, status: "done" });
-        } else {
-          const response = await fetch("/api/donna/chat/stream", {
-            method: "POST",
-            headers: { "content-type": "application/json", accept: "text/event-stream" },
-            body: JSON.stringify({
-              message,
-              conversation_id: conversationRef.current,
-              project_id: conversationRef.current ? undefined : projectId,
-              web_search: webSearch,
-              mentioned_project_id: mentions.projectId,
-              mentioned_document_ids: mentions.documentIds,
-            }),
-            signal: controller.signal,
-          });
-          if (!response.ok) throw Object.assign(new Error("http"), { kind: errorFromStatus(response.status) });
-
-          let answering = false;
-          let finished = false;
-          for await (const event of readChatStream(response)) {
-            if (event.type === "start") onConversation(event.conversationId);
-            else if (event.type === "delta") {
-              if (!answering) {
-                answering = true;
-                setSteps([...finishSteps(), { id: uid(), key: "answer", status: "running", at: Date.now() }]);
-              }
-              update((m) => ({ content: m.content + event.content }));
-            } else if (event.type === "sources") {
-              // Recherche documentaire effectuée avant l'ouverture du flux : étape rétroactive.
-              update({ sources: event.sources });
-              if (event.sources.length) {
-                setSteps([{ id: uid(), key: "rag", status: "done", at: Date.now() }, ...finishSteps()]);
-              }
-            } else if (event.type === "tool_start") {
-              // Étape affichée « en cours » pendant l'exécution de l'outil.
-              answering = false;
-              setSteps([...finishSteps(), { id: uid(), key: event.name, status: "running", at: Date.now() }]);
-            } else if (event.type === "tool_call") {
-              answering = false;
-              if (PROPOSALS.has(event.call.name)) proposed = true;
-              const index = steps.findLastIndex((s) => s.key === event.call.name && s.status === "running");
-              setSteps(
-                index >= 0
-                  ? steps.map((s, i) => (i === index ? { ...s, status: "done" as const } : s))
-                  : [...finishSteps(), { id: uid(), key: event.call.name, status: "done", at: Date.now() }],
-              );
-              update((m) => ({ tools: [...(m.tools ?? []), event.call] }));
-            } else if (event.type === "error") {
-              throw Object.assign(new Error("stream"), { kind: "generic" as ErrorKind });
-            } else if (event.type === "done") {
-              finished = true;
-              setSteps(finishSteps(), "done");
-              update({ sources: event.sources, memory: event.memory, attachments: event.attachments, status: "done" });
-            }
-          }
-          if (!finished) throw Object.assign(new Error("interrupted"), { kind: "generic" as ErrorKind });
-        }
-      } catch (error) {
-        if (controller.signal.aborted) {
-          setSteps(finishSteps(), "done");
-          update({ status: "stopped" });
-        } else {
-          const kind = (error as { kind?: ErrorKind }).kind ?? "unavailable";
-          setSteps(finishSteps(), "error");
-          update({ status: "error", error: kind });
-        }
-      } finally {
-        abortRef.current = null;
-        setBusy(false);
-        if (proposed) void refreshPending();
-        // Le titre définitif est généré en arrière-plan par le backend quelques secondes plus tard.
-        if (isNew && conversationRef.current) window.setTimeout(() => void refreshConversations(), 6000);
-      }
+      stick();
+      await sendRun({
+        key: threadKey,
+        message,
+        files,
+        webSearch,
+        mentions,
+        // Le fil connaît déjà l'id si le backend l'a créé lors d'un envoi précédent.
+        conversationId: thread?.conversationId ?? conversationId,
+        projectId,
+        lang,
+        fallbackTitle: message || files[0]?.name || dict.meta.newTitle,
+      });
     },
-    [busy, dict.meta.newTitle, lang, projectId, refreshConversations, refreshPending, setActivity, upsertConversation],
+    [busy, conversationId, dict.meta.newTitle, lang, projectId, sendRun, stick, thread?.conversationId, threadKey],
   );
+
 
   // Brouillon déposé depuis la page projet (project-detail.tsx, même Composer
   // que le chat) — consommé une seule fois au montage, jamais rejoué. En
@@ -240,7 +136,7 @@ export function Conversation({
   const retry = (index: number) => {
     const question = messages[index - 1];
     if (!question || question.role !== "user") return;
-    setMessages((list) => list.filter((_, i) => i !== index && i !== index - 1));
+    dropMessages(threadKey, [index, index - 1]);
     void send(question.content, []);
   };
 
@@ -258,13 +154,10 @@ export function Conversation({
       )}
       <div
         ref={scrollRef}
-        onScroll={(event) => {
-          const el = event.currentTarget;
-          stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
-        }}
+        onScroll={onScroll}
         className="scrollbar-none min-h-0 flex-1 overflow-y-auto"
       >
-        <div className="mx-auto flex w-full max-w-[46rem] flex-col gap-7 px-5 pt-8 pb-10 md:px-8">
+        <div ref={contentRef} className="mx-auto flex w-full max-w-[46rem] flex-col gap-7 px-5 pt-8 pb-10 md:px-8">
           {loadError ? (
             <div className="mt-16 flex flex-col items-center gap-4 text-center">
               <p className="text-message text-ink-2">{dict.chat.loadError}</p>
@@ -295,12 +188,27 @@ export function Conversation({
         </div>
       </div>
 
+      {/* L'utilisateur a remonté lire et du contenu arrive en bas : on ne le
+          tire jamais hors de sa lecture, on lui propose le saut. */}
+      {unseenBelow && (
+        <div className="pointer-events-none relative -mt-12 flex justify-center pb-1">
+          <button
+            type="button"
+            onClick={() => toBottom()}
+            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-meta font-medium text-ink shadow-float hover:bg-active"
+          >
+            <ChevronIcon size={14} />
+            {dict.chat.jumpToLatest}
+          </button>
+        </div>
+      )}
+
       {!loadError && (
         <Composer
           dict={dict}
           busy={busy}
           onSend={send}
-          onStop={() => abortRef.current?.abort()}
+          onStop={() => stop(threadKey)}
           onComposingChange={setComposing}
           autoFocus={empty}
         />
@@ -470,7 +378,7 @@ function AssistantMessage({
           <p className="inline-flex items-start gap-1.5 text-secondary text-ink-2">
             <CheckIcon size={15} className="mt-px shrink-0 text-success" />
             <span>
-              {chat.memory} : {message.memory.join(" · ")}
+              {chat.memory} : {message.memory.length} faits enregistrés · {message.memory.join(" · ")}
             </span>
           </p>
         )}

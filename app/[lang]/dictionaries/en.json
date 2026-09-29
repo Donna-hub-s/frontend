@@ -391,6 +391,19 @@
       "signOut": "Sign out",
       "owner": "Workspace",
       "inMessages": "In messages",
+      "preview": {
+        "loading": "Loading preview…",
+        "empty": "No messages in this conversation.",
+        "you": "You",
+        "donna": "Donna"
+      },
+      "groupBy": "Sort conversations",
+      "byDate": "Date",
+      "byProject": "Project",
+      "noProject": "No project",
+      "unread": "unread conversation(s)",
+      "newResponse": "New response from Donna",
+      "newQuestion": "Donna is asking a question",
       "searching": "Searching…",
       "searchPlaceholder": "Search a conversation or a message…",
       "searchTitles": "Conversations",
@@ -463,7 +476,8 @@
       "cmdProject": "Mention a project…",
       "cmdDocument": "Mention a document…",
       "mentionNoResults": "No results",
-      "stepRag": "Searching your documents"
+      "stepRag": "Searching your documents",
+      "jumpToLatest": "Jump to latest"
     },
     "tools": {
       "remember_fact": "Remembering a detail",

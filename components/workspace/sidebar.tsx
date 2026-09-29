@@ -8,8 +8,9 @@ import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { DonnaLockup } from "@/components/brand/donna-mark";
 import { LanguageSwitch } from "@/components/language-switch";
 import { logout } from "@/lib/auth-actions";
-import { parseBackendDate, type ConversationOut } from "@/lib/workspace-types";
-import { ChatIcon, ChevronIcon, CloseIcon, ComposeIcon, LogoutIcon, MoreIcon, SearchIcon, SettingsIcon } from "./icons";
+import { parseBackendDate, type ConversationOut, type ProjectOut } from "@/lib/workspace-types";
+import { ChatIcon, ChevronIcon, CloseIcon, ComposeIcon, FolderIcon, LogoutIcon, MoreIcon, SearchIcon, SettingsIcon } from "./icons";
+import { ConversationHoverPreview, type PreviewAnchor, useHoverPreview } from "./conversation-hover-preview";
 import { ProjectSidebarSection } from "./project-list";
 import { useWorkspace } from "./workspace-provider";
 
@@ -27,26 +28,47 @@ const useShortcutLabel = () =>
 /** Vrai après hydratation : le regroupement par date dépend du fuseau du navigateur. */
 const useMounted = () => useSyncExternalStore(noopSubscribe, () => true, () => false);
 
-type Group = { key: "today" | "yesterday" | "week" | "earlier"; items: ConversationOut[] };
+type DateKey = "today" | "yesterday" | "week" | "earlier";
+const DATE_KEYS: DateKey[] = ["today", "yesterday", "week", "earlier"];
 
-function groupByDate(conversations: ConversationOut[]): Group[] {
+type Group = { key: string; label: string; items: ConversationOut[] };
+
+/** Découpage par date, dans l'ordre de la barre latérale. */
+function groupByDate(conversations: ConversationOut[], labels: Labels): Group[] {
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const today = startOfToday.getTime();
   const day = 86_400_000;
-  const groups: Group[] = [
-    { key: "today", items: [] },
-    { key: "yesterday", items: [] },
-    { key: "week", items: [] },
-    { key: "earlier", items: [] },
-  ];
+  const buckets: Record<DateKey, ConversationOut[]> = { today: [], yesterday: [], week: [], earlier: [] };
   for (const conversation of conversations) {
     const at = parseBackendDate(conversation.created_at) ?? 0;
-    const index = at >= today ? 0 : at >= today - day ? 1 : at >= today - 7 * day ? 2 : 3;
-    groups[index].items.push(conversation);
+    const key: DateKey = at >= today ? "today" : at >= today - day ? "yesterday" : at >= today - 7 * day ? "week" : "earlier";
+    buckets[key].push(conversation);
   }
-  return groups.filter((group) => group.items.length);
+  return DATE_KEYS.filter((key) => buckets[key].length).map((key) => ({ key, label: labels[key], items: buckets[key] }));
 }
+
+/** Découpage par projet : rend visible à quelles conversations un projet
+ * appartient, et isole celles qui n'en dépendent pas. L'ordre suit la barre
+ * latérale (projets creation), pas l'ordre alphabétique. */
+function groupByProject(conversations: ConversationOut[], projects: ProjectOut[], labels: Labels): Group[] {
+  const known = new Set(projects.map((project) => project.id));
+  const byProject = new Map<string, ConversationOut[]>();
+  const orphans: ConversationOut[] = [];
+  for (const conversation of conversations) {
+    const id = conversation.project_id;
+    if (id && known.has(id)) byProject.set(id, [...(byProject.get(id) ?? []), conversation]);
+    else orphans.push(conversation);
+  }
+  const groups: Group[] = projects
+    .filter((project) => byProject.get(project.id)?.length)
+    .map((project) => ({ key: project.id, label: project.name, items: byProject.get(project.id) ?? [] }));
+  if (orphans.length) groups.push({ key: NO_PROJECT, label: labels.noProject, items: orphans });
+  return groups;
+}
+
+/** Clé interne des conversations sans projet (aucun id ne peut valoir cette valeur). */
+const NO_PROJECT = "__none__";
 
 export function Sidebar({
   lang,
@@ -65,11 +87,16 @@ export function Sidebar({
   open: boolean;
   onClose: () => void;
 }) {
-  const { conversations } = useWorkspace();
+  const { conversations, projects } = useWorkspace();
+  const { notices } = useWorkspace();
+  const unreadCount = Object.keys(notices).length;
   const pathname = usePathname();
   const mounted = useMounted();
   const { setSearchOpen } = useWorkspace();
   const shortcut = useShortcutLabel();
+  // « Par date » (défaut) ou « par projet » : la seconde vue rend explicite le
+  // rattachement d'une conversation à un projet.
+  const [grouping, setGrouping] = useState<"date" | "project">("date");
 
   const activeId = pathname.match(/\/app\/c\/([^/]+)/)?.[1];
   const activeProjectId = pathname.match(/\/app\/projects\/([^/]+)/)?.[1];
@@ -139,13 +166,55 @@ export function Sidebar({
             activeId={activeProjectId}
             onNavigate={onClose}
           />
-          <p className="mt-4 px-2.5 pb-1.5 text-caps font-medium text-ink-3 uppercase">{labels.conversations}</p>
+          <div className="mt-4 flex items-center justify-between gap-2 px-2.5 pb-1.5">
+            <p className="flex items-center gap-2 text-caps font-medium text-ink-3 uppercase">
+              {labels.conversations}
+              {/* Nombre total de fils en attente, toutes conversations. */}
+              {unreadCount > 0 && (
+                <span className="rounded-badge bg-bordeaux-700 px-1.5 py-px text-[10px] leading-4 font-semibold text-white tabular-nums">
+                  {unreadCount}
+                  <span className="sr-only">{labels.unread}</span>
+                </span>
+              )}
+            </p>
+            <div role="group" aria-label={labels.groupBy} className="flex items-center gap-px rounded-badge bg-active p-px">
+              {(["date", "project"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setGrouping(mode)}
+                  aria-pressed={grouping === mode}
+                  className={`rounded-[5px] px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                    grouping === mode ? "bg-white text-ink shadow-sm" : "text-ink-3 hover:text-ink-2"
+                  }`}
+                >
+                  {mode === "date" ? labels.byDate : labels.byProject}
+                </button>
+              ))}
+            </div>
+          </div>
           {!conversations.length ? (
             <p className="px-2.5 py-2 text-secondary text-ink-3">{labels.empty}</p>
-          ) : mounted ? (
-            groupByDate(conversations).map((group) => (
+          ) : grouping === "project" ? (
+            // Par projet : aucun dépend du fuseau du navigateur, donc pas de
+            // garde `mounted` nécessaire — pas d'incohérence à l'hydratation.
+            groupByProject(conversations, projects, labels).map((group) => (
               <div key={group.key} className="mt-2 first:mt-0">
-                <p className="px-2.5 pt-2 pb-1 text-meta text-ink-3">{labels[group.key]}</p>
+                <p className="px-2.5 pt-2 pb-1 text-meta text-ink-3">{group.label}</p>
+                <ConversationList
+                  lang={lang}
+                  items={group.items}
+                  activeId={activeId}
+                  labels={labels}
+                  projectLabels={projectLabels}
+                  onNavigate={onClose}
+                />
+              </div>
+            ))
+          ) : mounted ? (
+            groupByDate(conversations, labels).map((group) => (
+              <div key={group.key} className="mt-2 first:mt-0">
+                <p className="px-2.5 pt-2 pb-1 text-meta text-ink-3">{group.label}</p>
                 <ConversationList lang={lang} items={group.items} activeId={activeId} labels={labels} projectLabels={projectLabels} onNavigate={onClose} />
               </div>
             ))
@@ -175,6 +244,7 @@ function ConversationList({
   projectLabels: Dictionary["workspace"]["projects"];
   onNavigate: () => void;
 }) {
+  const [previewAnchor, setPreviewAnchor] = useState<PreviewAnchor | null>(null);
   return (
     <ul className="flex flex-col gap-px">
       {items.map((conversation) => (
@@ -186,8 +256,12 @@ function ConversationList({
           labels={labels}
           projectLabels={projectLabels}
           onNavigate={onNavigate}
+          onHover={setPreviewAnchor}
         />
       ))}
+      {previewAnchor && (
+        <ConversationHoverPreview anchor={previewAnchor} labels={labels.preview} />
+      )}
     </ul>
   );
 }
@@ -199,6 +273,7 @@ function ConversationItem({
   labels,
   projectLabels,
   onNavigate,
+  onHover,
 }: {
   lang: Locale;
   conversation: ConversationOut;
@@ -206,8 +281,12 @@ function ConversationItem({
   labels: Labels;
   projectLabels: Dictionary["workspace"]["projects"];
   onNavigate: () => void;
+  onHover: (anchor: PreviewAnchor | null) => void;
 }) {
-  const { projects, upsertConversation, removeConversation } = useWorkspace();
+  const { projects, upsertConversation, removeConversation, notices, resolveThreadKey } = useWorkspace();
+  // Les notifications sont indexées sur la clé de fil, qui reste locale pour
+  // une conversation qui vient d'être créée : on résout avant de lire.
+  const noticeFor = (conversation: ConversationOut) => notices[resolveThreadKey(conversation.id)];
   const pathname = usePathname();
   const router = useRouter();
   const [mode, setMode] = useState<"idle" | "menu" | "rename" | "delete" | "move">("idle");
@@ -215,6 +294,15 @@ function ConversationItem({
   const [busy, setBusy] = useState(false);
   const [moveError, setMoveError] = useState(false);
   const itemRef = useRef<HTMLLIElement>(null);
+  // Nom du projet de rattachement, s'il existe encore (un projet supprimé ne
+  // doit pas faire disparaître la conversation de la liste).
+  const projectName = conversation.project_id
+    ? projects.find((project) => project.id === conversation.project_id)?.name
+    : undefined;
+  const hover = useHoverPreview(
+    (anchor) => onHover(anchor),
+    () => onHover(null),
+  );
 
   // Fermeture du menu au clic extérieur ou sur Échap.
   useEffect(() => {
@@ -306,13 +394,42 @@ function ConversationItem({
       <Link
         href={`/${lang}/app/c/${conversation.id}`}
         onClick={onNavigate}
+        onMouseEnter={hover.onMouseEnter}
+        onMouseLeave={hover.onMouseLeave}
+        data-conversation-id={conversation.id}
         aria-current={active ? "page" : undefined}
         className={`flex h-9 items-center gap-2.5 rounded-nav pr-9 pl-2.5 text-label no-underline transition-colors duration-(--duration-fast) ${
           active ? "bg-active font-medium text-ink" : "text-ink-2 hover:bg-active/70 hover:text-ink"
         }`}
       >
-        <ChatIcon size={16} className="shrink-0 text-ink-3" />
-        <span className="truncate">{conversation.title}</span>
+        {projectName ? (
+          <>
+            {/* Conversation rattachée : l'icône dossier remplace celle de la
+                discussion, et le nom du projet rappelle où elle vit. */}
+            <FolderIcon size={16} className="shrink-0 text-ink-3" />
+            <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
+            <span title={projectName} className="min-w-0 max-w-20 shrink-0 truncate text-meta text-ink-3">
+              {projectName}
+            </span>
+          </>
+        ) : (
+          <>
+            <ChatIcon size={16} className="shrink-0 text-ink-3" />
+            <span className="min-w-0 flex-1 truncate">{conversation.title}</span>
+          </>
+        )}
+        {/* Réponse reçue (ou question posée) pendant que l'utilisateur était
+            sur une autre conversation. `question` est mise en avant : elle
+            attend une action de sa part. */}
+        {noticeFor(conversation) && (
+          <span
+            className={`ml-auto size-1.5 shrink-0 rounded-full ${noticeFor(conversation) === "question" ? "bg-bordeaux-700" : "bg-ink-3/50"}`}
+          >
+            <span className="sr-only">
+              {noticeFor(conversation) === "question" ? labels.newQuestion : labels.newResponse}
+            </span>
+          </span>
+        )}
       </Link>
       <button
         type="button"
