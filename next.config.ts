@@ -5,7 +5,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
 
   poweredByHeader: true,
-  swcMinify: true,
   experimental: {
     scrollRestoration: true,
   },
