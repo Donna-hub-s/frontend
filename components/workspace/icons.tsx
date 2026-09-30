@@ -61,6 +61,12 @@ export const StopIcon = (p: IconProps) => (
     <rect x="5.5" y="5.5" width="9" height="9" rx="1.5" />
   </Icon>
 );
+export const SpeakerIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M3.5 7.5h2.8L10 4.2v11.6L6.3 12.5H3.5z" strokeLinejoin="round" />
+    <path d="M13 7.3a4 4 0 0 1 0 5.4M15.3 5a7.2 7.2 0 0 1 0 10" />
+  </Icon>
+);
 export const CheckIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="m4.5 10.5 3.5 3.5 7.5-8" />
@@ -184,6 +190,12 @@ export const BellIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="M5.2 13.5V9a4.8 4.8 0 0 1 9.6 0v4.5l1.4 1.8H3.8l1.4-1.8Z" />
     <path d="M8.3 17.3a1.9 1.9 0 0 0 3.4 0" />
+  </Icon>
+);
+export const ClockIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <circle cx="10" cy="10" r="7.2" />
+    <path d="M10 6v4.2l2.8 1.7" />
   </Icon>
 );
 export const SlidersIcon = (p: IconProps) => (

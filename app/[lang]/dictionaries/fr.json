@@ -452,6 +452,7 @@
       "stepFiles": "Lecture des fichiers joints",
       "draftEmail": "Brouillon d'email",
       "draftEvent": "Rendez-vous à valider",
+      "draftDriveUpload": "Fichier à déposer sur Drive",
       "to": "À",
       "awaiting": "En attente de votre accord",
       "eventActions": {
@@ -477,7 +478,10 @@
       "cmdDocument": "Mentionner un document…",
       "mentionNoResults": "Aucun résultat",
       "stepRag": "Recherche dans vos documents",
-      "jumpToLatest": "Aller au plus récent"
+      "jumpToLatest": "Aller au plus récent",
+      "listen": "Écouter la réponse",
+      "stopListening": "Arrêter la lecture",
+      "listenError": "Lecture audio impossible."
     },
     "tools": {
       "remember_fact": "Mémorisation d'une information",
@@ -490,6 +494,7 @@
       "list_upcoming_events": "Lecture de votre agenda",
       "propose_email": "Préparation d'un email",
       "propose_calendar_event": "Préparation d'un rendez-vous",
+      "propose_drive_upload": "Préparation d'un dépôt Drive",
       "cancel_action": "Annulation d'une action",
       "save_generated_document": "Création d'un document",
       "web_search": "Recherche sur le web",
@@ -514,7 +519,8 @@
       "actionError": "L'action n'a pas pu être traitée. Réessayez.",
       "kinds": {
         "send_email": "Email",
-        "calendar_event": "Agenda"
+        "calendar_event": "Agenda",
+        "drive_upload": "Drive"
       },
       "connectors": "Connecteurs",
       "google": "Google",
@@ -683,6 +689,14 @@
       "navNotifications": "Notifications",
       "navConnectors": "Connecteurs",
       "navSkills": "Compétences",
+      "navReminders": "Rappels",
+      "remindersHint": "Les rappels que DONNA a programmés pour vous. Annulez ceux dont vous n'avez plus besoin.",
+      "remindersEmpty": "Aucun rappel programmé.",
+      "remindersLoadError": "Impossible de charger vos rappels. Réessayez dans un instant.",
+      "remindersNoDate": "Sans date — DONNA vous le ressortira au bon moment.",
+      "remindersCancel": "Annuler",
+      "remindersCancelling": "Annulation…",
+      "remindersCancelError": "Ce rappel n'a pas pu être annulé.",
       "skillsHint": "Ce que DONNA peut faire dans vos conversations. Une compétence désactivée retire ses outils à DONNA : elle ne pourra plus l'utiliser tant qu'elle est inactive. Cela ne retire aucun droit d'accès à vos données.",
       "skill": {
         "enable_web_search": { "label": "Recherche web", "description": "Chercher sur Internet pendant une conversation." },
@@ -800,5 +814,20 @@
     "acceptError": "Impossible de rejoindre le projet.",
     "accepted": "Vous avez rejoint le projet.",
     "goToApp": "Ouvrir Donna"
+  },
+  "workspaceInvite": {
+    "title": "Invitation à un espace",
+    "notFoundOrInvalid": "Cette invitation est introuvable, a expiré, ou a déjà été utilisée.",
+    "intro": "Vous avez été invité·e à rejoindre l'espace « {tenant} ».",
+    "wrongEmail": "Cette invitation a été envoyée à {email}. Connectez-vous avec cette adresse pour l'accepter.",
+    "signIn": "Se connecter",
+    "signUp": "Créer un compte",
+    "signUpHint": "Après avoir créé votre compte avec cette même adresse email, revenez sur ce lien pour rejoindre l'espace.",
+    "accept": "Rejoindre l'espace",
+    "accepting": "Adhésion…",
+    "acceptError": "Impossible de rejoindre cet espace.",
+    "accepted": "Vous avez rejoint l'espace.",
+    "goToApp": "Ouvrir Donna",
+    "missingToken": "Lien d'invitation invalide."
   }
 }

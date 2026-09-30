@@ -59,14 +59,23 @@ export type ConversationOut = {
   updated_at?: string;
 };
 
+export type ToolCallOut = { name: string; arguments: Record<string, unknown>; result: string };
+
 export type MessageOut = {
   role: "user" | "assistant" | string;
   content: string;
   created_at: string | null;
   attachments: AttachmentOut[];
+  // Reconstruit ask_user/propose_email/propose_calendar_event en cartes —
+  // sans ça une conversation rechargée (F5, réouverture) ne montre plus que
+  // le texte brut de ces réponses (voir ANALYSE_COMPLETE.md §3.2).
+  tool_calls?: ToolCallOut[] | null;
 };
 
 export type PendingActionOut = { id: string; kind: string; summary: string; status: string; created_at: string };
+
+/** GET /app/chat/memory/reminders (backend/app/chat/src/schemas.py::ReminderOut). */
+export type ReminderOut = { id: string; content: string; status: string; due_at: string | null; created_at: string };
 
 export type LinkedAccount = {
   provider: string;

@@ -20,7 +20,7 @@ import {
   type SourceOut,
   type ToolCall,
 } from "@/lib/workspace-types";
-import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, SendIcon, StopIcon } from "./icons";
+import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, SendIcon, SpeakerIcon, StopIcon } from "./icons";
 import { Markdown } from "./markdown";
 import { StepDot, stepLabel } from "./side-panel";
 import { useWorkspace } from "./workspace-provider";
@@ -410,9 +410,92 @@ function AssistantMessage({
           </div>
         )}
 
-        {!streaming && <Time lang={lang} at={message.createdAt} />}
+        {!streaming && (
+          <div className="flex items-center gap-2">
+            <Time lang={lang} at={message.createdAt} />
+            {message.content && <ListenButton text={message.content} chat={chat} />}
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+/** Bouton "écouter" — POST /app/chat/speech (Piper, voix du profil résolue
+ * côté serveur). Ne rejoue rien automatiquement : uniquement à la demande,
+ * un clic à la fois (voir synthesize_speech, chat_routes.py). */
+function ListenButton({ text, chat }: { text: string; chat: WorkspaceDict["chat"] }) {
+  const [state, setState] = useState<"idle" | "loading" | "playing" | "error">("idle");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const urlRef = useRef<string | null>(null);
+  // Annule une réponse /speech encore en vol : sans ça, cliquer "annuler"
+  // pendant le chargement n'empêchait pas la lecture de démarrer quand même
+  // une fois la réponse arrivée (l'état passait à idle, mais rien n'ignorait
+  // le fetch déjà lancé).
+  const controllerRef = useRef<AbortController | null>(null);
+
+  const cleanup = useCallback(() => {
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    audioRef.current?.pause();
+    audioRef.current = null;
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => cleanup, [cleanup]);
+
+  const toggle = useCallback(async () => {
+    if (state === "playing" || state === "loading") {
+      cleanup();
+      setState("idle");
+      return;
+    }
+    setState("loading");
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    try {
+      const response = await fetch("/api/donna/chat/speech", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ text }),
+        signal: controller.signal,
+      });
+      if (!response.ok) throw new Error("speech");
+      const url = URL.createObjectURL(await response.blob());
+      if (controller.signal.aborted) {
+        URL.revokeObjectURL(url);
+        return;
+      }
+      urlRef.current = url;
+      const audio = new Audio(url);
+      audio.onended = () => setState("idle");
+      audio.onerror = () => setState("error");
+      audioRef.current = audio;
+      await audio.play();
+      setState("playing");
+    } catch {
+      if (controller.signal.aborted) return;
+      cleanup();
+      setState("error");
+    }
+  }, [cleanup, state, text]);
+
+  const playing = state === "playing" || state === "loading";
+  return (
+    <button
+      type="button"
+      onClick={() => void toggle()}
+      aria-label={playing ? chat.stopListening : chat.listen}
+      title={state === "error" ? chat.listenError : playing ? chat.stopListening : chat.listen}
+      className={`flex size-6 items-center justify-center rounded-full text-ink-3 hover:bg-active hover:text-ink ${
+        state === "error" ? "text-danger" : ""
+      }`}
+    >
+      {playing ? <StopIcon size={13} /> : <SpeakerIcon size={14} />}
+    </button>
   );
 }
 
@@ -476,6 +559,7 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
   const awaiting = !decision && pending.some((a) => a.id === id);
   const args = call.arguments;
   const isEmail = call.name === "propose_email";
+  const isDriveUpload = call.name === "propose_drive_upload";
   const eventAction = text(args.action) as keyof WorkspaceDict["chat"]["eventActions"];
   const when = [text(args.start_datetime), text(args.end_datetime)]
     .filter(Boolean)
@@ -498,7 +582,9 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
   return (
     <div className="rounded-panel border border-border bg-ivoire-50 p-4">
       <div className="flex items-center justify-between gap-3 text-meta">
-        <span className="font-medium text-ink">{isEmail ? dict.chat.draftEmail : dict.chat.draftEvent}</span>
+        <span className="font-medium text-ink">
+          {isEmail ? dict.chat.draftEmail : isDriveUpload ? dict.chat.draftDriveUpload : dict.chat.draftEvent}
+        </span>
         {decision ? (
           <span className={`inline-flex items-center gap-1 ${decision === "confirm" ? "text-success-ink" : "text-ink-3"}`}>
             {decision === "confirm" ? <CheckIcon size={14} /> : <CloseIcon size={14} />}
@@ -520,6 +606,14 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
           </p>
           <p className="mt-0.5 text-label font-medium text-ink">{text(args.subject)}</p>
           <p className="mt-2 text-secondary leading-5 whitespace-pre-wrap text-ink-2">{text(args.body)}</p>
+        </>
+      ) : isDriveUpload ? (
+        <>
+          <p className="mt-3 text-label font-medium text-ink">{text(args.filename)}</p>
+          {text(args.mime_type) && <p className="mt-0.5 text-meta text-ink-3">{text(args.mime_type)}</p>}
+          {text(args.content) && (
+            <p className="mt-2 line-clamp-6 text-secondary leading-5 whitespace-pre-wrap text-ink-2">{text(args.content)}</p>
+          )}
         </>
       ) : (
         <>

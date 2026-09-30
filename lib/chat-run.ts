@@ -18,7 +18,7 @@ export const visibleSteps = (steps: Step[]) => steps.filter((step) => !TECHNICAL
 export const uid = () => crypto.randomUUID();
 
 /** Outils qui créent une action en attente de confirmation humaine. */
-export const PROPOSALS = new Set(["propose_email", "propose_calendar_event"]);
+export const PROPOSALS = new Set(["propose_email", "propose_calendar_event", "propose_drive_upload"]);
 
 export type ErrorKind = NonNullable<ChatMessage["error"]>;
 

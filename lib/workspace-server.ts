@@ -38,5 +38,6 @@ export const toChatMessages = (messages: MessageOut[]): ChatMessage[] =>
       content: m.content,
       createdAt: parseBackendDate(m.created_at),
       attachments: m.attachments,
+      tools: m.tool_calls ?? undefined,
       status: "done",
     }));

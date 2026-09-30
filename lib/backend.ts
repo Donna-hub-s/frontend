@@ -69,6 +69,22 @@ export async function getInvitePreview(token: string): Promise<ProjectInvitePrev
   }
 }
 
+/** Aperçu public d'une invitation à un espace (backend/app/xauth/src/schemas/invite.py::InvitePreview) —
+ * pas de "status" détaillé côté backend, juste `valid` (actif, non utilisé, non expiré). */
+export type WorkspaceInvitePreview = { tenant_name: string; email: string; expires_at: string; valid: boolean };
+
+export async function getWorkspaceInvitePreview(token: string): Promise<WorkspaceInvitePreview | null> {
+  try {
+    const response = await fetch(`${AUTH_BASE}/invites/token/${encodeURIComponent(token)}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+    });
+    return response.ok ? ((await response.json()) as WorkspaceInvitePreview) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Fournisseurs OAuth réellement configurés côté backend ; liste vide si l'API ne répond pas. */
 export async function getOAuthProviders(): Promise<string[]> {
   try {

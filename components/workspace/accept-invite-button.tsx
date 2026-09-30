@@ -3,14 +3,27 @@
 import Link from "next/link";
 import { useState } from "react";
 import type { Locale } from "@/i18n/config";
-import type { Dictionary } from "@/app/[lang]/dictionaries";
 
-export function AcceptInviteButton({ lang, token, labels }: { lang: Locale; token: string; labels: Dictionary["invite"] }) {
+/** Sous-ensemble commun aux dictionnaires `invite` (projet) et `workspaceInvite` (espace). */
+type AcceptLabels = { accept: string; accepting: string; acceptError: string; accepted: string; goToApp: string };
+
+export function AcceptInviteButton({
+  lang,
+  token,
+  labels,
+  endpoint = "/api/donna/chat/projects/invites/accept",
+}: {
+  lang: Locale;
+  token: string;
+  labels: AcceptLabels;
+  /** Route d'acceptation — projet par défaut ; espace : /api/donna/auth/invites/accept. */
+  endpoint?: string;
+}) {
   const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
 
   const accept = async () => {
     setState("busy");
-    const response = await fetch("/api/donna/chat/projects/invites/accept", {
+    const response = await fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ token }),

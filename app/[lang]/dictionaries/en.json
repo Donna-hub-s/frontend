@@ -452,6 +452,7 @@
       "stepFiles": "Reading the attached files",
       "draftEmail": "Email draft",
       "draftEvent": "Event awaiting approval",
+      "draftDriveUpload": "File to upload to Drive",
       "to": "To",
       "awaiting": "Waiting for your approval",
       "eventActions": {
@@ -477,7 +478,10 @@
       "cmdDocument": "Mention a document…",
       "mentionNoResults": "No results",
       "stepRag": "Searching your documents",
-      "jumpToLatest": "Jump to latest"
+      "jumpToLatest": "Jump to latest",
+      "listen": "Listen to the reply",
+      "stopListening": "Stop playback",
+      "listenError": "Couldn't play the audio."
     },
     "tools": {
       "remember_fact": "Remembering a detail",
@@ -490,6 +494,7 @@
       "list_upcoming_events": "Reading your calendar",
       "propose_email": "Drafting an email",
       "propose_calendar_event": "Preparing a calendar event",
+      "propose_drive_upload": "Preparing a Drive upload",
       "cancel_action": "Cancelling an action",
       "save_generated_document": "Creating a document",
       "web_search": "Searching the web",
@@ -514,7 +519,8 @@
       "actionError": "The action couldn't be processed. Try again.",
       "kinds": {
         "send_email": "Email",
-        "calendar_event": "Calendar"
+        "calendar_event": "Calendar",
+        "drive_upload": "Drive"
       },
       "connectors": "Connectors",
       "google": "Google",
@@ -683,6 +689,14 @@
       "navNotifications": "Notifications",
       "navConnectors": "Connectors",
       "navSkills": "Skills",
+      "navReminders": "Reminders",
+      "remindersHint": "The reminders DONNA has scheduled for you. Cancel the ones you no longer need.",
+      "remindersEmpty": "No reminders scheduled.",
+      "remindersLoadError": "Couldn't load your reminders. Try again in a moment.",
+      "remindersNoDate": "No date yet — DONNA will bring it back up at the right time.",
+      "remindersCancel": "Cancel",
+      "remindersCancelling": "Cancelling…",
+      "remindersCancelError": "This reminder couldn't be cancelled.",
       "skillsHint": "What DONNA can do in your conversations. Turning a skill off removes its tools from DONNA: she can no longer use it while it is off. This does not withdraw any access rights to your data.",
       "skill": {
         "enable_web_search": { "label": "Web search", "description": "Search the web during a conversation." },
@@ -800,5 +814,20 @@
     "acceptError": "Couldn't join the project.",
     "accepted": "You've joined the project.",
     "goToApp": "Open Donna"
+  },
+  "workspaceInvite": {
+    "title": "Workspace invitation",
+    "notFoundOrInvalid": "This invitation could not be found, has expired, or was already used.",
+    "intro": "You've been invited to join the workspace “{tenant}”.",
+    "wrongEmail": "This invitation was sent to {email}. Sign in with that address to accept it.",
+    "signIn": "Sign in",
+    "signUp": "Create an account",
+    "signUpHint": "After creating your account with that same email address, come back to this link to join the workspace.",
+    "accept": "Join the workspace",
+    "accepting": "Joining…",
+    "acceptError": "Couldn't join this workspace.",
+    "accepted": "You've joined the workspace.",
+    "goToApp": "Open Donna",
+    "missingToken": "Invalid invitation link."
   }
 }

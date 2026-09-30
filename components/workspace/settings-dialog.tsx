@@ -3,17 +3,17 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { locales, localeNames, type Locale } from "@/i18n/config";
-import type { ConnectorsOut, ProfileOut, SkillKey } from "@/lib/workspace-types";
-import { SKILL_KEYS } from "@/lib/workspace-types";
+import type { ConnectorsOut, ProfileOut, ReminderOut, SkillKey } from "@/lib/workspace-types";
+import { parseBackendDate, SKILL_KEYS } from "@/lib/workspace-types";
 import { Dialog } from "./dialog";
-import { BellIcon, CloseIcon, PlugIcon, ShieldIcon, SlidersIcon, UserIcon } from "./icons";
+import { BellIcon, ClockIcon, CloseIcon, PlugIcon, ShieldIcon, SlidersIcon, UserIcon } from "./icons";
 import { SecurityPane } from "./security-pane";
 import { ConnectorRows } from "./side-panel";
 import { useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
 type Labels = WorkspaceDict["settings"];
-type Tab = "profile" | "security" | "preferences" | "skills" | "notifications" | "connectors";
+type Tab = "profile" | "security" | "preferences" | "skills" | "reminders" | "notifications" | "connectors";
 type Account = { name: string; email: string; initials: string; workspace: string | null };
 
 /** Champs modifiables de GET/PATCH /app/profile/me. */
@@ -160,6 +160,7 @@ function SettingsBody({
     { key: "security", label: labels.navSecurity, icon: <ShieldIcon size={17} /> },
     { key: "preferences", label: labels.navPreferences, icon: <SlidersIcon size={17} /> },
     { key: "skills", label: labels.navSkills, icon: <SlidersIcon size={17} /> },
+    { key: "reminders", label: labels.navReminders, icon: <ClockIcon size={17} /> },
     { key: "notifications", label: labels.navNotifications, icon: <BellIcon size={17} /> },
     { key: "connectors", label: labels.navConnectors, icon: <PlugIcon size={17} /> },
   ];
@@ -216,6 +217,8 @@ function SettingsBody({
             </Pane>
           ) : tab === "security" ? (
             <SecurityPane lang={lang} labels={labels} oauthProviders={oauthProviders} />
+          ) : tab === "reminders" ? (
+            <RemindersPane lang={lang} labels={labels} />
           ) : loadFailed ? (
             <p className="py-10 text-center text-secondary text-danger">{labels.loadError}</p>
           ) : !draft ? (
@@ -231,7 +234,7 @@ function SettingsBody({
           )}
         </div>
 
-        {tab !== "connectors" && tab !== "security" && draft && (
+        {tab !== "connectors" && tab !== "security" && tab !== "reminders" && draft && (
           <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-border px-5 py-3 md:px-8">
             <p aria-live="polite" className="mr-auto text-secondary">
               {status === "saved" && <span className="text-success-ink">{labels.saved}</span>}
@@ -426,6 +429,77 @@ function SkillsPane({ labels, draft, update }: PaneProps) {
           </div>
         );
       })}
+    </Pane>
+  );
+}
+
+/** Rappels programmés par DONNA (set_reminder) — GET/DELETE /app/chat/memory/reminders.
+ * Indépendant du profil (draft) : pas de brouillon ni de bouton Enregistrer,
+ * chaque annulation part directement au serveur, comme les connecteurs. */
+function RemindersPane({ lang, labels }: { lang: Locale; labels: Labels }) {
+  const [reminders, setReminders] = useState<ReminderOut[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [failedId, setFailedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/donna/chat/memory/reminders", { cache: "no-store" })
+      .then((response) => (response.ok ? (response.json() as Promise<ReminderOut[]>) : Promise.reject()))
+      .then((list) => !cancelled && setReminders(list))
+      .catch(() => !cancelled && setLoadFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const cancelReminder = async (id: string) => {
+    setCancellingId(id);
+    setFailedId(null);
+    const response = await fetch(`/api/donna/chat/memory/reminders/${encodeURIComponent(id)}`, { method: "DELETE" }).catch(
+      () => null,
+    );
+    setCancellingId(null);
+    if (response?.ok) setReminders((list) => list?.filter((r) => r.id !== id) ?? list);
+    else setFailedId(id);
+  };
+
+  return (
+    <Pane title={labels.navReminders} hint={labels.remindersHint}>
+      {loadFailed ? (
+        <p className="py-6 text-center text-secondary text-danger">{labels.remindersLoadError}</p>
+      ) : !reminders ? (
+        <p className="py-6 text-center text-secondary text-ink-3">{labels.loading}</p>
+      ) : reminders.length === 0 ? (
+        <p className="py-6 text-center text-secondary text-ink-3">{labels.remindersEmpty}</p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-card border border-border">
+          {reminders.map((reminder) => {
+            const dueAt = parseBackendDate(reminder.due_at);
+            return (
+              <li key={reminder.id} className="flex items-start justify-between gap-4 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="text-label text-ink text-pretty">{reminder.content}</p>
+                  <p className="mt-0.5 text-meta text-ink-3">
+                    {dueAt
+                      ? new Intl.DateTimeFormat(lang, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(dueAt)
+                      : labels.remindersNoDate}
+                  </p>
+                  {failedId === reminder.id && <p className="mt-1 text-meta text-danger">{labels.remindersCancelError}</p>}
+                </div>
+                <button
+                  type="button"
+                  disabled={cancellingId === reminder.id}
+                  onClick={() => void cancelReminder(reminder.id)}
+                  className="shrink-0 rounded-button px-3 py-1.5 text-meta font-medium text-ink hover:bg-active disabled:opacity-50"
+                >
+                  {cancellingId === reminder.id ? labels.remindersCancelling : labels.remindersCancel}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </Pane>
   );
 }

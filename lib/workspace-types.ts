@@ -11,6 +11,7 @@ import type {
   ProjectMemberOut,
   ProjectOut,
   ProjectRole,
+  ReminderOut,
   SearchHitOut,
   SourceOut,
 } from "./api";
@@ -27,6 +28,7 @@ export type {
   ProjectMemberOut,
   ProjectOut,
   ProjectRole,
+  ReminderOut,
   SearchHitOut,
   SourceOut,
 };

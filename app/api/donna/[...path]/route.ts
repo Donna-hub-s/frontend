@@ -23,6 +23,9 @@ const ALLOWED = [
   /^auth\/mfa\/(setup|enable|verify|backup-codes\/regenerate)$/,
   /^auth\/mfa\/?$/,
   /^auth\/password\/(change|set)$/,
+  // Page "Rejoindre un espace" (app/[lang]/invitation/page.tsx) — acceptation
+  // nominative uniquement ; l'aperçu public passe par lib/backend.ts en direct.
+  /^auth\/invites\/accept$/,
 ];
 
 // En-têtes de réponse relayés (le reste — cookies backend, CORS — reste côté serveur).
