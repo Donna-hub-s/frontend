@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { startChatRun, uid, visibleSteps, type RunInput } from "@/lib/chat-run";
-import { useProjectCapacityWs } from "@/lib/use-project-ws";
+import { useProjectCapacityWs, type DocumentStatusUpdate } from "@/lib/use-project-ws";
 import { installSessionGuard } from "@/lib/session-guard";
 import type { Locale } from "@/i18n/config";
 import type {
@@ -105,6 +105,10 @@ type WorkspaceValue = {
   /** Derniers messages reçus par conversation non affichée (pastille + badge). */
   notices: Record<string, Notice>;
   markRead: (key: string) => void;
+  /** Dernier statut connu par document RAG (clé = document id), mis à jour en
+   * direct par le websocket dès qu'une ingestion change d'état — voir
+   * project-detail.tsx::FilesCard, qui patche sa liste locale sur cette base. */
+  documentStatuses: Record<string, DocumentStatusUpdate>;
 };
 
 const WorkspaceContext = createContext<WorkspaceValue | null>(null);
@@ -299,11 +303,17 @@ export function WorkspaceProvider({
     );
   }, []);
 
+  const [documentStatuses, setDocumentStatuses] = useState<Record<string, DocumentStatusUpdate>>({});
+
   useProjectCapacityWs(
     wsBaseUrl,
     useCallback(
       ({ projectId, contextChunksUsed }) => patchProjectCapacity(projectId, contextChunksUsed),
       [patchProjectCapacity],
+    ),
+    useCallback(
+      (update: DocumentStatusUpdate) => setDocumentStatuses((map) => ({ ...map, [update.documentId]: update })),
+      [],
     ),
   );
 
@@ -437,6 +447,7 @@ export function WorkspaceProvider({
       stop,
       notices,
       markRead,
+      documentStatuses,
     }),
     [
       conversations,
@@ -466,6 +477,7 @@ export function WorkspaceProvider({
       stop,
       notices,
       markRead,
+      documentStatuses,
     ],
   );
 
