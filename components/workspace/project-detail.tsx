@@ -19,7 +19,8 @@ import { parseBackendDate } from "@/lib/workspace-types";
 import { Composer } from "./conversation";
 import { Dialog, DialogHeader } from "./dialog";
 import { FileLink } from "./file-viewer";
-import { ChatIcon, ChevronIcon, FileIcon, FolderIcon, LockIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon, UsersIcon } from "./icons";
+import { ChatIcon, ChevronIcon, FileIcon, LockIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon, UsersIcon } from "./icons";
+import { ProjectIcon, ProjectIconPicker } from "./project-icon";
 import { useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
@@ -125,7 +126,7 @@ export function ProjectDetail({
         ) : (
           <header className="flex flex-wrap items-start gap-4">
             <span className="flex size-12 shrink-0 items-center justify-center rounded-card bg-peche-100 text-bordeaux-700">
-              <FolderIcon size={24} />
+              <ProjectIcon icon={liveProject.icon} size={24} />
             </span>
             <div className="min-w-[12rem] flex-1">
               <h1 className="text-hero-sm font-medium text-balance text-ink">{liveProject.name}</h1>
@@ -217,6 +218,7 @@ export function ProjectDetail({
 
 function HeaderForm({ labels, project, onCancel, onSaved }: { labels: Labels; project: ProjectOut; onCancel: () => void; onSaved: (project: ProjectOut) => void }) {
   const [name, setName] = useState(project.name);
+  const [icon, setIcon] = useState(project.icon);
   const [description, setDescription] = useState(project.description ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
@@ -228,7 +230,7 @@ function HeaderForm({ labels, project, onCancel, onSaved }: { labels: Labels; pr
     setError(false);
     const { ok, data } = await api<ProjectOut>(`/${project.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ name: name.trim(), description: description.trim() || null }),
+      body: JSON.stringify({ name: name.trim(), icon, description: description.trim() || null }),
     });
     setBusy(false);
     if (ok && data) onSaved(data);
@@ -247,6 +249,7 @@ function HeaderForm({ labels, project, onCancel, onSaved }: { labels: Labels; pr
         {labels.nameLabel}
       </label>
       <input id={nameId} autoFocus required maxLength={120} value={name} onChange={(e) => setName(e.target.value)} className={`h-11 text-panel-title ${fieldClass}`} />
+      <ProjectIconPicker value={icon} onChange={setIcon} label={labels.iconLabel} names={labels.iconNames} />
       <label htmlFor={descId} className="text-label font-medium text-ink">
         {labels.descriptionLabel}
       </label>

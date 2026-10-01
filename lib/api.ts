@@ -140,6 +140,7 @@ export type ProjectOut = {
   name: string;
   description: string | null;
   instructions: string | null;
+  icon: string | null;
   conversations_count: number;
   member_count: number;
   document_count: number;

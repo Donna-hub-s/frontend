@@ -6,7 +6,8 @@ import { useId, useState } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import type { ProjectOut } from "@/lib/workspace-types";
-import { FolderIcon, PlusIcon } from "./icons";
+import { PlusIcon } from "./icons";
+import { ProjectIcon, ProjectIconPicker } from "./project-icon";
 import { useWorkspace } from "./workspace-provider";
 
 type SidebarLabels = Dictionary["workspace"]["sidebar"];
@@ -57,7 +58,7 @@ export function ProjectSidebarSection({
                   project.id === activeId ? "bg-active font-medium text-ink" : "text-ink-2 hover:bg-active/70 hover:text-ink"
                 }`}
               >
-                <FolderIcon size={16} className="shrink-0 text-ink-3" />
+                <ProjectIcon icon={project.icon} size={16} className="text-ink-3" />
                 <span className="truncate">{project.name}</span>
               </Link>
             </li>
@@ -82,6 +83,7 @@ export function NewProjectDialog({ lang, labels, onClose }: { lang: Locale; labe
   const { upsertProject } = useWorkspace();
   const router = useRouter();
   const [name, setName] = useState("");
+  const [icon, setIcon] = useState<string | null>(null);
   const [description, setDescription] = useState("");
   const [instructions, setInstructions] = useState("");
   const [busy, setBusy] = useState(false);
@@ -101,6 +103,7 @@ export function NewProjectDialog({ lang, labels, onClose }: { lang: Locale; labe
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           name: trimmed,
+          icon,
           description: description.trim() || null,
           instructions: instructions.trim() || null,
         }),
@@ -147,6 +150,8 @@ export function NewProjectDialog({ lang, labels, onClose }: { lang: Locale; labe
             className="h-10 w-full rounded-button border border-border bg-white px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
           />
         </div>
+
+        <ProjectIconPicker value={icon} onChange={setIcon} label={labels.iconLabel} names={labels.iconNames} />
 
         <div className="flex flex-col gap-1.5">
           <label htmlFor={descId} className="text-label font-medium text-ink">
