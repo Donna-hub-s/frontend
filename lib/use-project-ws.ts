@@ -17,12 +17,27 @@ const RECONNECT_INITIAL_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
 
 type CapacityUpdate = { projectId: string; contextChunksUsed: number };
+/** Statut à jour d'UN document précis (voir backend/app/rag/src/tasks.py::_publish_status "current"). */
+export type DocumentStatusUpdate = {
+  documentId: string;
+  status: string;
+  chunkCount: number;
+  error: string | null;
+};
 
-export function useProjectCapacityWs(wsBaseUrl: string | null, onUpdate: (update: CapacityUpdate) => void) {
+export function useProjectCapacityWs(
+  wsBaseUrl: string | null,
+  onUpdate: (update: CapacityUpdate) => void,
+  onDocumentUpdate?: (update: DocumentStatusUpdate) => void,
+) {
   const onUpdateRef = useRef(onUpdate);
   useEffect(() => {
     onUpdateRef.current = onUpdate;
   }, [onUpdate]);
+  const onDocumentUpdateRef = useRef(onDocumentUpdate);
+  useEffect(() => {
+    onDocumentUpdateRef.current = onDocumentUpdate;
+  }, [onDocumentUpdate]);
 
   useEffect(() => {
     if (!wsBaseUrl) return;
@@ -53,12 +68,26 @@ export function useProjectCapacityWs(wsBaseUrl: string | null, onUpdate: (update
           try {
             const message = JSON.parse(event.data as string) as {
               action?: string;
-              payload?: { project_id?: string; project_chunk_total?: number };
+              payload?: {
+                project_id?: string;
+                project_chunk_total?: number;
+                current?: { document_id?: string; status?: string; chunk_count?: number; error?: string | null };
+              };
             };
+            if (message.action !== "RAG_INGESTION_STATUS") return;
             const projectId = message.payload?.project_id;
             const chunkTotal = message.payload?.project_chunk_total;
-            if (message.action === "RAG_INGESTION_STATUS" && projectId && typeof chunkTotal === "number") {
+            if (projectId && typeof chunkTotal === "number") {
               onUpdateRef.current({ projectId, contextChunksUsed: chunkTotal });
+            }
+            const current = message.payload?.current;
+            if (current?.document_id && current.status) {
+              onDocumentUpdateRef.current?.({
+                documentId: current.document_id,
+                status: current.status,
+                chunkCount: current.chunk_count ?? 0,
+                error: current.error ?? null,
+              });
             }
           } catch {
             // Message non JSON ou inattendu — ignoré, pas fatal pour la connexion.

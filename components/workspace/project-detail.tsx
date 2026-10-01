@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import type {
@@ -512,6 +512,22 @@ function FilesCard({
   const [uploading, setUploading] = useState(0);
   const [error, setError] = useState<"upload" | "delete" | "capacity" | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // Statut d'ingestion en direct (websocket, voir workspace-provider.tsx) —
+  // sans ça, un document reste affiché "en attente" indéfiniment même une
+  // fois traité (avec succès ou en échec), tant que la page n'est pas rechargée.
+  // Dérivé au rendu (pas de setState dans un effet) : `documents` ne garde
+  // que l'ajout/suppression, `documentStatuses` (externe) s'applique par-dessus.
+  const { documentStatuses } = useWorkspace();
+  const displayDocuments = useMemo(
+    () =>
+      documents.map((doc) => {
+        const update = documentStatuses[doc.id];
+        if (!update) return doc;
+        return { ...doc, status: update.status, chunk_count: update.chunkCount, error: update.error };
+      }),
+    [documents, documentStatuses],
+  );
   // Le blocage réel est appliqué côté serveur (400) — ce garde-fou évite juste
   // une requête vouée à l'échec quand la limite est visiblement atteinte.
   const atCapacity = contextChunksLimit > 0 && contextChunksUsed >= contextChunksLimit;
@@ -600,9 +616,9 @@ function FilesCard({
           </div>
         )}
 
-        {documents.length > 0 && (
+        {displayDocuments.length > 0 && (
           <ul className="flex flex-col border-t border-border py-1">
-            {documents.map((doc) => (
+            {displayDocuments.map((doc) => (
               <li key={doc.id} className="group flex items-center gap-2 px-2">
                 <FileLink
                   url={`/api/donna/chat/projects/${encodeURIComponent(projectId)}/documents/${encodeURIComponent(doc.id)}/file`}
