@@ -5,8 +5,9 @@ import { useMemo, useState } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { parseBackendDate, type ProjectOut } from "@/lib/workspace-types";
-import { ChevronIcon, FolderIcon, PlusIcon, SearchIcon } from "./icons";
+import { ChevronIcon, PlusIcon, SearchIcon } from "./icons";
 import { NewProjectDialog } from "./project-list";
+import { ProjectIcon } from "./project-icon";
 import { useWorkspace } from "./workspace-provider";
 
 type Labels = Dictionary["workspace"]["projects"];
@@ -106,7 +107,7 @@ export function ProjectsIndex({ lang, labels }: { lang: Locale; labels: Labels }
                     className="flex h-full flex-col gap-2 rounded-panel bg-surface p-4 no-underline shadow-card transition-colors hover:bg-white"
                   >
                     <span className="flex items-center gap-2 text-label font-medium text-ink">
-                      <FolderIcon size={17} className="shrink-0 text-bordeaux-700" />
+                      <ProjectIcon icon={project.icon} size={17} className="text-bordeaux-700" />
                       <span className="truncate">{project.name}</span>
                     </span>
                     <span className="line-clamp-2 flex-1 text-secondary text-ink-2 text-pretty">
