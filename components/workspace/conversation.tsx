@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { DonnaMark } from "@/components/brand/donna-mark";
@@ -22,11 +22,14 @@ import {
   type ToolCall,
 } from "@/lib/workspace-types";
 import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, SendIcon, SpeakerIcon, StopIcon } from "./icons";
-import { Markdown } from "./markdown";
+import { Markdown, type MarkdownFile } from "./markdown";
 import { downloadDriveFiles, type DriveFileOut } from "@/lib/drive";
 import { EmailAttachmentList } from "./email-attachments";
 import { WorkflowDraft } from "./workflow-draft";
+import { useConversationContext } from "@/lib/use-conversation-context";
 import { GoogleDriveIcon } from "./brand-icons";
+import { ContextMenu } from "./context-menu";
+import { ModelMenu } from "./model-menu";
 import { SkillsMenu } from "./skills-menu";
 import { DrivePicker } from "./drive-picker";
 import { StepDot, stepDetail, stepLabel } from "./side-panel";
@@ -216,6 +219,7 @@ export function Conversation({
           lang={lang}
           dict={dict}
           busy={busy}
+          conversationId={thread?.conversationId ?? conversationId}
           onSend={send}
           onStop={() => stop(threadKey)}
           onComposingChange={setComposing}
@@ -311,6 +315,13 @@ function UserMessage({ lang, message, initials, label }: { lang: Locale; message
   );
 }
 
+/** Lien du texte vers un fichier joint à CE message : aperçu dans DONNA (voir `Markdown`). */
+const renderFile = (file: MarkdownFile, label: ReactNode) => (
+  <FileLink url={file.url} name={file.name} className="underline decoration-rose-300 underline-offset-2">
+    {label}
+  </FileLink>
+);
+
 function AssistantMessage({
   lang,
   dict,
@@ -333,6 +344,7 @@ function AssistantMessage({
   const tools = message.tools ?? [];
   const question = tools.findLast((t) => t.name === "ask_user");
   const proposals = tools.filter((t) => PROPOSALS.has(t.name));
+  const files = useMemo(() => message.attachments.map((file) => ({ name: file.original_name, url: fileHref(file.file_url) })), [message.attachments]);
 
   return (
     <div className="flex gap-3">
@@ -348,7 +360,9 @@ function AssistantMessage({
 
         {message.content ? (
           <div aria-live={streaming ? "polite" : undefined}>
-            <Markdown>{message.content}</Markdown>
+            <Markdown files={files} renderFile={renderFile}>
+              {message.content}
+            </Markdown>
             {streaming && <span aria-hidden className="demo-caret ml-0.5 inline-block h-4 w-px translate-y-0.5 bg-bordeaux-700" />}
           </div>
         ) : null}
@@ -791,6 +805,7 @@ type MenuAction =
   | { type: "mention"; mention: Mention }
   | { type: "web" }
   | { type: "clear" }
+  | { type: "compact" }
   | { type: "shortcut"; kind: MentionKind };
 type MenuItem = { id: string; label: string; /** Projet d'un document (affiché en discret). */ hint?: string; kind: "project" | "document" | "command"; action: MenuAction };
 
@@ -811,6 +826,7 @@ export function Composer({
   lang,
   dict,
   busy,
+  conversationId,
   onSend,
   onStop,
   onComposingChange,
@@ -819,12 +835,15 @@ export function Composer({
   lang: Locale;
   dict: WorkspaceDict;
   busy: boolean;
+  /** Conversation en cours (null sur l'accueil) : la jauge de contexte et /compact n'existent qu'avec elle. */
+  conversationId: string | null;
   onSend: (text: string, files: File[], webSearch: boolean, mentions: MentionSelection) => Promise<void>;
   onStop: () => void;
   onComposingChange?: (composing: boolean) => void;
   autoFocus: boolean;
 }) {
   const { projects } = useWorkspace();
+  const context = useConversationContext(conversationId, busy);
   const [value, setValue] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   // Pièces jointes : message d'information (plafond atteint, fichiers Drive en échec) et
@@ -943,6 +962,7 @@ export function Composer({
       const commands: MenuItem[] = [
         { id: "web", label: dict.chat.cmdWeb, kind: "command", action: { type: "web" } },
         { id: "clear", label: dict.chat.cmdClear, kind: "command", action: { type: "clear" } },
+        ...(conversationId ? [{ id: "compact", label: dict.chat.cmdCompact, kind: "command" as const, action: { type: "compact" as const } }] : []),
         { id: "project", label: dict.chat.cmdProject, kind: "command", action: { type: "shortcut", kind: "project" } },
         { id: "document", label: dict.chat.cmdDocument, kind: "command", action: { type: "shortcut", kind: "document" } },
       ];
@@ -966,7 +986,13 @@ export function Composer({
       }
     }
     return items.slice(0, 8);
-  }, [menu, projects, accessibleDocs, dict.chat]);
+  }, [menu, projects, accessibleDocs, dict.chat, conversationId]);
+
+  // Compaction à la demande (bouton de la jauge ou /compact) : renvoie le message à afficher.
+  const runCompact = useCallback(async (): Promise<string> => {
+    const outcome = await context.compact();
+    return outcome === "compacted" ? dict.chat.contextDone : outcome === "nothing" ? dict.chat.contextNothing : dict.chat.contextError;
+  }, [context, dict.chat]);
 
   // Seul point d'exécution réel des actions du menu — appelé depuis de vrais
   // gestionnaires d'événement (onClick, Entrée), jamais pendant le rendu :
@@ -988,12 +1014,16 @@ export function Composer({
           setMentions([]);
           setMenu(null);
           break;
+        case "compact":
+          insertToken("");
+          void runCompact().then(setNotice);
+          break;
         case "shortcut":
           runSlashShortcut(item.action.kind);
           break;
       }
     },
-    [selectMention, insertToken, runSlashShortcut],
+    [selectMention, insertToken, runSlashShortcut, runCompact],
   );
 
   // Délégation d'événement sur le <ul> plutôt qu'un onClick recréé à chaque
@@ -1313,7 +1343,11 @@ export function Composer({
               <GlobeIcon size={18} />
               <span className={webSearch ? "" : "sr-only"}>{dict.chat.webSearch}</span>
             </button>
+            <ModelMenu lang={lang} labels={dict.chat.models} />
             <SkillsMenu lang={lang} labels={dict.chat} />
+            {conversationId && (
+              <ContextMenu labels={dict.chat} status={context.status} compacting={context.compacting} busy={busy} onCompact={runCompact} />
+            )}
           </div>
           {busy ? (
             <button

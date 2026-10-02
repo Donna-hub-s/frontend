@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { parseUserChannelMessage, type CapacityUpdate, type DocumentStatusUpdate, type ReminderDue } from "./user-channel";
+import { parseUserChannelMessage, type AppNotification, type CapacityUpdate, type DocumentStatusUpdate, type ReminderDue } from "./user-channel";
 
-export type { DocumentStatusUpdate, ReminderDue } from "./user-channel";
+export type { AppNotification, DocumentStatusUpdate, ReminderDue } from "./user-channel";
 
 /**
  * Connexion WebSocket temps réel (canal "user", voir extensions/xwebsocket) —
@@ -24,6 +24,7 @@ export function useProjectCapacityWs(
   onUpdate: (update: CapacityUpdate) => void,
   onDocumentUpdate?: (update: DocumentStatusUpdate) => void,
   onReminder?: (reminder: ReminderDue) => void,
+  onNotification?: (notification: AppNotification) => void,
 ) {
   const onUpdateRef = useRef(onUpdate);
   useEffect(() => {
@@ -37,6 +38,10 @@ export function useProjectCapacityWs(
   useEffect(() => {
     onReminderRef.current = onReminder;
   }, [onReminder]);
+  const onNotificationRef = useRef(onNotification);
+  useEffect(() => {
+    onNotificationRef.current = onNotification;
+  }, [onNotification]);
 
   useEffect(() => {
     if (!wsBaseUrl) return;
@@ -67,7 +72,8 @@ export function useProjectCapacityWs(
           for (const update of parseUserChannelMessage(event.data as string)) {
             if (update.kind === "capacity") onUpdateRef.current(update.update);
             else if (update.kind === "document") onDocumentUpdateRef.current?.(update.update);
-            else onReminderRef.current?.(update.reminder);
+            else if (update.kind === "reminder") onReminderRef.current?.(update.reminder);
+            else onNotificationRef.current?.(update.notification);
           }
         };
         socket.onclose = () => {

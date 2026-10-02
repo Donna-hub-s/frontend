@@ -4,6 +4,9 @@ import type {
   AttachedFileOut,
   AttachmentOut,
   ConnectorsOut,
+  ContextStatusOut,
+  ModelOut,
+  ModelsOut,
   ConversationOut,
   DocumentHitOut,
   DocumentSearchOut,
@@ -24,6 +27,9 @@ import type {
   SkillOut,
   SourceOut,
   WorkflowDraftOut,
+  WorkflowOut,
+  WorkflowRunOut,
+  WorkflowStepRunOut,
 } from "./api";
 
 export type {
@@ -31,6 +37,9 @@ export type {
   AttachedFileOut,
   AttachmentOut,
   ConnectorsOut,
+  ContextStatusOut,
+  ModelOut,
+  ModelsOut,
   ConversationOut,
   DocumentHitOut,
   DocumentSearchOut,
@@ -51,6 +60,9 @@ export type {
   SkillOut,
   SourceOut,
   WorkflowDraftOut,
+  WorkflowOut,
+  WorkflowRunOut,
+  WorkflowStepRunOut,
 };
 
 export type StepStatus = "running" | "done";

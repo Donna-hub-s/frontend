@@ -129,8 +129,91 @@ export type MessageOut = {
 /** backend/app/chat/src/schemas.py::EmailDraftOut — le brouillon RÉEL d'un email en attente. */
 export type EmailAttachmentOut = { name: string; size: number; mime_type: string; source: "conversation" | "drive" | string };
 export type EmailDraftOut = { to: string; subject: string; body: string; attachments: EmailAttachmentOut[] };
+/** GET /app/chat/models (backend/app/chat/src/schemas.py::ModelOut). */
+export type ModelOut = {
+  id: string;
+  /** eco | balanced | premium | free. */
+  tier: string;
+  label: string;
+  provider: string;
+  model: string;
+  /** $ par million de tokens ; null = tarif propre au fournisseur (non affiché). */
+  price_in: number | null;
+  price_out: number | null;
+  context: number | null;
+  /** Accepte un effort de raisonnement. */
+  reasoning: boolean;
+  vision: boolean;
+  recommended: boolean;
+};
+
+export type ModelsOut = { models: ModelOut[]; efforts: string[]; default_provider: string };
+
+/** GET /app/chat/{id}/context et POST /app/chat/{id}/compact (backend/app/chat/src/schemas.py::ContextStatusOut). */
+export type ContextStatusOut = {
+  total_messages: number;
+  /** Messages déjà condensés dans le résumé de la conversation. */
+  covered_messages: number;
+  /** Messages encore envoyés en clair au modèle. */
+  recent_messages: number;
+  summary_chars: number;
+  /** Part du budget de contexte utilisée (0 à 100). */
+  context_budget_used_pct: number;
+  compacted: boolean;
+};
+
 /** Automatisation proposée par DONNA (kind "workflow") : nom, déclencheur puis une ligne par étape. */
 export type WorkflowDraftOut = { name: string; lines: string[] };
+
+/** GET /app/workflows (backend/app/workflows/src/schemas.py::WorkflowOut). */
+export type WorkflowOut = {
+  id: string;
+  name: string;
+  description: string | null;
+  /** draft (jamais approuvé ou modifié depuis) | active | paused. */
+  status: "draft" | "active" | "paused" | string;
+  /** user | template | donna (proposé par DONNA puis approuvé). */
+  origin: string;
+  definition: Record<string, unknown>;
+  /** La définition courante est celle que l'utilisateur a approuvée. */
+  approved: boolean;
+  /** Déclencheur en clair. */
+  schedule: string;
+  /** Ce que l'utilisateur approuve : le déclencheur puis une ligne par étape. */
+  lines: string[];
+  next_run_at: string | null;
+  last_run_at: string | null;
+  max_runs_per_day: number;
+  conversation_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WorkflowStepRunOut = {
+  position: number;
+  step_id: string;
+  type: string;
+  /** succeeded | failed | skipped (étape facultative indisponible). */
+  status: string;
+  output: string | null;
+  error: string | null;
+  /** Étape « agent » : les outils que DONNA a appelés, dans l'ordre (arguments et début du résultat). */
+  detail?: ToolTraceOut[] | null;
+};
+
+export type ToolTraceOut = { name: string; arguments: unknown; result: string };
+
+export type WorkflowRunOut = {
+  id: string;
+  /** running | succeeded | failed | skipped. */
+  status: string;
+  /** schedule | manual. */
+  trigger: string;
+  error: string | null;
+  started_at: string;
+  finished_at: string | null;
+  steps: WorkflowStepRunOut[];
+};
 
 export type PendingActionOut = {
   id: string;

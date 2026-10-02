@@ -15,6 +15,8 @@ const ALLOWED = [
   /^auth\/oauth\/me\/accounts$/,
   /^auth\/oauth\/[^/]+\/unlink$/,
   /^profile(\/|$)/,
+  // Page Workflows (components/workspace/workflows-page.tsx) : l'activation reste un geste de l'utilisateur.
+  /^workflows(\/|$)/,
   /^auth\/ws\/ticket$/,
   /^rag\/documents$/,
   // Fenêtre des paramètres, onglet Sécurité (settings-dialog.tsx).

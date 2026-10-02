@@ -422,7 +422,9 @@
       "newProject": "New project",
       "projectsEmpty": "No projects yet.",
       "settings": "Settings",
-      "viewAllProjects": "View all projects"
+      "viewAllProjects": "View all projects",
+      "workflows": "Automations",
+      "newNotification": "New notification from Donna"
     },
     "chat": {
       "greeting": "Hello",
@@ -532,7 +534,44 @@
       "skillsLoadError": "Couldn't load the skills.",
       "skillsManage": "All settings",
       "draftWorkflow": "Automation awaiting approval",
-      "workflowNote": "Once you approve, it runs on its own — and only ever writes to you."
+      "workflowNote": "Once you approve, it runs on its own — and only ever writes to you.",
+      "contextMenu": "Context",
+      "contextUsed": "{pct}% of the context used",
+      "contextDetail": "{n} messages sent as-is to the model",
+      "contextCondensed": "{n} older messages condensed into a summary",
+      "contextNone": "Nothing is condensed yet.",
+      "contextHint": "Compacting summarises older messages to free up context. They stay visible in the conversation.",
+      "contextCompact": "Compact now",
+      "contextCompacting": "Compacting…",
+      "contextDone": "Context compacted.",
+      "contextNothing": "Nothing to compact yet: the conversation is still short.",
+      "contextError": "Couldn't compact. Try again.",
+      "cmdCompact": "Compact the conversation",
+      "models": {
+        "title": "Model",
+        "hint": "Pick the model that answers your next messages. Cost is an estimate for a typical message.",
+        "defaultModel": "Server default model",
+        "recommended": "recommended",
+        "reasoning": "reasoning",
+        "vision": "vision",
+        "perMessage": "≈ ${cost} / message",
+        "free": "free",
+        "freeNote": "Trials: rate limits, variable availability and less protected data. Avoid for client data.",
+        "effort": "Reasoning effort",
+        "effortHint": "Higher effort means a more considered, slower and costlier answer. “Auto” lets the model decide.",
+        "tiers": {
+          "eco": "Economy",
+          "balanced": "Balanced",
+          "premium": "Premium",
+          "free": "Free trials"
+        },
+        "efforts": {
+          "auto": "Auto",
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      }
     },
     "tools": {
       "remember_fact": "Remembering a detail",
@@ -907,6 +946,82 @@
         "markdown": "Markdown text",
         "text": "Text file",
         "other": "File"
+      }
+    },
+    "workflows": {
+      "indexTitle": "Automations",
+      "subtitle": "Tasks DONNA runs on its own at the set time — only after your approval, and only ever addressed to you.",
+      "homeLabel": "Home",
+      "create": "New automation",
+      "createTitle": "Morning briefing",
+      "createHint": "DONNA reads your calendar, important emails, reminders and what's waiting for your approval, then sends you a summary. You review the details before turning it on.",
+      "empty": "No automations yet.",
+      "emptyHint": "Create a morning briefing, or ask DONNA in a conversation: “set me up a briefing every morning at 8”.",
+      "loadError": "Couldn't load your automations.",
+      "actionError": "The action failed. Try again.",
+      "status": {
+        "draft": "To approve",
+        "active": "Active",
+        "paused": "Paused"
+      },
+      "origin": {
+        "donna": "Proposed by DONNA",
+        "template": "Template",
+        "user": "Created by you"
+      },
+      "draftNote": "Nothing runs on its own until you approve: review each step below.",
+      "editedNote": "The definition changed since you last approved it: it no longer runs on its own until you approve it again.",
+      "approve": "Approve and activate",
+      "pause": "Pause",
+      "resume": "Resume",
+      "runNow": "Run now",
+      "testRun": "Try it now",
+      "running": "Running…",
+      "details": "Details",
+      "hideDetails": "Hide details",
+      "history": "History",
+      "hideHistory": "Hide history",
+      "delete": "Delete",
+      "confirmDelete": "Confirm deletion",
+      "nextRun": "Next run: {when}",
+      "lastRun": "Last: {when}",
+      "neverRun": "Never run",
+      "openConversation": "Open conversation",
+      "historyEmpty": "No runs yet.",
+      "trigger": {
+        "schedule": "Scheduled",
+        "manual": "Manual",
+        "event": "On event"
+      },
+      "runStatus": {
+        "running": "Running",
+        "succeeded": "Succeeded",
+        "failed": "Failed",
+        "skipped": "Skipped"
+      },
+      "stepStatus": {
+        "succeeded": "ok",
+        "failed": "failed",
+        "skipped": "skipped"
+      },
+      "toolsCalled": "Tools called ({n})",
+      "tally": "{ok} ok · {skipped} skipped · {failed} failed",
+      "dialog": {
+        "time": "Time",
+        "timeInvalid": "Invalid time (HH:MM).",
+        "every": "Frequency",
+        "weekdays": "Weekdays",
+        "day": "Every day",
+        "week": "Every Monday",
+        "timezone": "Time zone",
+        "channels": "Where to receive the briefing",
+        "app": "In the app",
+        "whatsapp": "WhatsApp (your number)",
+        "email": "Email (your address)",
+        "channelsNone": "Pick at least one channel.",
+        "submit": "Create the draft",
+        "cancel": "Cancel",
+        "error": "Couldn't create it. Check the time zone and try again."
       }
     }
   },

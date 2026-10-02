@@ -6,6 +6,7 @@ import { useId, useState } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import type { ProjectOut } from "@/lib/workspace-types";
+import { Dialog } from "./dialog";
 import { PlusIcon } from "./icons";
 import { ProjectIcon, ProjectIconPicker } from "./project-icon";
 import { useWorkspace } from "./workspace-provider";
@@ -120,18 +121,16 @@ export function NewProjectDialog({ lang, labels, onClose }: { lang: Locale; labe
     }
   };
 
+  // <dialog> natif (couche supérieure) : un `fixed inset-0` rendu ici s'affichait DANS la barre latérale, parce
+  // que celle-ci porte une transformation CSS (translate) qui devient le repère des éléments `fixed` qu'elle contient.
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/25 px-4 pt-[12vh]" onMouseDown={onClose}>
+    <Dialog open onClose={onClose} label={labels.createTitle} className="max-w-[26rem]">
       <form
-        role="dialog"
-        aria-modal="true"
-        aria-label={labels.createTitle}
-        onMouseDown={(event) => event.stopPropagation()}
         onSubmit={(event) => {
           event.preventDefault();
           void submit();
         }}
-        className="flex w-full max-w-[26rem] flex-col gap-4 rounded-panel bg-white p-5 shadow-float"
+        className="scrollbar-none flex max-h-[calc(100dvh-2rem)] flex-col gap-4 overflow-y-auto p-5"
       >
         <h2 className="text-panel-title font-medium text-ink">{labels.createTitle}</h2>
 
@@ -195,6 +194,6 @@ export function NewProjectDialog({ lang, labels, onClose }: { lang: Locale; labe
           </button>
         </div>
       </form>
-    </div>
+    </Dialog>
   );
 }

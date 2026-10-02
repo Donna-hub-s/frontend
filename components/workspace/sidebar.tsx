@@ -12,6 +12,7 @@ import { groupByDate, groupByProject } from "@/lib/sidebar-grouping";
 import type { ConversationOut } from "@/lib/workspace-types";
 import { ChatIcon, ChevronIcon, CloseIcon, ComposeIcon, FolderIcon, LogoutIcon, MoreIcon, SearchIcon, SettingsIcon } from "./icons";
 import { ConversationHoverPreview, type PreviewAnchor, useHoverPreview } from "./conversation-hover-preview";
+import { Workflow as WorkflowGlyph } from "lucide-react";
 import { ProjectSidebarSection } from "./project-list";
 import { useWorkspace } from "./workspace-provider";
 
@@ -59,6 +60,7 @@ export function Sidebar({
 
   const activeId = pathname.match(/\/app\/c\/([^/]+)/)?.[1];
   const activeProjectId = pathname.match(/\/app\/projects\/([^/]+)/)?.[1];
+  const workflowsActive = pathname.includes("/app/workflows");
 
   return (
     <>
@@ -118,6 +120,17 @@ export function Sidebar({
         </div>
 
         <nav aria-label={labels.conversations} className="scrollbar-none mt-5 flex-1 overflow-y-auto px-2 pb-4">
+          <Link
+            href={`/${lang}/app/workflows`}
+            onClick={onClose}
+            aria-current={workflowsActive ? "page" : undefined}
+            className={`mb-3 flex h-9 items-center gap-2.5 rounded-nav px-2.5 text-label no-underline transition-colors duration-(--duration-fast) ${
+              workflowsActive ? "bg-active font-medium text-ink" : "text-ink-2 hover:bg-active/70 hover:text-ink"
+            }`}
+          >
+            <WorkflowGlyph size={16} className="text-ink-3" />
+            {labels.workflows}
+          </Link>
           <ProjectSidebarSection
             lang={lang}
             labels={labels}
@@ -389,7 +402,9 @@ function ConversationItem({
                 ? labels.newQuestion
                 : noticeFor(conversation) === "reminder"
                   ? labels.newReminder
-                  : labels.newResponse}
+                  : noticeFor(conversation) === "notification"
+                    ? labels.newNotification
+                    : labels.newResponse}
             </span>
           </span>
         )}

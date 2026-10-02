@@ -380,7 +380,7 @@ function InlineComposer({ lang, dict, projectId }: { lang: Locale; dict: Workspa
     router.push(`/${lang}/app?project=${projectId}`);
   };
 
-  return <Composer lang={lang} dict={dict} busy={false} onSend={handleSend} onStop={() => {}} autoFocus={false} />;
+  return <Composer lang={lang} dict={dict} busy={false} conversationId={null} onSend={handleSend} onStop={() => {}} autoFocus={false} />;
 }
 
 function ConversationsList({ lang, labels, conversations }: { lang: Locale; labels: Labels; conversations: ConversationOut[] }) {

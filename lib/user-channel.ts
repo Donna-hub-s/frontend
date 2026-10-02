@@ -23,10 +23,20 @@ export type ReminderDue = {
   content: string;
 };
 
+/** Message de DONNA à l'utilisateur hors conversation (ex. briefing d'un workflow) — backend/app/chat/src/workflow_service.py::_deliver_app. */
+export type AppNotification = {
+  /** Message déposé dans la conversation du workflow (déjà en base). */
+  messageId: string | null;
+  conversationId: string | null;
+  title: string;
+  body: string;
+};
+
 export type UserChannelEvent =
   | { kind: "capacity"; update: CapacityUpdate }
   | { kind: "document"; update: DocumentStatusUpdate }
-  | { kind: "reminder"; reminder: ReminderDue };
+  | { kind: "reminder"; reminder: ReminderDue }
+  | { kind: "notification"; notification: AppNotification };
 
 const text = (value: unknown): string | null => (typeof value === "string" && value ? value : null);
 
@@ -74,6 +84,15 @@ export function parseUserChannelMessage(raw: string): UserChannelEvent[] {
         kind: "reminder",
         reminder: { reminderId, conversationId: text(payload.conversation_id), messageId: text(payload.message_id), content },
       },
+    ];
+  }
+
+  if (message.action === "NOTIFICATION") {
+    const title = text(payload.title);
+    const body = text(payload.body);
+    if (!title || !body) return [];
+    return [
+      { kind: "notification", notification: { messageId: text(payload.message_id), conversationId: text(payload.conversation_id), title, body } },
     ];
   }
 

@@ -422,7 +422,9 @@
       "newProject": "Nouveau projet",
       "projectsEmpty": "Aucun projet pour l'instant.",
       "settings": "Paramètres",
-      "viewAllProjects": "Voir tous les projets"
+      "viewAllProjects": "Voir tous les projets",
+      "workflows": "Automatisations",
+      "newNotification": "Nouvelle notification de Donna"
     },
     "chat": {
       "greeting": "Bonjour",
@@ -532,7 +534,44 @@
       "skillsLoadError": "Impossible de charger les compétences.",
       "skillsManage": "Tous les réglages",
       "draftWorkflow": "Automatisation à valider",
-      "workflowNote": "Après votre accord, elle tourne seule — et ne s'adresse qu'à vous."
+      "workflowNote": "Après votre accord, elle tourne seule — et ne s'adresse qu'à vous.",
+      "contextMenu": "Contexte",
+      "contextUsed": "{pct} % du contexte utilisé",
+      "contextDetail": "{n} messages envoyés en clair au modèle",
+      "contextCondensed": "{n} anciens messages condensés dans un résumé",
+      "contextNone": "Rien n'est condensé pour l'instant.",
+      "contextHint": "Compacter résume les anciens messages pour libérer du contexte. Ils restent affichés dans la conversation.",
+      "contextCompact": "Compacter maintenant",
+      "contextCompacting": "Compactage…",
+      "contextDone": "Contexte compacté.",
+      "contextNothing": "Rien à compacter pour l'instant : la conversation est encore courte.",
+      "contextError": "Compactage impossible. Réessayez.",
+      "cmdCompact": "Compacter la conversation",
+      "models": {
+        "title": "Modèle",
+        "hint": "Choisissez le modèle qui répond à vos prochains messages. Le coût est une estimation pour un message type.",
+        "defaultModel": "Modèle par défaut du serveur",
+        "recommended": "conseillé",
+        "reasoning": "raisonnement",
+        "vision": "vision",
+        "perMessage": "≈ {cost} $ / message",
+        "free": "gratuit",
+        "freeNote": "Essais : limites de débit, disponibilité variable et données moins protégées. À éviter pour des données clients.",
+        "effort": "Effort de raisonnement",
+        "effortHint": "Plus l'effort est élevé, plus la réponse est réfléchie, lente et coûteuse. « Auto » laisse le modèle décider.",
+        "tiers": {
+          "eco": "Économique",
+          "balanced": "Équilibré",
+          "premium": "Premium",
+          "free": "Essais gratuits"
+        },
+        "efforts": {
+          "auto": "Auto",
+          "low": "Faible",
+          "medium": "Moyen",
+          "high": "Élevé"
+        }
+      }
     },
     "tools": {
       "remember_fact": "Mémorisation d'une information",
@@ -907,6 +946,82 @@
         "markdown": "Texte Markdown",
         "text": "Fichier texte",
         "other": "Fichier"
+      }
+    },
+    "workflows": {
+      "indexTitle": "Automatisations",
+      "subtitle": "Des tâches que DONNA exécute seule à l'heure dite — uniquement après votre accord, et qui ne s'adressent qu'à vous.",
+      "homeLabel": "Accueil",
+      "create": "Nouvelle automatisation",
+      "createTitle": "Briefing du matin",
+      "createHint": "DONNA lit votre agenda, vos emails importants, vos rappels et ce qui attend votre approbation, puis vous envoie un résumé. Vous relisez le détail avant de l'activer.",
+      "empty": "Aucune automatisation pour l'instant.",
+      "emptyHint": "Créez un briefing du matin, ou demandez-le à DONNA dans une conversation : « fais-moi un briefing chaque matin à 8 h ».",
+      "loadError": "Impossible de charger vos automatisations.",
+      "actionError": "L'action a échoué. Réessayez.",
+      "status": {
+        "draft": "À approuver",
+        "active": "Active",
+        "paused": "En pause"
+      },
+      "origin": {
+        "donna": "Proposée par DONNA",
+        "template": "Modèle",
+        "user": "Créée par vous"
+      },
+      "draftNote": "Rien ne tourne seul tant que vous n'avez pas approuvé : relisez chaque étape ci-dessous.",
+      "editedNote": "La définition a changé depuis votre dernière approbation : elle ne tourne plus seule tant que vous ne l'avez pas ré-approuvée.",
+      "approve": "Approuver et activer",
+      "pause": "Mettre en pause",
+      "resume": "Réactiver",
+      "runNow": "Lancer maintenant",
+      "testRun": "Essayer maintenant",
+      "running": "En cours…",
+      "details": "Détail",
+      "hideDetails": "Masquer le détail",
+      "history": "Historique",
+      "hideHistory": "Masquer l'historique",
+      "delete": "Supprimer",
+      "confirmDelete": "Confirmer la suppression",
+      "nextRun": "Prochaine exécution : {when}",
+      "lastRun": "Dernière : {when}",
+      "neverRun": "Jamais exécutée",
+      "openConversation": "Ouvrir la conversation",
+      "historyEmpty": "Aucune exécution pour l'instant.",
+      "trigger": {
+        "schedule": "Planifiée",
+        "manual": "Manuelle",
+        "event": "Sur événement"
+      },
+      "runStatus": {
+        "running": "En cours",
+        "succeeded": "Réussie",
+        "failed": "Échec",
+        "skipped": "Ignorée"
+      },
+      "stepStatus": {
+        "succeeded": "ok",
+        "failed": "échec",
+        "skipped": "ignorée"
+      },
+      "toolsCalled": "Outils appelés ({n})",
+      "tally": "{ok} ok · {skipped} ignorée(s) · {failed} échec(s)",
+      "dialog": {
+        "time": "Heure",
+        "timeInvalid": "Heure invalide (HH:MM).",
+        "every": "Fréquence",
+        "weekdays": "Jours ouvrés",
+        "day": "Tous les jours",
+        "week": "Chaque lundi",
+        "timezone": "Fuseau horaire",
+        "channels": "Où recevoir le briefing",
+        "app": "Dans l'application",
+        "whatsapp": "WhatsApp (votre numéro)",
+        "email": "Email (votre adresse)",
+        "channelsNone": "Choisissez au moins un canal.",
+        "submit": "Créer le brouillon",
+        "cancel": "Annuler",
+        "error": "Création impossible. Vérifiez le fuseau horaire et réessayez."
       }
     }
   },

@@ -23,6 +23,20 @@ describe("parseUserChannelMessage", () => {
     expect(parseUserChannelMessage(frame("REMINDER_DUE", { reminder_id: "r1", content: "" }))).toEqual([]);
   });
 
+  it("décode la notification d'une automatisation (briefing du matin)", () => {
+    const events = parseUserChannelMessage(
+      frame("NOTIFICATION", { source: "workflow", workflow_id: "w1", title: "Briefing du matin", body: "Rien d'urgent.", conversation_id: "c1", message_id: "m1" }),
+    );
+    expect(events).toEqual([
+      { kind: "notification", notification: { messageId: "m1", conversationId: "c1", title: "Briefing du matin", body: "Rien d'urgent." } },
+    ]);
+  });
+
+  it("ignore une notification sans titre ou sans texte", () => {
+    expect(parseUserChannelMessage(frame("NOTIFICATION", { body: "x" }))).toEqual([]);
+    expect(parseUserChannelMessage(frame("NOTIFICATION", { title: "T", body: "" }))).toEqual([]);
+  });
+
   it("garde le comportement des statuts d'ingestion RAG : capacité du projet puis document", () => {
     const events = parseUserChannelMessage(
       frame("RAG_INGESTION_STATUS", {

@@ -6,6 +6,7 @@
 // machine à états du flux — étapes, deltas, outils, propositions, erreurs —
 // soit écrite une seule fois, quel que soit l'écran qui déclenche l'envoi.
 
+import { clearStaleModel, modelRequestFields } from "./model-choice";
 import { readChatStream, type PrepStep } from "./chat-stream";
 import type { AttachedFileOut, AttachmentOut, ChatMessage, MentionSelection, RagInfoOut, SourceOut, Step, StepData, ToolCall } from "./workspace-types";
 
@@ -136,11 +137,15 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
       if (conversationId) form.set("conversation_id", conversationId);
       else if (projectId) form.set("project_id", projectId);
       if (webSearch) form.set("web_search", "true");
+      const modelFields = modelRequestFields();
+      if (modelFields.model) form.set("model", modelFields.model);
+      if (modelFields.effort) form.set("effort", modelFields.effort);
       if (mentions.projectId) form.set("mentioned_project_id", mentions.projectId);
       if (mentions.documentIds.length) form.set("mentioned_document_ids", JSON.stringify(mentions.documentIds));
       for (const file of files) form.append("files", file);
       const response = await fetch("/api/donna/chat/upload", { method: "POST", body: form, signal });
       if (!response.ok) {
+        if (modelFields.model) clearStaleModel(response.status);
         throw Object.assign(new Error("http"), { kind: errorFromStatus(response.status), detail: await readDetail(response) });
       }
       const data = (await response.json()) as {
@@ -170,10 +175,12 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
       callbacks.patch({ content: data.reply, sources: data.sources, rag: data.rag ?? undefined, memory: data.memory_notes, attachments: data.attachments, tools, status: "done" });
       callbacks.settled(data.question ? "question" : "response");
     } else {
+      const modelFields = modelRequestFields();
       const response = await fetch("/api/donna/chat/stream", {
         method: "POST",
         headers: { "content-type": "application/json", accept: "text/event-stream" },
         body: JSON.stringify({
+          ...modelFields,
           message,
           conversation_id: conversationId,
           project_id: conversationId ? undefined : projectId,
@@ -183,7 +190,10 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
         }),
         signal,
       });
-      if (!response.ok) throw Object.assign(new Error("http"), { kind: errorFromStatus(response.status) });
+      if (!response.ok) {
+        if (modelFields.model) clearStaleModel(response.status);
+        throw Object.assign(new Error("http"), { kind: errorFromStatus(response.status) });
+      }
 
       let answering = false;
       let finished = false;

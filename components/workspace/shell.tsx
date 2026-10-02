@@ -50,7 +50,11 @@ export function WorkspaceShell({
       initialProjects={projects}
       wsBaseUrl={wsBaseUrl}
     >
-      <div className="flex h-dvh overflow-hidden bg-page">
+      {/* `relative` : repère des éléments `absolute` sans ancêtre positionné, notamment les `sr-only` du fil de discussion.
+          Sans lui, leur repère est la FENÊTRE : `overflow-hidden` ne les rogne pas et, dans une longue conversation, ils
+          allongent la page (constaté : 5 444 px pour 903 de fenêtre) — la fenêtre défile, l'espace de travail glisse
+          vers le haut et laisse un vide en bas. */}
+      <div className="relative flex h-dvh overflow-hidden bg-page">
         <Sidebar
           lang={lang}
           labels={dict.sidebar}

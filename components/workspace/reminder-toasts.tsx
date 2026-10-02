@@ -8,9 +8,9 @@ import { BellIcon, CloseIcon } from "./icons";
 import { useWorkspace } from "./workspace-provider";
 
 /**
- * Rappels qui viennent de se déclencher : DONNA les signale dans l'application en plus de WhatsApp
- * et de l'email (canal websocket, voir lib/user-channel.ts). La carte reste affichée jusqu'à ce que
- * l'utilisateur la ferme — un rappel qu'on ne voit pas ne sert à rien.
+ * Rappels qui viennent de se déclencher et notifications d'automatisations (briefing du matin…) : DONNA les
+ * signale dans l'application en plus de WhatsApp et de l'email (canal websocket, voir lib/user-channel.ts). La
+ * carte reste affichée jusqu'à ce que l'utilisateur la ferme — un rappel qu'on ne voit pas ne sert à rien.
  */
 export function ReminderToasts({ lang, labels }: { lang: Locale; labels: Dictionary["workspace"]["reminders"] }) {
   const { reminders, dismissReminder } = useWorkspace();
@@ -41,8 +41,8 @@ export function ReminderToasts({ lang, labels }: { lang: Locale; labels: Diction
               <BellIcon size={17} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-meta font-medium text-bordeaux-700">{labels.title}</p>
-              <p className="mt-0.5 text-label text-ink text-pretty break-words">{reminder.content}</p>
+              <p className="text-meta font-medium text-bordeaux-700">{reminder.title ?? labels.title}</p>
+              <p className="mt-0.5 line-clamp-6 text-label whitespace-pre-line text-ink text-pretty break-words">{reminder.content}</p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {/* Inutile quand la conversation du rappel est déjà à l'écran. */}
                 {reminder.conversationId && !pathname.includes(`/app/c/${reminder.conversationId}`) && (

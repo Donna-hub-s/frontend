@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { startChatRun, uid, visibleSteps, type RunInput } from "@/lib/chat-run";
-import { useProjectCapacityWs, type DocumentStatusUpdate, type ReminderDue } from "@/lib/use-project-ws";
+import { useProjectCapacityWs, type AppNotification, type DocumentStatusUpdate, type ReminderDue } from "@/lib/use-project-ws";
 import type { SkillSettings } from "@/lib/skills";
 import { installSessionGuard } from "@/lib/session-guard";
 import type { Locale } from "@/i18n/config";
@@ -16,11 +16,11 @@ import type {
   Step,
 } from "@/lib/workspace-types";
 
-/** Notification in-app : une réponse est arrivée, DONNA pose une question, ou un rappel s'est déclenché. */
-export type Notice = "response" | "question" | "reminder";
+/** Notification in-app : une réponse est arrivée, DONNA pose une question, un rappel s'est déclenché ou une automatisation a écrit. */
+export type Notice = "response" | "question" | "reminder" | "notification";
 
-/** Rappel déclenché, affiché jusqu'à ce que l'utilisateur le ferme (voir reminder-toasts.tsx). */
-export type ReminderAlert = { id: string; content: string; conversationId: string | null };
+/** Rappel ou notification d'automatisation, affiché jusqu'à ce que l'utilisateur le ferme (voir reminder-toasts.tsx). */
+export type ReminderAlert = { id: string; content: string; conversationId: string | null; title?: string | null };
 
 /** Nombre maximum de fils conservés en mémoire (historique complet de chacun). */
 const THREAD_LIMIT = 30;
@@ -174,6 +174,7 @@ export function WorkspaceProvider({
   // doit surtout pas annuler le flux, seule l'action « Arrêter » le fait.
   const runs = useRef(new Map<string, AbortController>());
   const activeKeyRef = useRef<string | null>(null);
+  const conversationsRef = useRef(initialConversations);
   // Perte de session : le proxy a déjà tenté de renouveler le jeton ; s'il
   // échoue, on renvoie vers /login depuis n'importe quel appel (voir
   // lib/session-guard.ts). Le provider est monté sur tout /app, donc un seul
@@ -371,31 +372,33 @@ export function WorkspaceProvider({
   const [reminders, setReminders] = useState<ReminderAlert[]>([]);
   const dismissReminder = useCallback((id: string) => setReminders((list) => list.filter((r) => r.id !== id)), []);
 
-  // Un rappel vient de se déclencher : le worker a déjà posé son message dans la conversation, on
-  // l'ajoute aux fils chargés en mémoire (sinon il n'apparaît qu'au rechargement), on marque la
-  // conversation non lue, on affiche la carte et, onglet masqué, une notification du navigateur.
-  const handleReminder = useCallback(
-    (due: ReminderDue) => {
+  // Un rappel ou une notification d'automatisation vient d'arriver : le serveur a déjà posé le message dans
+  // la conversation. On l'ajoute aux fils chargés en mémoire (sinon il n'apparaît qu'au rechargement), on
+  // marque la conversation non lue, on affiche la carte et, onglet masqué, une notification du navigateur.
+  const deliver = useCallback(
+    (item: { id: string; title: string | null; content: string; conversationId: string | null; messageId: string; text: string; notice: Notice }) => {
       setReminders((list) =>
-        list.some((r) => r.id === due.reminderId)
+        list.some((r) => r.id === item.id)
           ? list
-          : [...list, { id: due.reminderId, content: due.content, conversationId: due.conversationId }].slice(-3),
+          : [...list, { id: item.id, title: item.title, content: item.content, conversationId: item.conversationId }].slice(-3),
       );
-      if (due.conversationId) {
-        const conversationId = due.conversationId;
-        const messageId = `reminder-${due.messageId ?? due.reminderId}`;
+      if (item.conversationId) {
+        const conversationId = item.conversationId;
+        // Conversation créée par le serveur (première notification d'un workflow) : absente de la liste
+        // tant qu'on ne la recharge pas, donc ni entrée ni pastille dans la barre latérale.
+        if (!conversationsRef.current.some((c) => c.id === conversationId)) void refreshConversations();
         setThreads((existing) => {
           let changed = false;
           const next = { ...existing };
           for (const [key, thread] of Object.entries(existing)) {
-            if (thread.conversationId !== conversationId || thread.messages.some((m) => m.id === messageId)) continue;
+            if (thread.conversationId !== conversationId || thread.messages.some((m) => m.id === item.messageId)) continue;
             changed = true;
-            // Même texte que celui inséré par le worker (tasks.py::_insert_reminder_message).
+            // Même texte que celui déposé par le serveur (tasks.py::_insert_reminder_message, workflow_service.py::_deliver_app).
             next[key] = {
               ...thread,
               messages: [
                 ...thread.messages,
-                { id: messageId, role: "assistant", content: `Petit rappel : ${due.content}.`, createdAt: Date.now(), attachments: [], status: "done" },
+                { id: item.messageId, role: "assistant", content: item.text, createdAt: Date.now(), attachments: [], status: "done" },
               ],
             };
           }
@@ -403,19 +406,49 @@ export function WorkspaceProvider({
         });
         const key = threadAlias[conversationId] ?? conversationId;
         if (activeKeyRef.current !== key) {
-          // Une question en attente reste prioritaire sur le simple rappel.
-          setNotices((existing) => (existing[key] === "question" ? existing : { ...existing, [key]: "reminder" }));
+          // Une question en attente reste prioritaire sur un simple rappel ou une notification.
+          setNotices((existing) => (existing[key] === "question" ? existing : { ...existing, [key]: item.notice }));
         }
       }
       try {
         if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.visibilityState === "hidden") {
-          new Notification("DONNA", { body: due.content, tag: due.reminderId });
+          new Notification(item.title ?? "DONNA", { body: item.content.slice(0, 300), tag: item.id });
         }
       } catch {
         // Notification système indisponible : la carte dans l'application suffit.
       }
     },
-    [threadAlias],
+    [refreshConversations, threadAlias],
+  );
+
+  const handleReminder = useCallback(
+    (due: ReminderDue) =>
+      deliver({
+        id: due.reminderId,
+        title: null,
+        content: due.content,
+        conversationId: due.conversationId,
+        messageId: `reminder-${due.messageId ?? due.reminderId}`,
+        text: `Petit rappel : ${due.content}.`,
+        notice: "reminder",
+      }),
+    [deliver],
+  );
+
+  const handleNotification = useCallback(
+    (notification: AppNotification) => {
+      const id = notification.messageId ?? `${notification.title}-${notification.body.length}`;
+      deliver({
+        id: `notification-${id}`,
+        title: notification.title,
+        content: notification.body,
+        conversationId: notification.conversationId,
+        messageId: `notification-${id}`,
+        text: `**${notification.title}**\n\n${notification.body}`,
+        notice: "notification",
+      });
+    },
+    [deliver],
   );
 
   useProjectCapacityWs(
@@ -429,12 +462,16 @@ export function WorkspaceProvider({
       [],
     ),
     handleReminder,
+    handleNotification,
   );
 
-  // Ref synchronisée après rendu : lue par les callbacks de flux, hors cycle de rendu.
+  // Refs synchronisées après rendu : lues par les callbacks de flux, hors cycle de rendu.
   useEffect(() => {
     activeKeyRef.current = activeKey;
   }, [activeKey]);
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   const send = useCallback(
     async (input: SendInput) => {

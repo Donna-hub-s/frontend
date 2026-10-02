@@ -1,7 +1,9 @@
 "use client";
 
-import ReactMarkdown, { type Components } from "react-markdown";
+import { useMemo, type ReactNode } from "react";
+import ReactMarkdown, { defaultUrlTransform, type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { linkTarget } from "@/lib/file-links";
 import { isBareUrlLink, LinkCard, linkCardData } from "./link-card";
 
 /** Un paragraphe réduit à un seul lien « nu » (le texte EST l'URL) devient une
@@ -31,11 +33,6 @@ const components: Components = {
     if (card) return <LinkCard data={card} />;
     return <p className="my-3 first:mt-0 last:mb-0">{children}</p>;
   },
-  a: ({ href, children }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer nofollow" className="underline decoration-rose-300 underline-offset-2">
-      {children}
-    </a>
-  ),
   ul: ({ children }) => <ul className="my-3 list-disc space-y-1.5 pl-5 marker:text-rose-300">{children}</ul>,
   ol: ({ children }) => <ol className="my-3 list-decimal space-y-1.5 pl-5 marker:text-ink-3">{children}</ol>,
   li: ({ children }) => <li className="pl-1">{children}</li>,
@@ -61,10 +58,58 @@ const components: Components = {
   hr: () => <hr className="my-5 border-border" />,
 };
 
-export function Markdown({ children }: { children: string }) {
+/** Texte brut d'un lien (ses enfants React) : sert à retrouver un fichier par son nom. */
+function textOf(node: ReactNode): string {
+  if (typeof node === "string" || typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(textOf).join("");
+  if (node && typeof node === "object" && "props" in node) return textOf((node as { props: { children?: ReactNode } }).props.children);
+  return "";
+}
+
+const linkClass = "underline decoration-rose-300 underline-offset-2";
+
+// react-markdown remplace par une chaîne vide toute URL au schéma inconnu (« sandbox: » inclus) ; un lien
+// vide rouvrait l'application. On garde donc la cible brute dans `href` UNIQUEMENT pour la lire : le rendu
+// ci-dessous ne la réutilise que si c'est http(s)/mailto:, sinon il la remplace par le fichier joint ou du texte.
+const keepHref = (url: string, key: string) => (key === "href" ? url : defaultUrlTransform(url));
+
+export type MarkdownFile = { name: string; url: string };
+
+/**
+ * `files` : les pièces jointes du message. Un lien qui vise l'un d'eux (par son nom) s'ouvre via `renderFile`
+ * (aperçu dans DONNA). Fourni par l'appelant plutôt que importé : le visualiseur de fichiers rend lui-même du
+ * Markdown, un import direct ferait un cycle.
+ */
+export function Markdown({
+  children,
+  files = [],
+  renderFile,
+}: {
+  children: string;
+  files?: readonly MarkdownFile[];
+  renderFile?: (file: MarkdownFile, label: ReactNode) => ReactNode;
+}) {
+  const merged = useMemo<Components>(
+    () => ({
+      ...components,
+      a: ({ href, children: label }) => {
+        const target = linkTarget(href, textOf(label), renderFile ? files : []);
+        if (target.kind === "file" && renderFile) return <>{renderFile(target.file, label)}</>;
+        if (target.kind === "external") {
+          return (
+            <a href={target.href} target="_blank" rel="noopener noreferrer nofollow" className={linkClass}>
+              {label}
+            </a>
+          );
+        }
+        return <span>{label}</span>;
+      },
+    }),
+    [files, renderFile],
+  );
   return (
     <div className="text-message text-ink [overflow-wrap:anywhere]">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={merged} urlTransform={keepHref}>
         {children}
       </ReactMarkdown>
     </div>
