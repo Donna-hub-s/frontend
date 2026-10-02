@@ -129,6 +129,9 @@ export type MessageOut = {
 /** backend/app/chat/src/schemas.py::EmailDraftOut — le brouillon RÉEL d'un email en attente. */
 export type EmailAttachmentOut = { name: string; size: number; mime_type: string; source: "conversation" | "drive" | string };
 export type EmailDraftOut = { to: string; subject: string; body: string; attachments: EmailAttachmentOut[] };
+/** Automatisation proposée par DONNA (kind "workflow") : nom, déclencheur puis une ligne par étape. */
+export type WorkflowDraftOut = { name: string; lines: string[] };
+
 export type PendingActionOut = {
   id: string;
   kind: string;
@@ -137,6 +140,8 @@ export type PendingActionOut = {
   created_at: string;
   /** Brouillon d'email (kind « send_email ») : destinataire, objet, corps et pièces jointes. */
   email?: EmailDraftOut | null;
+  /** Automatisation proposée (kind « workflow ») : ce que l'utilisateur va approuver. */
+  workflow?: WorkflowDraftOut | null;
 };
 
 /** GET /app/chat/memory/reminders (backend/app/chat/src/schemas.py::ReminderOut). */

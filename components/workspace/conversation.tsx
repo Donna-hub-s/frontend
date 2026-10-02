@@ -17,7 +17,6 @@ import {
   type MentionKind,
   type MentionSelection,
   type AccessibleDocumentOut,
-  type EmailDraftOut,
   type PendingActionOut,
   type SourceOut,
   type ToolCall,
@@ -26,6 +25,7 @@ import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, Mic
 import { Markdown } from "./markdown";
 import { downloadDriveFiles, type DriveFileOut } from "@/lib/drive";
 import { EmailAttachmentList } from "./email-attachments";
+import { WorkflowDraft } from "./workflow-draft";
 import { GoogleDriveIcon } from "./brand-icons";
 import { SkillsMenu } from "./skills-menu";
 import { DrivePicker } from "./drive-picker";
@@ -569,9 +569,10 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
   const { pending, decisions, decideAction } = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
-  const [fetched, setFetched] = useState<EmailDraftOut | null>(null);
+  const [fetched, setFetched] = useState<PendingActionOut | null>(null);
   const id = actionIdFrom(call.result);
-  const isEmailCall = call.name === "propose_email";
+  // Email et workflow : le serveur est seul à savoir ce qui sera réellement envoyé / activé.
+  const isEmailCall = call.name === "propose_email" || call.name === "propose_workflow";
 
   // Brouillon RÉEL côté serveur (pièces jointes comprises) : ce que le modèle a demandé a pu être refusé,
   // résolu ou renommé — seul le serveur sait ce qui partira. Valable quel que soit le statut de l'action.
@@ -581,7 +582,7 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
     void (async () => {
       try {
         const response = await fetch(`/api/donna/chat/memory/actions/${encodeURIComponent(id)}`, { cache: "no-store" });
-        if (response.ok && live) setFetched(((await response.json()) as PendingActionOut).email ?? null);
+        if (response.ok && live) setFetched((await response.json()) as PendingActionOut);
       } catch {
         // Silencieux : la carte reste utilisable sans la liste des pièces jointes.
       }
@@ -595,10 +596,13 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
 
   const decision = decisions[id];
   const awaiting = !decision && pending.some((a) => a.id === id);
-  const draft = pending.find((a) => a.id === id)?.email ?? fetched;
+  const listed = pending.find((a) => a.id === id);
+  const draft = listed?.email ?? fetched?.email ?? null;
+  const workflow = listed?.workflow ?? fetched?.workflow ?? null;
   const args = call.arguments;
   const isEmail = call.name === "propose_email";
   const isDriveUpload = call.name === "propose_drive_upload";
+  const isWorkflow = call.name === "propose_workflow";
   const eventAction = text(args.action) as keyof WorkspaceDict["chat"]["eventActions"];
   const when = [text(args.start_datetime), text(args.end_datetime)]
     .filter(Boolean)
@@ -622,7 +626,7 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
     <div className="rounded-panel border border-border bg-ivoire-50 p-4">
       <div className="flex items-center justify-between gap-3 text-meta">
         <span className="font-medium text-ink">
-          {isEmail ? dict.chat.draftEmail : isDriveUpload ? dict.chat.draftDriveUpload : dict.chat.draftEvent}
+          {isEmail ? dict.chat.draftEmail : isDriveUpload ? dict.chat.draftDriveUpload : isWorkflow ? dict.chat.draftWorkflow : dict.chat.draftEvent}
         </span>
         {decision ? (
           <span className={`inline-flex items-center gap-1 ${decision === "confirm" ? "text-success-ink" : "text-ink-3"}`}>
@@ -647,6 +651,8 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
           <p className="mt-2 text-secondary leading-5 whitespace-pre-wrap text-ink-2">{text(args.body)}</p>
           {draft && <EmailAttachmentList actionId={id} attachments={draft.attachments} openable={awaiting} labels={dict.chat} />}
         </>
+      ) : isWorkflow ? (
+        <WorkflowDraft draft={workflow ?? { name: text(args.name), lines: [] }} labels={dict.chat} />
       ) : isDriveUpload ? (
         <>
           <p className="mt-3 text-label font-medium text-ink">{text(args.filename)}</p>

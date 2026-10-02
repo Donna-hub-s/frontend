@@ -23,6 +23,7 @@ import type {
   SearchHitOut,
   SkillOut,
   SourceOut,
+  WorkflowDraftOut,
 } from "./api";
 
 export type {
@@ -49,6 +50,7 @@ export type {
   SearchHitOut,
   SkillOut,
   SourceOut,
+  WorkflowDraftOut,
 };
 
 export type StepStatus = "running" | "done";

@@ -530,7 +530,9 @@
       "skillsMissing": "{connectors} : non connecté",
       "skillsSaveError": "Réglage non enregistré, réessaie.",
       "skillsLoadError": "Impossible de charger les compétences.",
-      "skillsManage": "Tous les réglages"
+      "skillsManage": "Tous les réglages",
+      "draftWorkflow": "Automatisation à valider",
+      "workflowNote": "Après votre accord, elle tourne seule — et ne s'adresse qu'à vous."
     },
     "tools": {
       "remember_fact": "Mémorisation d'une information",
@@ -551,7 +553,10 @@
       "search_drive_files": "Recherche dans Google Drive",
       "read_drive_file": "Lecture d'un fichier Drive",
       "create_document": "Rédaction du document",
-      "fallback": "Utilisation d'un outil"
+      "fallback": "Utilisation d'un outil",
+      "propose_workflow": "Préparation d'une automatisation",
+      "list_workflows": "Lecture de vos automatisations",
+      "pause_workflow": "Mise en pause d'une automatisation"
     },
     "panel": {
       "label": "Panneau d'activité",
@@ -569,7 +574,8 @@
       "kinds": {
         "send_email": "Email",
         "calendar_event": "Agenda",
-        "drive_upload": "Drive"
+        "drive_upload": "Drive",
+        "workflow": "Automatisation"
       },
       "connectors": "Connecteurs",
       "google": "Google",

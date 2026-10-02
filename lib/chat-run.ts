@@ -55,7 +55,7 @@ export function applyPrepStep(steps: Step[], event: PrepStep, now = Date.now()):
 }
 
 /** Outils qui créent une action en attente de confirmation humaine. */
-export const PROPOSALS = new Set(["propose_email", "propose_calendar_event", "propose_drive_upload"]);
+export const PROPOSALS = new Set(["propose_email", "propose_calendar_event", "propose_drive_upload", "propose_workflow"]);
 
 export type ErrorKind = NonNullable<ChatMessage["error"]>;
 

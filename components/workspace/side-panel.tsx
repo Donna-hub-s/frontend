@@ -7,6 +7,7 @@ import { GmailIcon, GoogleCalendarIcon, GoogleDriveIcon, WhatsAppIcon } from "./
 import { visibleSteps } from "@/lib/chat-run";
 import { parseBackendDate, type ConnectorsOut, type PendingActionOut, type Step } from "@/lib/workspace-types";
 import { EmailAttachmentList } from "./email-attachments";
+import { WorkflowDraft } from "./workflow-draft";
 import { useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
@@ -205,6 +206,7 @@ function PendingItem({ lang, dict, action }: { lang: Locale; dict: WorkspaceDict
       </div>
       <p className="mt-2 text-label text-ink text-pretty">{action.summary}</p>
       {action.email && <EmailAttachmentList actionId={action.id} attachments={action.email.attachments} openable labels={dict.chat} />}
+      {action.workflow && <WorkflowDraft draft={action.workflow} labels={dict.chat} />}
       {failed && <p className="mt-2 text-secondary text-danger">{panel.actionError}</p>}
       <div className="mt-3 flex gap-2">
         <button

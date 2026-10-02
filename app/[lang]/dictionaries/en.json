@@ -530,7 +530,9 @@
       "skillsMissing": "{connectors}: not connected",
       "skillsSaveError": "Setting not saved, try again.",
       "skillsLoadError": "Couldn't load the skills.",
-      "skillsManage": "All settings"
+      "skillsManage": "All settings",
+      "draftWorkflow": "Automation awaiting approval",
+      "workflowNote": "Once you approve, it runs on its own — and only ever writes to you."
     },
     "tools": {
       "remember_fact": "Remembering a detail",
@@ -551,7 +553,10 @@
       "search_drive_files": "Searching Google Drive",
       "read_drive_file": "Reading a Drive file",
       "create_document": "Writing the document",
-      "fallback": "Using a tool"
+      "fallback": "Using a tool",
+      "propose_workflow": "Preparing an automation",
+      "list_workflows": "Reading your automations",
+      "pause_workflow": "Pausing an automation"
     },
     "panel": {
       "label": "Activity panel",
@@ -569,7 +574,8 @@
       "kinds": {
         "send_email": "Email",
         "calendar_event": "Calendar",
-        "drive_upload": "Drive"
+        "drive_upload": "Drive",
+        "workflow": "Automation"
       },
       "connectors": "Connectors",
       "google": "Google",
