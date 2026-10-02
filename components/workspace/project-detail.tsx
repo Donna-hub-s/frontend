@@ -8,6 +8,7 @@ import type { Dictionary } from "@/app/[lang]/dictionaries";
 import type {
   ConversationOut,
   MentionSelection,
+  ProjectDocumentBatchOut,
   ProjectDocumentOut,
   ProjectFactOut,
   ProjectInviteOut,
@@ -20,7 +21,10 @@ import { Composer } from "./conversation";
 import { Dialog, DialogHeader } from "./dialog";
 import { FileLink } from "./file-viewer";
 import { ChatIcon, ChevronIcon, FileIcon, LockIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon, UsersIcon } from "./icons";
+import { GoogleDriveIcon } from "./brand-icons";
+import { DrivePicker } from "./drive-picker";
 import { ProjectIcon, ProjectIconPicker } from "./project-icon";
+import type { DriveErrorCode, DriveFileOut } from "@/lib/drive";
 import { useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
@@ -50,20 +54,30 @@ async function api<T>(path: string, init?: RequestInit): Promise<{ ok: boolean; 
 // Pas de header content-type ici : le navigateur doit fixer lui-même la
 // frontière multipart pour FormData — api() ci-dessus force du JSON, donc
 // inutilisable pour un upload de fichier.
-async function uploadDocument(projectId: string, file: File): Promise<{ ok: boolean; data: ProjectDocumentOut | null }> {
+// Plusieurs fichiers = UNE requête (le backend les traite en parallèle) : N
+// requêtes simultanées se disputeraient aussi le renouvellement du jeton
+// (le refresh token est à usage unique, voir app/api/donna/[...path]/route.ts).
+async function uploadDocuments(
+  projectId: string,
+  files: File[],
+): Promise<{ ok: boolean; batch: ProjectDocumentBatchOut | null; status: number }> {
   try {
     const form = new FormData();
-    form.set("file", file);
-    const response = await fetch(`/api/donna/chat/projects/${encodeURIComponent(projectId)}/documents`, {
+    for (const file of files) form.append("files", file);
+    const response = await fetch(`/api/donna/chat/projects/${encodeURIComponent(projectId)}/documents/batch`, {
       method: "POST",
       body: form,
     });
-    const data = (await response.json().catch(() => null)) as ProjectDocumentOut | null;
-    return { ok: response.ok, data };
+    const batch = (await response.json().catch(() => null)) as ProjectDocumentBatchOut | null;
+    return { ok: response.ok, batch: response.ok ? batch : null, status: response.status };
   } catch {
-    return { ok: false, data: null };
+    return { ok: false, batch: null, status: 0 };
   }
 }
+
+// Même plafond que DONNA_MAX_FILES_PER_REQUEST côté backend (10 par défaut) :
+// une sélection plus grande part en plusieurs envois successifs.
+const UPLOAD_BATCH_SIZE = 10;
 
 /**
  * Page d'un projet, organisée autour du travail : écrire à DONNA et retrouver
@@ -172,6 +186,8 @@ export function ProjectDetail({
           <aside className="flex flex-col gap-4">
             <InstructionsCard labels={labels} project={liveProject} isOwner={isOwner} onSaved={upsertProject} />
             <FilesCard
+              lang={lang}
+              driveLabels={dict.drive}
               labels={labels}
               projectId={project.id}
               initialDocuments={initialDocuments}
@@ -364,7 +380,7 @@ function InlineComposer({ lang, dict, projectId }: { lang: Locale; dict: Workspa
     router.push(`/${lang}/app?project=${projectId}`);
   };
 
-  return <Composer dict={dict} busy={false} onSend={handleSend} onStop={() => {}} autoFocus={false} />;
+  return <Composer lang={lang} dict={dict} busy={false} onSend={handleSend} onStop={() => {}} autoFocus={false} />;
 }
 
 function ConversationsList({ lang, labels, conversations }: { lang: Locale; labels: Labels; conversations: ConversationOut[] }) {
@@ -496,6 +512,8 @@ function InstructionsCard({ labels, project, isOwner, onSaved }: { labels: Label
 }
 
 function FilesCard({
+  lang,
+  driveLabels,
   labels,
   projectId,
   initialDocuments,
@@ -503,6 +521,8 @@ function FilesCard({
   contextChunksUsed,
   contextChunksLimit,
 }: {
+  lang: Locale;
+  driveLabels: WorkspaceDict["drive"];
   labels: Labels;
   projectId: string;
   initialDocuments: ProjectDocumentOut[];
@@ -513,7 +533,11 @@ function FilesCard({
   const [documents, setDocuments] = useState(initialDocuments);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(0);
-  const [error, setError] = useState<"upload" | "delete" | "capacity" | null>(null);
+  const [error, setError] = useState<"upload" | "delete" | "capacity" | "retry" | "retryBusy" | "drive" | null>(null);
+  const [driveOpen, setDriveOpen] = useState(false);
+  const [driveCode, setDriveCode] = useState<DriveErrorCode>("unavailable");
+  // Noms des fichiers refusés lors du dernier dépôt (affichés dans le message d'erreur).
+  const [rejected, setRejected] = useState<string[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Statut d'ingestion en direct (websocket, voir workspace-provider.tsx) —
@@ -541,13 +565,61 @@ function FilesCard({
     if (!list.length) return;
     if (atCapacity) return setError("capacity");
     setError(null);
+    setRejected([]);
     setUploading((n) => n + list.length);
-    for (const file of list) {
-      const { ok, data } = await uploadDocument(projectId, file);
-      setUploading((n) => n - 1);
-      if (ok && data) setDocuments((docs) => [data, ...docs]);
-      else setError("upload");
+    for (let start = 0; start < list.length; start += UPLOAD_BATCH_SIZE) {
+      const group = list.slice(start, start + UPLOAD_BATCH_SIZE);
+      const { ok, batch, status } = await uploadDocuments(projectId, group);
+      setUploading((n) => n - group.length);
+      if (ok && batch) {
+        if (batch.documents.length) setDocuments((docs) => [...batch.documents, ...docs]);
+        if (batch.errors.length) {
+          setError("upload");
+          setRejected((names) => [...names, ...batch.errors.map((e) => e.filename)]);
+        }
+      } else {
+        setError(status === 400 ? "capacity" : "upload");
+        setRejected((names) => [...names, ...group.map((f) => f.name)]);
+      }
     }
+  };
+
+  // Import depuis Google Drive : le backend récupère les fichiers (jeton Google gardé serveur) et les
+  // indexe comme un dépôt groupé — mêmes lignes, mêmes erreurs par fichier.
+  const importFromDrive = async (picked: DriveFileOut[]) => {
+    if (!picked.length) return;
+    if (atCapacity) return setError("capacity");
+    setError(null);
+    setRejected([]);
+    setUploading((n) => n + picked.length);
+    const { ok, data, status } = await api<ProjectDocumentBatchOut & { detail?: { code?: DriveErrorCode } }>(`/${projectId}/documents/drive`, {
+      method: "POST",
+      body: JSON.stringify({ file_ids: picked.map((file) => file.id) }),
+    });
+    setUploading((n) => n - picked.length);
+    if (ok && data) {
+      if (data.documents.length) setDocuments((docs) => [...data.documents, ...docs]);
+      if (data.errors.length) {
+        setError("upload");
+        setRejected(data.errors.map((e) => e.filename));
+      }
+      return;
+    }
+    const code = data?.detail && typeof data.detail === "object" ? data.detail.code : undefined;
+    if (code) {
+      setDriveCode(code);
+      setError("drive");
+    } else {
+      setError(status === 400 ? "capacity" : "upload");
+      setRejected(picked.map((file) => file.name));
+    }
+  };
+
+  const retry = async (id: string) => {
+    setError(null);
+    const { ok, data, status } = await api<ProjectDocumentOut>(`/${projectId}/documents/${encodeURIComponent(id)}/reingest`, { method: "POST" });
+    if (ok && data) setDocuments((docs) => docs.map((d) => (d.id === id ? { ...d, status: data.status, error: null } : d)));
+    else setError(status === 409 ? "retryBusy" : "retry");
   };
 
   const remove = async (id: string) => {
@@ -584,16 +656,28 @@ function FilesCard({
         }
         action={
           canEdit && (
-            <button
-              type="button"
-              disabled={atCapacity}
-              onClick={() => fileRef.current?.click()}
-              aria-label={labels.addFiles}
-              title={labels.addFiles}
-              className="flex size-7 items-center justify-center rounded-badge text-ink-2 hover:bg-active hover:text-bordeaux-700 disabled:opacity-40"
-            >
-              <PlusIcon size={16} />
-            </button>
+            <span className="flex items-center gap-0.5">
+              <button
+                type="button"
+                disabled={atCapacity}
+                onClick={() => setDriveOpen(true)}
+                aria-label={labels.addFromDrive}
+                title={labels.addFromDrive}
+                className="flex size-7 items-center justify-center rounded-badge text-ink-2 hover:bg-active disabled:opacity-40"
+              >
+                <GoogleDriveIcon size={15} />
+              </button>
+              <button
+                type="button"
+                disabled={atCapacity}
+                onClick={() => fileRef.current?.click()}
+                aria-label={labels.addFromComputer}
+                title={labels.addFromComputer}
+                className="flex size-7 items-center justify-center rounded-badge text-ink-2 hover:bg-active hover:text-bordeaux-700 disabled:opacity-40"
+              >
+                <PlusIcon size={16} />
+              </button>
+            </span>
           )
         }
       >
@@ -632,6 +716,17 @@ function FilesCard({
                   <span className="truncate">{doc.original_name}</span>
                   <DocStatus labels={labels} doc={doc} />
                 </FileLink>
+                {canEdit && (doc.status === "failed" || doc.status === "pending") && (
+                  <button
+                    type="button"
+                    onClick={() => void retry(doc.id)}
+                    aria-label={`${labels.retryIndexing} ${doc.original_name}`}
+                    title={doc.error ? `${labels.retryIndexing} — ${doc.error}` : labels.retryIndexing}
+                    className="shrink-0 rounded-badge px-2 py-1 text-meta text-bordeaux-700 hover:bg-active"
+                  >
+                    {labels.retryIndexing}
+                  </button>
+                )}
                 {canEdit && (
                   <button
                     type="button"
@@ -650,19 +745,40 @@ function FilesCard({
 
         {uploading > 0 && <p className="border-t border-border px-4 py-2.5 text-meta text-ink-2">{labels.uploading.replace("{n}", String(uploading))}</p>}
 
+        <DrivePicker
+          lang={lang}
+          labels={driveLabels}
+          open={driveOpen}
+          onClose={() => setDriveOpen(false)}
+          max={UPLOAD_BATCH_SIZE}
+          confirmLabel="import"
+          onConfirm={importFromDrive}
+        />
+
         {!documents.length && !uploading && (
           <div className="px-4 pb-4">
             {canEdit ? (
-              <button
-                type="button"
-                disabled={atCapacity}
-                onClick={() => fileRef.current?.click()}
-                className="flex w-full flex-col items-center gap-1.5 rounded-card border border-dashed border-border px-4 py-5 text-center hover:border-bordeaux-700/40 hover:bg-white disabled:opacity-60"
-              >
-                <UploadIcon size={20} className="text-ink-3" />
-                <span className="text-label font-medium text-ink">{labels.dropzoneHint}</span>
-                <span className="text-meta text-ink-3">{labels.dropzoneTypes}</span>
-              </button>
+              <>
+                <button
+                  type="button"
+                  disabled={atCapacity}
+                  onClick={() => fileRef.current?.click()}
+                  className="flex w-full flex-col items-center gap-1.5 rounded-card border border-dashed border-border px-4 py-5 text-center hover:border-bordeaux-700/40 hover:bg-white disabled:opacity-60"
+                >
+                  <UploadIcon size={20} className="text-ink-3" />
+                  <span className="text-label font-medium text-ink">{labels.dropzoneHint}</span>
+                  <span className="text-meta text-ink-3">{labels.dropzoneTypes}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={atCapacity}
+                  onClick={() => setDriveOpen(true)}
+                  className="mt-2 inline-flex items-center gap-2 text-label text-bordeaux-700 hover:text-bordeaux-900 disabled:opacity-60"
+                >
+                  <GoogleDriveIcon size={15} />
+                  {labels.addFromDrive}
+                </button>
+              </>
             ) : (
               <p className="text-secondary text-ink-3">{labels.documentsEmpty}</p>
             )}
@@ -671,7 +787,19 @@ function FilesCard({
 
         {error && (
           <p role="alert" className="border-t border-border px-4 py-2.5 text-meta text-danger">
-            {error === "upload" ? labels.uploadError : error === "delete" ? labels.deleteDocumentError : labels.contextCapacityReached}
+            {error === "upload"
+              ? rejected.length
+                ? labels.uploadErrorFiles.replace("{files}", rejected.join(", "))
+                : labels.uploadError
+              : error === "drive"
+                ? ((driveLabels.errors as Record<string, string>)[driveCode] ?? driveLabels.errors.unavailable)
+                : error === "delete"
+                ? labels.deleteDocumentError
+                : error === "retry"
+                  ? labels.retryIndexingError
+                  : error === "retryBusy"
+                    ? labels.retryIndexingBusy
+                    : labels.contextCapacityReached}
           </p>
         )}
       </Card>

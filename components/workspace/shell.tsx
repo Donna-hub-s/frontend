@@ -10,6 +10,7 @@ import { SearchPalette } from "./search-palette";
 import { ConnectorRows, SidePanel } from "./side-panel";
 import { Sidebar, type Account } from "./sidebar";
 import { FileViewer } from "./file-viewer";
+import { ReminderToasts } from "./reminder-toasts";
 import { SettingsDialog } from "./settings-dialog";
 import { WorkspaceProvider } from "./workspace-provider";
 
@@ -83,6 +84,7 @@ export function WorkspaceShell({
       <SearchPalette lang={lang} labels={dict.sidebar} />
       <SettingsDialog lang={lang} dict={dict} account={account} connectors={connectors} oauthProviders={oauthProviders} />
       <FileViewer lang={lang} labels={dict.viewer} />
+      <ReminderToasts lang={lang} labels={dict.reminders} />
     </WorkspaceProvider>
   );
 }

@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { startChatRun, uid, visibleSteps, type RunInput } from "@/lib/chat-run";
-import { useProjectCapacityWs, type DocumentStatusUpdate } from "@/lib/use-project-ws";
+import { useProjectCapacityWs, type DocumentStatusUpdate, type ReminderDue } from "@/lib/use-project-ws";
+import type { SkillSettings } from "@/lib/skills";
 import { installSessionGuard } from "@/lib/session-guard";
 import type { Locale } from "@/i18n/config";
 import type {
@@ -11,11 +12,15 @@ import type {
   MentionSelection,
   PendingActionOut,
   ProjectOut,
+  SkillOut,
   Step,
 } from "@/lib/workspace-types";
 
-/** Notification in-app : une réponse est arrivée, ou DONNA pose une question. */
-export type Notice = "response" | "question";
+/** Notification in-app : une réponse est arrivée, DONNA pose une question, ou un rappel s'est déclenché. */
+export type Notice = "response" | "question" | "reminder";
+
+/** Rappel déclenché, affiché jusqu'à ce que l'utilisateur le ferme (voir reminder-toasts.tsx). */
+export type ReminderAlert = { id: string; content: string; conversationId: string | null };
 
 /** Nombre maximum de fils conservés en mémoire (historique complet de chacun). */
 const THREAD_LIMIT = 30;
@@ -105,6 +110,16 @@ type WorkspaceValue = {
   /** Derniers messages reçus par conversation non affichée (pastille + badge). */
   notices: Record<string, Notice>;
   markRead: (key: string) => void;
+  /** Rappels qui viennent de se déclencher (poussés en direct par le websocket). */
+  reminders: ReminderAlert[];
+  dismissReminder: (id: string) => void;
+  /** Catalogue des skills (null tant qu'il n'est pas chargé) et réglages EXPLICITES de l'utilisateur —
+   * partagés par le raccourci du chat et l'onglet Compétences des paramètres. */
+  skills: SkillOut[] | null;
+  skillSettings: SkillSettings;
+  refreshSkills: () => Promise<void>;
+  /** Active/coupe une skill tout de suite (appliqué dès le prochain message). false = non enregistré. */
+  setSkillEnabled: (id: string, enabled: boolean) => Promise<boolean>;
   /** Dernier statut connu par document RAG (clé = document id), mis à jour en
    * direct par le websocket dès qu'une ingestion change d'état — voir
    * project-detail.tsx::FilesCard, qui patche sa liste locale sur cette base. */
@@ -305,6 +320,104 @@ export function WorkspaceProvider({
 
   const [documentStatuses, setDocumentStatuses] = useState<Record<string, DocumentStatusUpdate>>({});
 
+  const [skills, setSkills] = useState<SkillOut[] | null>(null);
+  const [skillSettings, setSkillSettings] = useState<SkillSettings>({});
+  const refreshSkills = useCallback(async () => {
+    const [catalog, profile] = await Promise.all([
+      getJson<SkillOut[]>("/api/donna/chat/skills"),
+      getJson<{ skills?: SkillSettings }>("/api/donna/profile/me"),
+    ]);
+    if (catalog) setSkills(catalog);
+    if (profile) setSkillSettings(profile.skills ?? {});
+  }, []);
+  // Chargement initial (même lecture que refreshSkills, gardée contre un démontage en cours de route).
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([
+      getJson<SkillOut[]>("/api/donna/chat/skills"),
+      getJson<{ skills?: SkillSettings }>("/api/donna/profile/me"),
+    ]).then(([catalog, profile]) => {
+      if (cancelled) return;
+      if (catalog) setSkills(catalog);
+      if (profile) setSkillSettings(profile.skills ?? {});
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const setSkillEnabled = useCallback(async (id: string, enabled: boolean) => {
+    let previous: boolean | undefined;
+    // Optimiste : l'interrupteur bouge tout de suite ; on revient en arrière si le serveur refuse.
+    setSkillSettings((settings) => {
+      previous = settings[id];
+      return { ...settings, [id]: enabled };
+    });
+    const response = await fetch("/api/donna/profile/me", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ skills: { [id]: enabled } }),
+    }).catch(() => null);
+    if (response?.ok) return true;
+    setSkillSettings((settings) => {
+      const rest = { ...settings };
+      if (previous === undefined) delete rest[id];
+      else rest[id] = previous;
+      return rest;
+    });
+    return false;
+  }, []);
+
+  const [reminders, setReminders] = useState<ReminderAlert[]>([]);
+  const dismissReminder = useCallback((id: string) => setReminders((list) => list.filter((r) => r.id !== id)), []);
+
+  // Un rappel vient de se déclencher : le worker a déjà posé son message dans la conversation, on
+  // l'ajoute aux fils chargés en mémoire (sinon il n'apparaît qu'au rechargement), on marque la
+  // conversation non lue, on affiche la carte et, onglet masqué, une notification du navigateur.
+  const handleReminder = useCallback(
+    (due: ReminderDue) => {
+      setReminders((list) =>
+        list.some((r) => r.id === due.reminderId)
+          ? list
+          : [...list, { id: due.reminderId, content: due.content, conversationId: due.conversationId }].slice(-3),
+      );
+      if (due.conversationId) {
+        const conversationId = due.conversationId;
+        const messageId = `reminder-${due.messageId ?? due.reminderId}`;
+        setThreads((existing) => {
+          let changed = false;
+          const next = { ...existing };
+          for (const [key, thread] of Object.entries(existing)) {
+            if (thread.conversationId !== conversationId || thread.messages.some((m) => m.id === messageId)) continue;
+            changed = true;
+            // Même texte que celui inséré par le worker (tasks.py::_insert_reminder_message).
+            next[key] = {
+              ...thread,
+              messages: [
+                ...thread.messages,
+                { id: messageId, role: "assistant", content: `Petit rappel : ${due.content}.`, createdAt: Date.now(), attachments: [], status: "done" },
+              ],
+            };
+          }
+          return changed ? next : existing;
+        });
+        const key = threadAlias[conversationId] ?? conversationId;
+        if (activeKeyRef.current !== key) {
+          // Une question en attente reste prioritaire sur le simple rappel.
+          setNotices((existing) => (existing[key] === "question" ? existing : { ...existing, [key]: "reminder" }));
+        }
+      }
+      try {
+        if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.visibilityState === "hidden") {
+          new Notification("DONNA", { body: due.content, tag: due.reminderId });
+        }
+      } catch {
+        // Notification système indisponible : la carte dans l'application suffit.
+      }
+    },
+    [threadAlias],
+  );
+
   useProjectCapacityWs(
     wsBaseUrl,
     useCallback(
@@ -315,6 +428,7 @@ export function WorkspaceProvider({
       (update: DocumentStatusUpdate) => setDocumentStatuses((map) => ({ ...map, [update.documentId]: update })),
       [],
     ),
+    handleReminder,
   );
 
   // Ref synchronisée après rendu : lue par les callbacks de flux, hors cycle de rendu.
@@ -447,6 +561,12 @@ export function WorkspaceProvider({
       stop,
       notices,
       markRead,
+      reminders,
+      dismissReminder,
+      skills,
+      skillSettings,
+      refreshSkills,
+      setSkillEnabled,
       documentStatuses,
     }),
     [
@@ -477,6 +597,12 @@ export function WorkspaceProvider({
       stop,
       notices,
       markRead,
+      reminders,
+      dismissReminder,
+      skills,
+      skillSettings,
+      refreshSkills,
+      setSkillEnabled,
       documentStatuses,
     ],
   );

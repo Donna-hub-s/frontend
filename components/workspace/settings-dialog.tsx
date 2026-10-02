@@ -3,8 +3,9 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { locales, localeNames, type Locale } from "@/i18n/config";
-import type { ConnectorsOut, ProfileOut, ReminderOut, SkillKey } from "@/lib/workspace-types";
-import { parseBackendDate, SKILL_KEYS } from "@/lib/workspace-types";
+import type { ConnectorsOut, ProfileOut, ReminderOut, SkillOut } from "@/lib/workspace-types";
+import { parseBackendDate } from "@/lib/workspace-types";
+import { connectorName, setSkill, skillChanges, skillDescription, skillEnabled, skillLabel, type SkillSettings } from "@/lib/skills";
 import { Dialog } from "./dialog";
 import { BellIcon, ClockIcon, CloseIcon, PlugIcon, ShieldIcon, SlidersIcon, UserIcon } from "./icons";
 import { SecurityPane } from "./security-pane";
@@ -27,7 +28,9 @@ type Draft = {
   notify_reminders_email: boolean;
   notify_reminders_whatsapp: boolean;
   whatsapp_notify_number: string;
-} & { [K in SkillKey]: boolean };
+  /** Réglages explicites par skill (voir lib/skills.ts). */
+  skills: SkillSettings;
+};
 
 const toDraft = (p: ProfileOut): Draft => ({
   display_name: p.display_name ?? "",
@@ -39,13 +42,7 @@ const toDraft = (p: ProfileOut): Draft => ({
   notify_reminders_email: p.notify_reminders_email,
   notify_reminders_whatsapp: p.notify_reminders_whatsapp,
   whatsapp_notify_number: p.whatsapp_notify_number ?? "",
-  enable_web_search: p.enable_web_search,
-  enable_sub_agents: p.enable_sub_agents,
-  enable_reminders: p.enable_reminders,
-  enable_memory: p.enable_memory,
-  enable_email_calendar: p.enable_email_calendar,
-  enable_drive: p.enable_drive,
-  enable_create_document: p.enable_create_document,
+  skills: { ...p.skills },
 });
 
 const fieldClass =
@@ -99,6 +96,7 @@ function SettingsBody({
   onClose: () => void;
 }) {
   const labels = dict.settings;
+  const { refreshSkills } = useWorkspace();
   const [tab, setTab] = useState<Tab>("profile");
   const [initial, setInitial] = useState<Draft | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -142,7 +140,9 @@ function SettingsBody({
       notify_reminders_whatsapp: draft.notify_reminders_whatsapp,
       whatsapp_notify_number: draft.whatsapp_notify_number.trim() || null,
     };
-    for (const key of SKILL_KEYS) body[key] = draft[key];
+    // Seuls les réglages modifiés partent : le serveur les fusionne avec les autres.
+    const changed = skillChanges(initial?.skills ?? {}, draft.skills);
+    if (Object.keys(changed).length) body.skills = changed;
     const response = await fetch("/api/donna/profile/me", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -152,6 +152,7 @@ function SettingsBody({
     if (response?.ok) {
       setInitial(draft);
       setStatus("saved");
+      void refreshSkills(); // le raccourci du chat reflète les nouveaux réglages
     } else setStatus(response?.status === 400 || response?.status === 422 ? "invalidTimezone" : "error");
   };
 
@@ -228,7 +229,7 @@ function SettingsBody({
           ) : tab === "preferences" ? (
             <PreferencesPane labels={labels} draft={draft} update={update} />
           ) : tab === "skills" ? (
-            <SkillsPane labels={labels} draft={draft} update={update} />
+            <SkillsPane lang={lang} labels={labels} draft={draft} initial={initial} update={update} />
           ) : (
             <NotificationsPane labels={labels} account={account} draft={draft} update={update} />
           )}
@@ -413,22 +414,47 @@ function PreferencesPane({ labels, draft, update }: PaneProps) {
   );
 }
 
-function SkillsPane({ labels, draft, update }: PaneProps) {
+/** Compétences : le catalogue vient du serveur (GET /app/chat/skills — textes, outils, connecteurs requis) ;
+ * les réglages de l'utilisateur sont dans le brouillon du profil. Ajouter une skill côté backend suffit à
+ * la faire apparaître ici. */
+function SkillsPane({ lang, labels, draft, initial, update }: PaneProps & { lang: Locale; initial: Draft | null }) {
+  const [skills, setSkills] = useState<SkillOut[] | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/donna/chat/skills", { cache: "no-store" })
+      .then((response) => (response.ok ? (response.json() as Promise<SkillOut[]>) : Promise.reject()))
+      .then((list) => !cancelled && setSkills(list))
+      .catch(() => !cancelled && setLoadFailed(true));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <Pane title={labels.navSkills} hint={labels.skillsHint}>
-      {SKILL_KEYS.map((key, index) => {
-        const copy = labels.skill[key];
-        return (
-          <div key={key} className={index > 0 ? "border-t border-border" : undefined}>
+      {loadFailed ? (
+        <p className="py-6 text-center text-secondary text-danger">{labels.skillsLoadError}</p>
+      ) : !skills ? (
+        <p className="py-6 text-center text-secondary text-ink-3">{labels.loading}</p>
+      ) : (
+        skills.map((skill, index) => (
+          <div key={skill.id} className={index > 0 ? "border-t border-border" : undefined}>
             <Toggle
-              label={copy.label}
-              hint={copy.description}
-              checked={draft[key]}
-              onChange={(value) => update(key, value)}
+              label={skillLabel(skill, lang)}
+              hint={skillDescription(skill, lang)}
+              checked={skillEnabled(skill, draft.skills)}
+              onChange={(value) => update("skills", setSkill(draft.skills, skill, value, initial?.skills ?? {}))}
             />
+            {skill.missing.length > 0 && (
+              <p className="pb-1 text-meta text-danger text-pretty">
+                {labels.skillNeeds.replace("{connectors}", skill.missing.map(connectorName).join(", "))}
+              </p>
+            )}
           </div>
-        );
-      })}
+        ))
+      )}
     </Pane>
   );
 }

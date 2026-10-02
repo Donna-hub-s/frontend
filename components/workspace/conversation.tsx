@@ -16,18 +16,26 @@ import {
   type Mention,
   type MentionKind,
   type MentionSelection,
-  type PersonalDocumentOut,
+  type AccessibleDocumentOut,
+  type EmailDraftOut,
+  type PendingActionOut,
   type SourceOut,
   type ToolCall,
 } from "@/lib/workspace-types";
 import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, SendIcon, SpeakerIcon, StopIcon } from "./icons";
 import { Markdown } from "./markdown";
-import { StepDot, stepLabel } from "./side-panel";
+import { downloadDriveFiles, type DriveFileOut } from "@/lib/drive";
+import { EmailAttachmentList } from "./email-attachments";
+import { GoogleDriveIcon } from "./brand-icons";
+import { SkillsMenu } from "./skills-menu";
+import { DrivePicker } from "./drive-picker";
+import { StepDot, stepDetail, stepLabel } from "./side-panel";
 import { useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
 
-const MAX_FILES = 5;
+// Même plafond que DONNA_MAX_FILES_PER_REQUEST côté backend (10 par défaut).
+const MAX_FILES = 10;
 
 export function Conversation({
   lang,
@@ -205,6 +213,7 @@ export function Conversation({
 
       {!loadError && (
         <Composer
+          lang={lang}
           dict={dict}
           busy={busy}
           onSend={send}
@@ -393,7 +402,7 @@ function AssistantMessage({
                   ? chat.errorTooMany
                   : message.error === "unavailable"
                     ? chat.errorUnavailable
-                    : chat.errorGeneric}
+                    : (message.errorDetail ?? chat.errorGeneric)}
             </span>
             {message.error === "session" ? (
               <Link href={`/${lang}/login?next=/${lang}/app`} className="font-medium text-danger underline hover:text-danger">
@@ -532,13 +541,21 @@ function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict;
       </div>
       {expanded && (
         <ol className="flex flex-col gap-2 border-t border-border px-4 py-3">
-          {steps.map((step) => (
-            <li key={step.id} className="flex items-center gap-2.5 text-secondary">
-              <StepDot status={step.status} />
-              <span className={`flex-1 ${step.status === "done" ? "text-ink-2" : "text-ink"}`}>{stepLabel(dict, step.key)}</span>
-              <Time lang={lang} at={step.at} />
-            </li>
-          ))}
+          {steps.map((step) => {
+            const detail = stepDetail(dict, step);
+            return (
+              <li key={step.id} className="flex items-start gap-2.5 text-secondary">
+                <span className="mt-0.5 flex">
+                  <StepDot status={step.status} warn={detail?.warn} />
+                </span>
+                <span className={`flex-1 ${step.status === "done" ? "text-ink-2" : "text-ink"}`}>
+                  {stepLabel(dict, step.key)}
+                  {detail && <span className={`block text-meta text-pretty ${detail.warn ? "text-danger" : "text-ink-3"}`}>{detail.text}</span>}
+                </span>
+                <Time lang={lang} at={step.at} />
+              </li>
+            );
+          })}
         </ol>
       )}
     </div>
@@ -552,11 +569,33 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
   const { pending, decisions, decideAction } = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [fetched, setFetched] = useState<EmailDraftOut | null>(null);
   const id = actionIdFrom(call.result);
+  const isEmailCall = call.name === "propose_email";
+
+  // Brouillon RÉEL côté serveur (pièces jointes comprises) : ce que le modèle a demandé a pu être refusé,
+  // résolu ou renommé — seul le serveur sait ce qui partira. Valable quel que soit le statut de l'action.
+  useEffect(() => {
+    if (!id || !isEmailCall) return;
+    let live = true;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/donna/chat/memory/actions/${encodeURIComponent(id)}`, { cache: "no-store" });
+        if (response.ok && live) setFetched(((await response.json()) as PendingActionOut).email ?? null);
+      } catch {
+        // Silencieux : la carte reste utilisable sans la liste des pièces jointes.
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [id, isEmailCall]);
+
   if (!id) return null;
 
   const decision = decisions[id];
   const awaiting = !decision && pending.some((a) => a.id === id);
+  const draft = pending.find((a) => a.id === id)?.email ?? fetched;
   const args = call.arguments;
   const isEmail = call.name === "propose_email";
   const isDriveUpload = call.name === "propose_drive_upload";
@@ -606,6 +645,7 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
           </p>
           <p className="mt-0.5 text-label font-medium text-ink">{text(args.subject)}</p>
           <p className="mt-2 text-secondary leading-5 whitespace-pre-wrap text-ink-2">{text(args.body)}</p>
+          {draft && <EmailAttachmentList actionId={id} attachments={draft.attachments} openable={awaiting} labels={dict.chat} />}
         </>
       ) : isDriveUpload ? (
         <>
@@ -686,6 +726,9 @@ function QuestionCard({
 function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] }) {
   // Un document peut apparaître plusieurs fois (plusieurs extraits) : une puce par document.
   const unique = sources.filter((s, i) => sources.findIndex((o) => o.doc_id === s.doc_id) === i);
+  // Extraits réellement injectés dans le contexte du modèle (les fichiers générés n'en ont pas).
+  const excerpts = sources.filter((s) => s.excerpt.trim());
+  const [showExcerpts, setShowExcerpts] = useState(false);
   return (
     <div>
       <p className="text-meta text-ink-3">{dict.chat.sources}</p>
@@ -704,6 +747,29 @@ function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] 
           </li>
         ))}
       </ul>
+      {excerpts.length > 0 && (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowExcerpts((v) => !v)}
+            aria-expanded={showExcerpts}
+            className="mt-2 inline-flex items-center gap-1 text-meta text-ink-2 hover:text-ink"
+          >
+            {showExcerpts ? dict.chat.sourcesHideExcerpts : `${dict.chat.sourcesExcerpts} (${excerpts.length})`}
+            <ChevronIcon size={14} className={`transition-transform ${showExcerpts ? "rotate-180" : ""}`} />
+          </button>
+          {showExcerpts && (
+            <ol className="mt-1.5 flex flex-col gap-2">
+              {excerpts.map((source, index) => (
+                <li key={`${source.doc_id}-${index}`} className="rounded-card border border-border bg-white px-3 py-2">
+                  <p className="truncate text-meta font-medium text-ink-2">{source.original_name}</p>
+                  <p className="mt-0.5 line-clamp-4 text-meta whitespace-pre-line text-ink-3">{source.excerpt}</p>
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -720,7 +786,7 @@ type MenuAction =
   | { type: "web" }
   | { type: "clear" }
   | { type: "shortcut"; kind: MentionKind };
-type MenuItem = { id: string; label: string; kind: "project" | "document" | "command"; action: MenuAction };
+type MenuItem = { id: string; label: string; /** Projet d'un document (affiché en discret). */ hint?: string; kind: "project" | "document" | "command"; action: MenuAction };
 
 /** Repère un déclencheur "@"/"/" en cours de frappe juste avant le curseur —
  * précédé d'un début de chaîne ou d'un espace, sans espace entre lui et le
@@ -736,6 +802,7 @@ function detectTrigger(value: string, caret: number): { trigger: "@" | "/"; quer
 }
 
 export function Composer({
+  lang,
   dict,
   busy,
   onSend,
@@ -743,6 +810,7 @@ export function Composer({
   onComposingChange,
   autoFocus,
 }: {
+  lang: Locale;
   dict: WorkspaceDict;
   busy: boolean;
   onSend: (text: string, files: File[], webSearch: boolean, mentions: MentionSelection) => Promise<void>;
@@ -753,6 +821,12 @@ export function Composer({
   const { projects } = useWorkspace();
   const [value, setValue] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  // Pièces jointes : message d'information (plafond atteint, fichiers Drive en échec) et
+  // récupération Drive en cours — jamais d'abandon silencieux d'un fichier.
+  const [notice, setNotice] = useState<string | null>(null);
+  const [driveOpen, setDriveOpen] = useState(false);
+  const [driveFetch, setDriveFetch] = useState<{ done: number; total: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
   // Reste actif d'un message à l'autre, jusqu'à ce que l'utilisateur le désactive.
   const [webSearch, setWebSearch] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -773,7 +847,7 @@ export function Composer({
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [mentions, setMentions] = useState<Mention[]>([]);
-  const [personalDocs, setPersonalDocs] = useState<PersonalDocumentOut[] | null>(null);
+  const [accessibleDocs, setAccessibleDocs] = useState<AccessibleDocumentOut[] | null>(null);
   const docsFetchedRef = useRef(false);
 
   const ensurePersonalDocs = useCallback(() => {
@@ -781,8 +855,9 @@ export function Composer({
     docsFetchedRef.current = true;
     void (async () => {
       try {
-        const response = await fetch("/api/donna/rag/documents", { cache: "no-store" });
-        if (response.ok) setPersonalDocs((await response.json()) as PersonalDocumentOut[]);
+        // Documents personnels ET ceux des projets dont l'utilisateur est membre.
+        const response = await fetch("/api/donna/chat/documents", { cache: "no-store" });
+        if (response.ok) setAccessibleDocs((await response.json()) as AccessibleDocumentOut[]);
       } catch {
         // Silencieux — le menu @ retombe sur les projets seuls.
       }
@@ -877,14 +952,15 @@ export function Composer({
       }
     }
     if (menu.kind !== "project") {
-      for (const d of personalDocs ?? []) {
-        if (q && !d.original_name.toLowerCase().includes(q)) continue;
-        const mention: Mention = { id: d.id, label: `@${d.original_name}`, kind: "document" };
-        items.push({ id: `document:${d.id}`, label: mention.label, kind: "document", action: { type: "mention", mention } });
+      for (const d of accessibleDocs ?? []) {
+        // Seuls les documents indexés ont un contenu à injecter (un échec ou une attente n'en ont pas).
+        if (d.status !== "done" || (q && !d.original_name.toLowerCase().includes(q))) continue;
+        const mention: Mention = { id: d.id, label: `@${d.original_name}`, kind: "document", projectId: d.project_id };
+        items.push({ id: `document:${d.id}`, label: mention.label, hint: d.project_name ?? d.conversation_title ?? undefined, kind: "document", action: { type: "mention", mention } });
       }
     }
     return items.slice(0, 8);
-  }, [menu, projects, personalDocs, dict.chat]);
+  }, [menu, projects, accessibleDocs, dict.chat]);
 
   // Seul point d'exécution réel des actions du menu — appelé depuis de vrais
   // gestionnaires d'événement (onClick, Entrée), jamais pendant le rendu :
@@ -996,23 +1072,50 @@ export function Composer({
     el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
   }, [value]);
 
+  const addFiles = (picked: File[]) => {
+    if (!picked.length) return;
+    const room = Math.max(MAX_FILES - files.length, 0);
+    const accepted = picked.slice(0, room);
+    setFiles((list) => [...list, ...accepted]);
+    const skipped = picked.length - accepted.length;
+    setNotice(skipped > 0 ? dict.chat.filesLimit.replace("{max}", String(MAX_FILES)).replace("{n}", String(skipped)) : null);
+  };
+
+  const attachFromDrive = async (picked: DriveFileOut[]) => {
+    setNotice(null);
+    setDriveFetch({ done: 0, total: picked.length });
+    const result = await downloadDriveFiles(picked, (done, total) => setDriveFetch({ done, total }));
+    setDriveFetch(null);
+    addFiles(result.files);
+    if (result.failed.length) {
+      const reasons = dict.drive.errors as Record<string, string>;
+      const detail = result.failed.map((f) => `${f.name} (${reasons[f.code] ?? reasons.unavailable})`).join(", ");
+      setNotice(dict.chat.driveFailed.replace("{files}", detail));
+    }
+  };
+
   const submit = () => {
-    if (busy || (!value.trim() && !files.length)) return;
+    if (busy || driveFetch || (!value.trim() && !files.length)) return;
     const [text, attached] = [value, files];
     const activeMentions = mentions.filter((m) => text.includes(m.label));
+    // Un document de projet mentionné sans son projet : le tour est cadré sur ce projet — le
+    // backend n'accorde un document de projet que dans le périmètre effectif du tour.
+    const documentMentions = activeMentions.filter((m) => m.kind === "document");
     const selection: MentionSelection = {
-      documentIds: activeMentions.filter((m) => m.kind === "document").map((m) => m.id),
-      projectId: activeMentions.find((m) => m.kind === "project")?.id ?? null,
+      documentIds: documentMentions.map((m) => m.id),
+      projectId:
+        activeMentions.find((m) => m.kind === "project")?.id ?? documentMentions.find((m) => m.projectId)?.projectId ?? null,
     };
     setValue("");
     setFiles([]);
+    setNotice(null);
     setMentions([]);
     setMenu(null);
     onComposingChange?.(false);
     void onSend(text, attached, webSearch, selection);
   };
 
-  const canSend = !busy && (value.trim().length > 0 || files.length > 0);
+  const canSend = !busy && !driveFetch && (value.trim().length > 0 || files.length > 0);
 
   return (
     <div className="px-4 pb-4 md:px-8">
@@ -1021,8 +1124,27 @@ export function Composer({
           event.preventDefault();
           submit();
         }}
-        className="relative mx-auto w-full max-w-[46rem] rounded-panel border border-border bg-white shadow-float focus-within:border-bordeaux-700/40"
+        onDragOver={(event) => {
+          if (busy || !event.dataTransfer.types.includes("Files")) return;
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false);
+        }}
+        onDrop={(event) => {
+          if (busy || !event.dataTransfer.files.length) return;
+          event.preventDefault();
+          setDragging(false);
+          addFiles(Array.from(event.dataTransfer.files));
+        }}
+        className={`relative mx-auto w-full max-w-[46rem] rounded-panel border bg-white shadow-float focus-within:border-bordeaux-700/40 ${dragging ? "border-bordeaux-700 shadow-focus" : "border-border"}`}
       >
+        {dragging && (
+          <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-panel bg-white/85 text-label font-medium text-bordeaux-700">
+            {dict.chat.dropFiles}
+          </p>
+        )}
         {menu && (
           <ul
             role="listbox"
@@ -1045,12 +1167,23 @@ export function Composer({
                   {item.kind === "project" && <FolderIcon size={16} className="shrink-0 text-bordeaux-700" />}
                   {item.kind === "document" && <FileIcon size={16} className="shrink-0 text-ink-3" />}
                   <span className="truncate">{item.label}</span>
+                  {item.hint && <span className="ml-auto shrink-0 pl-2 text-meta text-ink-3">{item.hint}</span>}
                 </li>
               ))
             ) : (
               <li className="px-2.5 py-2 text-label text-ink-3">{dict.chat.mentionNoResults}</li>
             )}
           </ul>
+        )}
+        {driveFetch && (
+          <p role="status" className="px-4 pt-3 text-meta text-ink-2">
+            {dict.chat.driveFetching.replace("{done}", String(driveFetch.done)).replace("{total}", String(driveFetch.total))}
+          </p>
+        )}
+        {notice && (
+          <p role="status" className="px-4 pt-3 text-meta text-bordeaux-700">
+            {notice}
+          </p>
         )}
         {files.length > 0 && (
           <ul className="flex flex-wrap gap-2 px-4 pt-3">
@@ -1125,8 +1258,7 @@ export function Composer({
               multiple
               hidden
               onChange={(event) => {
-                const picked = Array.from(event.target.files ?? []);
-                setFiles((list) => [...list, ...picked].slice(0, MAX_FILES));
+                addFiles(Array.from(event.target.files ?? []));
                 event.target.value = "";
               }}
             />
@@ -1139,6 +1271,16 @@ export function Composer({
               className="flex size-9 items-center justify-center rounded-button text-ink-2 hover:bg-active hover:text-ink disabled:opacity-50"
             >
               <PaperclipIcon size={19} />
+            </button>
+            <button
+              type="button"
+              disabled={busy || Boolean(driveFetch) || files.length >= MAX_FILES}
+              onClick={() => setDriveOpen(true)}
+              aria-label={dict.chat.attachDrive}
+              title={dict.chat.attachDrive}
+              className="flex size-9 items-center justify-center rounded-button text-ink-2 hover:bg-active hover:text-ink disabled:opacity-50"
+            >
+              <GoogleDriveIcon size={18} />
             </button>
             <button
               type="button"
@@ -1165,6 +1307,7 @@ export function Composer({
               <GlobeIcon size={18} />
               <span className={webSearch ? "" : "sr-only"}>{dict.chat.webSearch}</span>
             </button>
+            <SkillsMenu lang={lang} labels={dict.chat} />
           </div>
           {busy ? (
             <button
@@ -1189,6 +1332,17 @@ export function Composer({
           )}
         </div>
       </form>
+      {/* Hors du <form> : Entrée dans la recherche du sélecteur ne doit jamais envoyer le message. */}
+      <DrivePicker
+        lang={lang}
+        labels={dict.drive}
+        open={driveOpen}
+        onClose={() => setDriveOpen(false)}
+        max={Math.max(MAX_FILES - files.length, 1)}
+        confirmLabel="attach"
+        onConfirm={attachFromDrive}
+      />
+
       {transcribing && <p className="mt-2 text-center text-meta text-ink-3">{dict.chat.micTranscribing}</p>}
       {micError && (
         <p className="mt-2 text-center text-meta text-danger">

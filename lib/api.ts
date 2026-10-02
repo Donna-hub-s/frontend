@@ -47,7 +47,61 @@ export type AttachmentOut = {
   created_at: string;
 };
 
-export type SourceOut = { doc_id: string; original_name: string; excerpt: string; file_url: string };
+export type SourceOut = { doc_id: string; original_name: string; excerpt: string; file_url: string; rerank_score?: number | null; is_project_doc?: boolean };
+
+/** backend/app/chat/src/schemas.py::AttachedFileOut — ce qui a été lu de chaque fichier joint. */
+export type AttachedFileOut = {
+  filename: string;
+  kind: "document" | "image" | "audio" | string;
+  chars: number;
+  kept_chars: number;
+  /** Texte plus long que sa part du budget : la suite n'a pas été transmise au modèle. */
+  truncated: boolean;
+};
+
+/** backend/app/chat/src/schemas.py::RagInfoOut — issue de la lecture documentaire d'un tour. */
+export type RagInfoOut = {
+  status: "completed" | "empty" | "skipped" | "failed";
+  scope: "project" | "personal";
+  sources_count: number;
+  documents_count: number;
+  indexed_documents: number;
+  reranked: boolean;
+  error: "index_mismatch" | "embeddings_auth" | "unavailable" | null;
+};
+
+/** backend/app/chat/src/schemas.py::AccessibleDocumentOut — GET /app/chat/documents. */
+export type AccessibleDocumentOut = {
+  id: string;
+  original_name: string;
+  status: string;
+  chunk_count: number;
+  project_id: string | null;
+  project_name: string | null;
+  /** Fichier joint à une conversation (visible de son seul propriétaire). */
+  conversation_id: string | null;
+  conversation_title: string | null;
+  created_at: string;
+};
+
+/** backend/app/chat/src/schemas.py::DocumentSearchOut — GET /app/chat/search/documents. */
+export type DocumentHitOut = {
+  doc_id: string;
+  original_name: string;
+  project_id: string | null;
+  project_name: string | null;
+  conversation_id: string | null;
+  conversation_title: string | null;
+  excerpt: string;
+  file_url: string;
+  score: number | null;
+  matched_in: "name" | "content" | "semantic";
+};
+export type DocumentSearchOut = {
+  hits: DocumentHitOut[];
+  mode: "hybrid" | "keyword" | "unavailable";
+  warning: RagInfoOut["error"];
+};
 
 export type ConversationOut = {
   id: string;
@@ -72,7 +126,18 @@ export type MessageOut = {
   tool_calls?: ToolCallOut[] | null;
 };
 
-export type PendingActionOut = { id: string; kind: string; summary: string; status: string; created_at: string };
+/** backend/app/chat/src/schemas.py::EmailDraftOut — le brouillon RÉEL d'un email en attente. */
+export type EmailAttachmentOut = { name: string; size: number; mime_type: string; source: "conversation" | "drive" | string };
+export type EmailDraftOut = { to: string; subject: string; body: string; attachments: EmailAttachmentOut[] };
+export type PendingActionOut = {
+  id: string;
+  kind: string;
+  summary: string;
+  status: string;
+  created_at: string;
+  /** Brouillon d'email (kind « send_email ») : destinataire, objet, corps et pièces jointes. */
+  email?: EmailDraftOut | null;
+};
 
 /** GET /app/chat/memory/reminders (backend/app/chat/src/schemas.py::ReminderOut). */
 export type ReminderOut = { id: string; content: string; status: string; due_at: string | null; created_at: string };
@@ -117,19 +182,27 @@ export type ProfileOut = {
   theme: string;
   date_format: string;
   measurement_system: string;
-  /** Skills activables — clés alignées sur `_SKILL_TOOLS`
-   * (backend/app/chat/src/tools.py). Une skill désactivée retire ses outils
-   * au modèle ; ne peut qu'enlever, jamais accorder (les droits viennent de
-   * xauth). Toutes vraies par défaut. */
-  enable_web_search: boolean;
-  enable_sub_agents: boolean;
-  enable_reminders: boolean;
-  enable_memory: boolean;
-  enable_email_calendar: boolean;
-  enable_drive: boolean;
-  enable_create_document: boolean;
+  /** Réglages EXPLICITES par skill ({identifiant: activée}) ; une skill absente garde sa valeur par
+   * défaut (voir SkillOut). Une skill désactivée retire ses outils au modèle ; ne peut qu'enlever,
+   * jamais accorder (les droits viennent de xauth). */
+  skills: Record<string, boolean>;
   created_at: string;
   updated_at: string;
+};
+
+/** GET /app/chat/skills (backend/app/chat/src/routes/skill_routes.py::SkillOut). */
+export type SkillOut = {
+  id: string;
+  /** Textes par langue ({fr, en}). */
+  label: Record<string, string>;
+  description: Record<string, string>;
+  tools: string[];
+  /** Ce que la skill peut provoquer : lecture seule, écriture chez l'utilisateur, ou envoi vers un tiers. */
+  risk: "read" | "write" | "outbound";
+  default_enabled: boolean;
+  /** Connecteurs nécessaires (gmail, calendar, drive) et ceux que l'utilisateur n'a pas accordés. */
+  requires: string[];
+  missing: string[];
 };
 
 export type ProjectRole = "owner" | "editor" | "viewer";
@@ -174,6 +247,12 @@ export type ProjectDocumentOut = {
   chunk_count: number;
   error: string | null;
   created_at: string;
+};
+
+/** backend/app/chat/src/schemas.py::ProjectDocumentBatchOut — fichiers ajoutés ET refusés. */
+export type ProjectDocumentBatchOut = {
+  documents: ProjectDocumentOut[];
+  errors: { filename: string; detail: string }[];
 };
 
 export const listConversations = async (projectId?: string) =>

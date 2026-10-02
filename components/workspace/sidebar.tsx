@@ -382,10 +382,14 @@ function ConversationItem({
             attend une action de sa part. */}
         {noticeFor(conversation) && (
           <span
-            className={`ml-auto size-1.5 shrink-0 rounded-full ${noticeFor(conversation) === "question" ? "bg-bordeaux-700" : "bg-ink-3/50"}`}
+            className={`ml-auto size-1.5 shrink-0 rounded-full ${noticeFor(conversation) === "response" ? "bg-ink-3/50" : "bg-bordeaux-700"}`}
           >
             <span className="sr-only">
-              {noticeFor(conversation) === "question" ? labels.newQuestion : labels.newResponse}
+              {noticeFor(conversation) === "question"
+                ? labels.newQuestion
+                : noticeFor(conversation) === "reminder"
+                  ? labels.newReminder
+                  : labels.newResponse}
             </span>
           </span>
         )}

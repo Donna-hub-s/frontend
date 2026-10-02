@@ -1,11 +1,26 @@
 // Lecture du flux SSE de POST /app/chat/stream (backend/app/chat/src/routes/chat_routes.py::event_stream).
 // fetch + ReadableStream plutôt qu'EventSource : la requête est un POST avec corps JSON.
-import type { AttachmentOut, SourceOut, ToolCall } from "./workspace-types";
+import type { AttachmentOut, RagInfoOut, SourceOut, ToolCall } from "./workspace-types";
+
+/** backend/app/chat/src/routes/chat_routes.py::_prepare_llm_context(on_step) — progression réelle de la préparation. */
+export type PrepStep = {
+  key: string;
+  status: "running" | "done" | "failed";
+  scope?: "project" | "personal";
+  info?: RagInfoOut;
+  count?: number | null;
+  names?: string[];
+  pending?: number;
+  name?: string;
+  instructions?: boolean;
+  facts?: number;
+};
 
 export type StreamEvent =
   | { type: "start"; conversationId: string }
   | { type: "delta"; content: string }
   | { type: "tool_start"; name: string }
+  | { type: "step"; step: PrepStep }
   | { type: "sources"; sources: SourceOut[] }
   | { type: "tool_call"; call: ToolCall }
   | { type: "fallback" }
@@ -33,6 +48,8 @@ function parseBlock(block: string): StreamEvent | null {
       return typeof payload.delta === "string" ? { type: "delta", content: payload.delta } : null;
     case "tool_start":
       return { type: "tool_start", name: String(payload.name ?? "") };
+    case "step":
+      return typeof payload.key === "string" ? { type: "step", step: payload as unknown as PrepStep } : null;
     case "sources":
       return { type: "sources", sources: (payload.sources as SourceOut[]) ?? [] };
     case "tool_call":
