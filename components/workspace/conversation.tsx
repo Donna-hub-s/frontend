@@ -9,6 +9,7 @@ import { DonnaOrb, type OrbState } from "@/components/brand/donna-orb";
 import { FileLink } from "./file-viewer";
 import { actionIdFrom } from "@/lib/chat-stream";
 import { EMPTY_MENTIONS, PROPOSALS, uid, visibleSteps } from "@/lib/chat-run";
+import { inlineImageNames, isImageName } from "@/lib/file-links";
 import { useStickToBottom } from "@/lib/use-stick-to-bottom";
 import {
   fileHref,
@@ -23,6 +24,7 @@ import {
 } from "@/lib/workspace-types";
 import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, SendIcon, SpeakerIcon, StopIcon } from "./icons";
 import { Markdown, type MarkdownFile } from "./markdown";
+import { FeedbackBar } from "./feedback-bar";
 import { downloadDriveFiles, type DriveFileOut } from "@/lib/drive";
 import { EmailAttachmentList } from "./email-attachments";
 import { WorkflowDraft } from "./workflow-draft";
@@ -66,6 +68,7 @@ export function Conversation({
     send: sendRun,
     stop,
     dropMessages,
+    patchMessage,
     threads,
     registerThread,
     releaseThread,
@@ -192,6 +195,7 @@ export function Conversation({
                   busy={busy}
                   onAnswer={(text) => void send(text, [])}
                   onRetry={() => retry(index)}
+                  onFeedback={(feedback) => patchMessage(threadKey, m.id, { feedback })}
                 />
               ),
             )
@@ -316,8 +320,8 @@ function UserMessage({ lang, message, initials, label }: { lang: Locale; message
 }
 
 /** Lien du texte vers un fichier joint à CE message : aperçu dans DONNA (voir `Markdown`). */
-const renderFile = (file: MarkdownFile, label: ReactNode) => (
-  <FileLink url={file.url} name={file.name} className="underline decoration-rose-300 underline-offset-2">
+const renderFile = (file: MarkdownFile, label: ReactNode, variant: "link" | "image") => (
+  <FileLink url={file.url} name={file.name} className={variant === "image" ? "inline-block no-underline" : "underline decoration-rose-300 underline-offset-2"}>
     {label}
   </FileLink>
 );
@@ -330,6 +334,7 @@ function AssistantMessage({
   busy,
   onAnswer,
   onRetry,
+  onFeedback,
 }: {
   lang: Locale;
   dict: WorkspaceDict;
@@ -338,6 +343,7 @@ function AssistantMessage({
   busy: boolean;
   onAnswer: (text: string) => void;
   onRetry: () => void;
+  onFeedback: (feedback: "up" | "down" | null) => void;
 }) {
   const { chat } = dict;
   const streaming = message.status === "streaming";
@@ -345,6 +351,12 @@ function AssistantMessage({
   const question = tools.findLast((t) => t.name === "ask_user");
   const proposals = tools.filter((t) => PROPOSALS.has(t.name));
   const files = useMemo(() => message.attachments.map((file) => ({ name: file.original_name, url: fileHref(file.file_url) })), [message.attachments]);
+  // Images produites (graphique, schéma…) : montrées en ligne (sauf si le texte les affiche déjà), en plus de leur carte
+  // « Fichiers ». SVG exclu (scripts possibles).
+  const images = useMemo(() => {
+    const inline = inlineImageNames(message.content, files);
+    return message.attachments.filter((file) => file.mime_type.startsWith("image/") && isImageName(file.original_name) && !inline.has(file.original_name.normalize("NFC").toLowerCase().trim()));
+  }, [files, message.attachments, message.content]);
 
   return (
     <div className="flex gap-3">
@@ -360,7 +372,7 @@ function AssistantMessage({
 
         {message.content ? (
           <div aria-live={streaming ? "polite" : undefined}>
-            <Markdown files={files} renderFile={renderFile}>
+            <Markdown files={files} renderFile={renderFile} streaming={streaming}>
               {message.content}
             </Markdown>
             {streaming && <span aria-hidden className="demo-caret ml-0.5 inline-block h-4 w-px translate-y-0.5 bg-bordeaux-700" />}
@@ -373,6 +385,19 @@ function AssistantMessage({
 
         {question && (
           <QuestionCard dict={dict} call={question} disabled={busy || !last} onAnswer={onAnswer} />
+        )}
+
+        {images.length > 0 && (
+          <ul className="flex flex-wrap gap-2">
+            {images.map((file) => (
+              <li key={file.id}>
+                <FileLink url={fileHref(file.file_url)} name={file.original_name} className="block no-underline">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- fichier du message servi par la passerelle, taille inconnue */}
+                  <img src={fileHref(file.file_url)} alt={file.original_name} loading="lazy" className="max-h-60 max-w-full rounded-card border border-border" />
+                </FileLink>
+              </li>
+            ))}
+          </ul>
         )}
 
         {message.attachments.length > 0 && (
@@ -434,9 +459,12 @@ function AssistantMessage({
         )}
 
         {!streaming && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Time lang={lang} at={message.createdAt} />
             {message.content && <ListenButton text={message.content} chat={chat} />}
+            {message.status !== "error" && message.serverId && message.content && (
+              <FeedbackBar messageId={message.serverId} value={message.feedback} labels={chat} onChange={onFeedback} />
+            )}
           </div>
         )}
       </div>

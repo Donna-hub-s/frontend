@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hrefBasename, linkTarget } from "./file-links";
+import { hrefBasename, imageTarget, inlineImageNames, isImageName, linkTarget } from "./file-links";
 
 const rapport = { name: "Rapport d'audit.pdf" };
 const budget = { name: "Budget 2026.xlsx" };
@@ -65,4 +65,53 @@ describe("linkTarget", () => {
       expect(linkTarget(href, "clic", [rapport])).toEqual({ kind: "text" });
     },
   );
+});
+
+describe("isImageName", () => {
+  it("accepte les images raster et refuse le SVG", () => {
+    for (const name of ["a.png", "B.JPG", "c.jpeg", "d.webp", "e.gif"]) expect(isImageName(name)).toBe(true);
+    for (const name of ["a.svg", "b.pdf", "c", "d.png.exe", ""]) expect(isImageName(name)).toBe(false);
+  });
+});
+
+describe("imageTarget", () => {
+  const graphique = { name: "graphique.png" };
+  const synthese = { name: "synthese.csv" };
+
+  it("affiche en ligne une pièce jointe image désignée par son nom", () => {
+    expect(imageTarget("sandbox:/mnt/data/graphique.png", "Graphique", [graphique, synthese])).toEqual({ kind: "image", file: graphique });
+    expect(imageTarget("graphique.png", "", [graphique])).toEqual({ kind: "image", file: graphique });
+  });
+
+  it("ne charge JAMAIS une image externe : lien seulement", () => {
+    expect(imageTarget("https://evil.example/pixel.png?secret=abc", "x", [graphique])).toEqual({ kind: "link", href: "https://evil.example/pixel.png?secret=abc" });
+    expect(imageTarget("https://evil.example/a.gif", "x", [])).toEqual({ kind: "link", href: "https://evil.example/a.gif" });
+  });
+
+  it("une pièce jointe qui n'est pas une image devient un lien de fichier", () => {
+    expect(imageTarget("synthese.csv", "Tableau", [graphique, synthese])).toEqual({ kind: "file", file: synthese });
+  });
+
+  it("rien d'affichable : du texte", () => {
+    expect(imageTarget("data:image/png;base64,AAAA", "x", [graphique])).toEqual({ kind: "text" });
+    expect(imageTarget("javascript:alert(1)", "x", [])).toEqual({ kind: "text" });
+    expect(imageTarget(undefined, "", [])).toEqual({ kind: "text" });
+  });
+});
+
+describe("inlineImageNames", () => {
+  const graphique = { name: "Graphique.png" };
+  const autre = { name: "autre.png" };
+
+  it("repère les pièces jointes déjà affichées par une image du texte", () => {
+    const text = "Voici : ![Graphique](sandbox:/mnt/data/graphique.png) et ![x](https://evil.example/p.png) puis ![a](<autre.png>)";
+    expect([...inlineImageNames(text, [graphique, autre])].sort()).toEqual(["autre.png", "graphique.png"]);
+  });
+
+  it("ignore le texte sans image, les liens simples et les fichiers inconnus", () => {
+    expect(inlineImageNames("Un [lien](graphique.png) et du texte.", [graphique]).size).toBe(0);
+    expect(inlineImageNames("![x](inconnu.png)", [graphique, autre]).size).toBe(0); // deux fichiers : aucune supposition
+    expect([...inlineImageNames("![x](inconnu.png)", [graphique])]).toEqual(["graphique.png"]); // un seul de ce type : c'est lui, comme à l'affichage
+    expect(inlineImageNames("", [graphique]).size).toBe(0);
+  });
 });

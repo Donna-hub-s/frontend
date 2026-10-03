@@ -25,7 +25,7 @@ export type StreamEvent =
   | { type: "tool_call"; call: ToolCall }
   | { type: "fallback" }
   | { type: "error"; message: string }
-  | { type: "done"; sources: SourceOut[]; memory: string[]; attachments: AttachmentOut[] };
+  | { type: "done"; messageId?: string; sources: SourceOut[]; memory: string[]; attachments: AttachmentOut[] };
 
 function parseBlock(block: string): StreamEvent | null {
   let name = "message";
@@ -68,6 +68,7 @@ function parseBlock(block: string): StreamEvent | null {
     case "done":
       return {
         type: "done",
+        messageId: typeof payload.message_id === "string" ? payload.message_id : undefined,
         sources: (payload.sources as SourceOut[]) ?? [],
         memory: (payload.memory_notes as string[]) ?? [],
         attachments: (payload.attachments as AttachmentOut[]) ?? [],

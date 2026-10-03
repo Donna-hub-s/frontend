@@ -8,11 +8,12 @@ import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { DonnaLockup } from "@/components/brand/donna-mark";
 import { LanguageSwitch } from "@/components/language-switch";
 import { logout } from "@/lib/auth-actions";
+import { EXPORT_FORMATS, exportHref } from "@/lib/conversation-export";
 import { groupByDate, groupByProject } from "@/lib/sidebar-grouping";
 import type { ConversationOut } from "@/lib/workspace-types";
 import { ChatIcon, ChevronIcon, CloseIcon, ComposeIcon, FolderIcon, LogoutIcon, MoreIcon, SearchIcon, SettingsIcon } from "./icons";
 import { ConversationHoverPreview, type PreviewAnchor, useHoverPreview } from "./conversation-hover-preview";
-import { Workflow as WorkflowGlyph } from "lucide-react";
+import { BarChart3, Workflow as WorkflowGlyph } from "lucide-react";
 import { ProjectSidebarSection } from "./project-list";
 import { useWorkspace } from "./workspace-provider";
 
@@ -61,6 +62,7 @@ export function Sidebar({
   const activeId = pathname.match(/\/app\/c\/([^/]+)/)?.[1];
   const activeProjectId = pathname.match(/\/app\/projects\/([^/]+)/)?.[1];
   const workflowsActive = pathname.includes("/app/workflows");
+  const usageActive = pathname.includes("/app/usage");
 
   return (
     <>
@@ -130,6 +132,17 @@ export function Sidebar({
           >
             <WorkflowGlyph size={16} className="text-ink-3" />
             {labels.workflows}
+          </Link>
+          <Link
+            href={`/${lang}/app/usage`}
+            onClick={onClose}
+            aria-current={usageActive ? "page" : undefined}
+            className={`mb-3 flex h-9 items-center gap-2.5 rounded-nav px-2.5 text-label no-underline transition-colors duration-(--duration-fast) ${
+              usageActive ? "bg-active font-medium text-ink" : "text-ink-2 hover:bg-active/70 hover:text-ink"
+            }`}
+          >
+            <BarChart3 size={16} className="text-ink-3" />
+            {labels.usage}
           </Link>
           <ProjectSidebarSection
             lang={lang}
@@ -261,7 +274,7 @@ function ConversationItem({
   const noticeFor = (conversation: ConversationOut) => notices[resolveThreadKey(conversation.id)];
   const pathname = usePathname();
   const router = useRouter();
-  const [mode, setMode] = useState<"idle" | "menu" | "rename" | "delete" | "move">("idle");
+  const [mode, setMode] = useState<"idle" | "menu" | "rename" | "delete" | "move" | "export">("idle");
   const [title, setTitle] = useState(conversation.title);
   const [busy, setBusy] = useState(false);
   const [moveError, setMoveError] = useState(false);
@@ -412,7 +425,7 @@ function ConversationItem({
       <button
         type="button"
         aria-label={labels.more}
-        aria-expanded={mode === "menu" || mode === "delete"}
+        aria-expanded={mode === "menu" || mode === "delete" || mode === "export"}
         onClick={() => setMode(mode === "idle" ? "menu" : "idle")}
         className={`absolute top-1/2 right-1 flex size-7 -translate-y-1/2 items-center justify-center rounded-badge text-ink-3 hover:bg-white hover:text-ink focus-visible:opacity-100 ${
           active || mode !== "idle" ? "opacity-100" : "opacity-0 group-hover:opacity-100"
@@ -459,11 +472,36 @@ function ConversationItem({
           <button
             role="menuitem"
             type="button"
+            onClick={() => setMode("export")}
+            className="flex w-full rounded-badge px-2.5 py-2 text-left text-label text-ink hover:bg-active"
+          >
+            {labels.export}
+          </button>
+          <button
+            role="menuitem"
+            type="button"
             onClick={() => setMode("delete")}
             className="flex w-full rounded-badge px-2.5 py-2 text-left text-label text-danger hover:bg-danger/[0.06]"
           >
             {labels.delete}
           </button>
+        </div>
+      )}
+      {mode === "export" && (
+        <div role="menu" aria-label={labels.export} className="absolute top-full right-1 z-10 mt-1 w-48 rounded-card bg-white p-1 shadow-float">
+          <p className="px-2.5 py-1.5 text-meta font-medium text-ink-3">{labels.export}</p>
+          {EXPORT_FORMATS.map((format) => (
+            <a
+              key={format}
+              role="menuitem"
+              href={exportHref(conversation.id, format, lang)}
+              download
+              onClick={() => setMode("idle")}
+              className="flex w-full rounded-badge px-2.5 py-2 text-left text-label text-ink no-underline hover:bg-active hover:text-ink"
+            >
+              {labels.exportFormats[format]}
+            </a>
+          ))}
         </div>
       )}
       {mode === "move" && (

@@ -128,6 +128,10 @@ export type ChatMessage = {
   rag?: RagInfoOut;
   memory?: string[];
   status?: "streaming" | "done" | "stopped" | "error";
+  /** Identifiant du message côté serveur (absent tant qu'il n'est pas enregistré) : nécessaire pour le noter. */
+  serverId?: string;
+  /** Mon pouce sur cette réponse. */
+  feedback?: "up" | "down" | null;
   error?: "generic" | "session" | "unavailable" | "tooMany";
   /** Raison renvoyée par le serveur pour un refus actionnable (fichier trop gros, type refusé…). */
   errorDetail?: string;

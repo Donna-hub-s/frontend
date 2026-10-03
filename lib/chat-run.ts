@@ -158,6 +158,7 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
         file_report?: AttachedFileOut[];
         memory_notes: string[];
         attachments: AttachmentOut[];
+        message_id?: string | null;
       };
       bind(data.conversation_id);
       const tools: ToolCall[] = data.question
@@ -172,7 +173,7 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
       const filesData: StepData = { kind: "files", files: data.file_report ?? [] };
       const filesDone = finishSteps().map((s) => (s.key === "files" && data.file_report?.length ? { ...s, data: filesData } : s));
       setSteps([...ragFirst, ...filesDone, { id: uid(), key: "answer", status: "done", at: Date.now() }], "done");
-      callbacks.patch({ content: data.reply, sources: data.sources, rag: data.rag ?? undefined, memory: data.memory_notes, attachments: data.attachments, tools, status: "done" });
+      callbacks.patch({ content: data.reply, sources: data.sources, rag: data.rag ?? undefined, memory: data.memory_notes, attachments: data.attachments, tools, status: "done", serverId: data.message_id ?? undefined });
       callbacks.settled(data.question ? "question" : "response");
     } else {
       const modelFields = modelRequestFields();
@@ -236,7 +237,7 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
         } else if (event.type === "done") {
           finished = true;
           setSteps(finishSteps(), "done");
-          callbacks.patch({ sources: event.sources, memory: event.memory, attachments: event.attachments, status: "done" });
+          callbacks.patch({ sources: event.sources, memory: event.memory, attachments: event.attachments, status: "done", serverId: event.messageId });
         }
       }
       if (!finished) throw Object.assign(new Error("interrupted"), { kind: "generic" as ErrorKind });

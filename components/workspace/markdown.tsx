@@ -1,10 +1,73 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import ReactMarkdown, { defaultUrlTransform, type Components } from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
+import rehypeKatex from "rehype-katex";
 import remarkGfm from "remark-gfm";
-import { linkTarget } from "@/lib/file-links";
+import remarkMath from "remark-math";
+import type { Pluggable, PluggableList } from "unified";
+import "katex/dist/katex.min.css";
+import { imageTarget, linkTarget } from "@/lib/file-links";
+import { hasMath, normalizeMath } from "@/lib/markdown-math";
+import { codeLanguage, nodeText } from "@/lib/markdown-text";
 import { isBareUrlLink, LinkCard, linkCardData } from "./link-card";
+
+/** Textes des boutons du rendu (fournis une fois par l'espace de travail ; anglais par défaut). */
+export type MarkdownLabels = { copy: string; copied: string };
+const MarkdownLabelsContext = createContext<MarkdownLabels>({ copy: "Copy", copied: "Copied" });
+export const MarkdownLabelsProvider = MarkdownLabelsContext.Provider;
+
+/** Copie dans le presse-papiers ; repli sur une zone de texte cachée (contexte non sécurisé, ancien navigateur). */
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    try {
+      return document.execCommand("copy");
+    } catch {
+      return false;
+    } finally {
+      area.remove();
+    }
+  }
+}
+
+function CodeBlock({ node, children }: { node?: unknown; children?: ReactNode }) {
+  const labels = useContext(MarkdownLabelsContext);
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const language = codeLanguage(node);
+  return (
+    <div className="my-3 overflow-hidden rounded-card bg-active">
+      <div className="flex items-center justify-between gap-3 px-4 pt-2 text-meta text-ink-3">
+        <span className="font-mono">{language ?? ""}</span>
+        <button
+          type="button"
+          onClick={async () => {
+            if (!(await copyToClipboard(nodeText(node).replace(/\n$/, "")))) return;
+            setCopied(true);
+            clearTimeout(timer.current);
+            timer.current = setTimeout(() => setCopied(false), 1800);
+          }}
+          className="rounded-badge px-2 py-0.5 text-ink-2 hover:bg-fill hover:text-ink"
+        >
+          <span aria-live="polite">{copied ? labels.copied : labels.copy}</span>
+        </button>
+      </div>
+      <pre className="donna-code overflow-x-auto px-4 pt-1 pb-4 leading-6">{children}</pre>
+    </div>
+  );
+}
 
 /** Un paragraphe réduit à un seul lien « nu » (le texte EST l'URL) devient une
  * carte ; c'est la forme que prend une source citée par DONNA. On inspecte le
@@ -47,7 +110,7 @@ const components: Components = {
     ) : (
       <code className="rounded-badge bg-active px-1.5 py-0.5 font-mono text-[0.8125rem]">{children}</code>
     ),
-  pre: ({ children }) => <pre className="my-3 overflow-x-auto rounded-card bg-active p-4 leading-6">{children}</pre>,
+  pre: ({ children, node }) => <CodeBlock node={node}>{children}</CodeBlock>,
   table: ({ children }) => (
     <div className="my-3 overflow-x-auto rounded-card border border-border">
       <table className="w-full border-collapse text-left text-label">{children}</table>
@@ -69,36 +132,68 @@ function textOf(node: ReactNode): string {
 const linkClass = "underline decoration-rose-300 underline-offset-2";
 
 // react-markdown remplace par une chaîne vide toute URL au schéma inconnu (« sandbox: » inclus) ; un lien
-// vide rouvrait l'application. On garde donc la cible brute dans `href` UNIQUEMENT pour la lire : le rendu
-// ci-dessous ne la réutilise que si c'est http(s)/mailto:, sinon il la remplace par le fichier joint ou du texte.
-const keepHref = (url: string, key: string) => (key === "href" ? url : defaultUrlTransform(url));
+// vide rouvrait l'application. On garde donc la cible brute dans `href` et `src` UNIQUEMENT pour la lire : le rendu
+// ci-dessous ne la réutilise que si c'est http(s)/mailto: (lien), sinon il la remplace par le fichier joint ou du texte.
+// Une image externe n'est jamais chargée (voir imageTarget).
+const keepTarget = (url: string, key: string) => (key === "href" || key === "src" ? url : defaultUrlTransform(url));
 
 export type MarkdownFile = { name: string; url: string };
 
+const MATH_REHYPE: Pluggable = [rehypeKatex, { throwOnError: false, strict: "ignore", trust: false }];
+const CODE_REHYPE: Pluggable = [rehypeHighlight, { detect: false, ignoreMissing: true }];
+// Le dollar seul n'ouvre PAS une formule (« $5 et $10 ») : voir lib/markdown-math.ts.
+const MATH_REMARK: Pluggable = [remarkMath, { singleDollarTextMath: false }];
+
 /**
- * `files` : les pièces jointes du message. Un lien qui vise l'un d'eux (par son nom) s'ouvre via `renderFile`
- * (aperçu dans DONNA). Fourni par l'appelant plutôt que importé : le visualiseur de fichiers rend lui-même du
- * Markdown, un import direct ferait un cycle.
+ * `files` : les pièces jointes du message. Un lien ou une image qui vise l'un d'eux (par son nom) s'ouvre via
+ * `renderFile` (aperçu dans DONNA). Fourni par l'appelant plutôt que importé : le visualiseur de fichiers rend
+ * lui-même du Markdown, un import direct ferait un cycle.
+ * `streaming` : pendant le flux, ni coloration du code ni formules (une formule à moitié écrite clignoterait en
+ * erreur, et recolorier à chaque jeton coûterait cher) ; ils apparaissent quand la réponse est complète.
  */
 export function Markdown({
   children,
   files = [],
   renderFile,
+  streaming = false,
 }: {
   children: string;
   files?: readonly MarkdownFile[];
-  renderFile?: (file: MarkdownFile, label: ReactNode) => ReactNode;
+  renderFile?: (file: MarkdownFile, label: ReactNode, variant: "link" | "image") => ReactNode;
+  streaming?: boolean;
 }) {
+  const withMath = !streaming && hasMath(children);
+  const withCode = !streaming && /^ {0,3}(```|~~~)/m.test(children);
+  const text = useMemo(() => (withMath ? normalizeMath(children) : children), [children, withMath]);
+  const remarkPlugins = useMemo<PluggableList>(() => [remarkGfm, ...(withMath ? [MATH_REMARK] : [])], [withMath]);
+  const rehypePlugins = useMemo<PluggableList>(() => [...(withCode ? [CODE_REHYPE] : []), ...(withMath ? [MATH_REHYPE] : [])], [withCode, withMath]);
   const merged = useMemo<Components>(
     () => ({
       ...components,
       a: ({ href, children: label }) => {
         const target = linkTarget(href, textOf(label), renderFile ? files : []);
-        if (target.kind === "file" && renderFile) return <>{renderFile(target.file, label)}</>;
+        if (target.kind === "file" && renderFile) return <>{renderFile(target.file, label, "link")}</>;
         if (target.kind === "external") {
           return (
             <a href={target.href} target="_blank" rel="noopener noreferrer nofollow" className={linkClass}>
               {label}
+            </a>
+          );
+        }
+        return <span>{label}</span>;
+      },
+      img: ({ src, alt }) => {
+        const label = alt ?? "";
+        const target = imageTarget(typeof src === "string" ? src : undefined, label, renderFile ? files : []);
+        if (target.kind === "image" && renderFile) {
+          // eslint-disable-next-line @next/next/no-img-element -- fichier du message servi par la passerelle, taille inconnue
+          return <>{renderFile(target.file, <img src={target.file.url} alt={label || target.file.name} loading="lazy" className="max-h-72 rounded-card border border-border" />, "image")}</>;
+        }
+        if (target.kind === "file" && renderFile) return <>{renderFile(target.file, label || target.file.name, "link")}</>;
+        if (target.kind === "link") {
+          return (
+            <a href={target.href} target="_blank" rel="noopener noreferrer nofollow" className={linkClass}>
+              {label || target.href}
             </a>
           );
         }
@@ -109,8 +204,8 @@ export function Markdown({
   );
   return (
     <div className="text-message text-ink [overflow-wrap:anywhere]">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={merged} urlTransform={keepHref}>
-        {children}
+      <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins} components={merged} urlTransform={keepTarget}>
+        {text}
       </ReactMarkdown>
     </div>
   );

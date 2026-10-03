@@ -111,4 +111,4 @@ async function forward(request: NextRequest, { params }: RouteContext<"/api/donn
   return new Response(upstream.body, { status: upstream.status, headers });
 }
 
-export { forward as GET, forward as POST, forward as PATCH, forward as DELETE };
+export { forward as GET, forward as POST, forward as PUT, forward as PATCH, forward as DELETE };

@@ -116,6 +116,10 @@ export type ConversationOut = {
 export type ToolCallOut = { name: string; arguments: Record<string, unknown>; result: string };
 
 export type MessageOut = {
+  /** Identifiant serveur du message (permet de le noter). */
+  id?: string | null;
+  /** Mon pouce sur cette réponse. */
+  feedback?: "up" | "down" | null;
   role: "user" | "assistant" | string;
   content: string;
   created_at: string | null;

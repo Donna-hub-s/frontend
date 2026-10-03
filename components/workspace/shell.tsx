@@ -10,6 +10,7 @@ import { SearchPalette } from "./search-palette";
 import { ConnectorRows, SidePanel } from "./side-panel";
 import { Sidebar, type Account } from "./sidebar";
 import { FileViewer } from "./file-viewer";
+import { MarkdownLabelsProvider } from "./markdown";
 import { ReminderToasts } from "./reminder-toasts";
 import { SettingsDialog } from "./settings-dialog";
 import { WorkspaceProvider } from "./workspace-provider";
@@ -50,6 +51,7 @@ export function WorkspaceShell({
       initialProjects={projects}
       wsBaseUrl={wsBaseUrl}
     >
+      <MarkdownLabelsProvider value={{ copy: dict.chat.copyCode, copied: dict.chat.codeCopied }}>
       {/* `relative` : repère des éléments `absolute` sans ancêtre positionné, notamment les `sr-only` du fil de discussion.
           Sans lui, leur repère est la FENÊTRE : `overflow-hidden` ne les rogne pas et, dans une longue conversation, ils
           allongent la page (constaté : 5 444 px pour 903 de fenêtre) — la fenêtre défile, l'espace de travail glisse
@@ -89,6 +91,7 @@ export function WorkspaceShell({
       <SettingsDialog lang={lang} dict={dict} account={account} connectors={connectors} oauthProviders={oauthProviders} />
       <FileViewer lang={lang} labels={dict.viewer} />
       <ReminderToasts lang={lang} labels={dict.reminders} />
+      </MarkdownLabelsProvider>
     </WorkspaceProvider>
   );
 }

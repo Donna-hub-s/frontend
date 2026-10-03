@@ -466,3 +466,69 @@ dialog:not([open]) {
   max-width: 100%;
   height: auto;
 }
+
+/*
+ * Coloration du code des réponses (rehype-highlight → classes « hljs-* »). Un seul thème, clair, aux couleurs de la
+ * marque ; chaque teinte atteint au moins 4,5:1 sur le fond des blocs de code (--color-active).
+ */
+.donna-code code.hljs {
+  font-family: var(--font-mono);
+  color: var(--color-ink);
+}
+.donna-code .hljs-comment,
+.donna-code .hljs-quote {
+  color: #5f5a5a;
+  font-style: italic;
+}
+.donna-code .hljs-keyword,
+.donna-code .hljs-selector-tag,
+.donna-code .hljs-meta .hljs-keyword,
+.donna-code .hljs-doctag {
+  color: var(--color-bordeaux-700);
+  font-weight: 600;
+}
+.donna-code .hljs-string,
+.donna-code .hljs-regexp,
+.donna-code .hljs-addition,
+.donna-code .hljs-meta .hljs-string {
+  color: #1f6a3b;
+}
+.donna-code .hljs-number,
+.donna-code .hljs-literal,
+.donna-code .hljs-symbol,
+.donna-code .hljs-bullet {
+  color: #8a4a06;
+}
+.donna-code .hljs-title,
+.donna-code .hljs-title.function_,
+.donna-code .hljs-section {
+  color: #1d4f91;
+}
+.donna-code .hljs-built_in,
+.donna-code .hljs-type,
+.donna-code .hljs-title.class_ {
+  color: #6a3a99;
+}
+.donna-code .hljs-attr,
+.donna-code .hljs-attribute,
+.donna-code .hljs-variable,
+.donna-code .hljs-template-variable,
+.donna-code .hljs-property {
+  color: #1c6470;
+}
+.donna-code .hljs-deletion {
+  color: var(--color-danger);
+}
+.donna-code .hljs-emphasis {
+  font-style: italic;
+}
+.donna-code .hljs-strong {
+  font-weight: 700;
+}
+
+/* Formules : KaTeX hérite de la taille du texte ; un bloc trop large défile au lieu de déborder. */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.25rem;
+}

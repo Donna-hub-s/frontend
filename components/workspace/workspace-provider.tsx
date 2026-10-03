@@ -106,6 +106,8 @@ type WorkspaceValue = {
   send: (input: SendInput) => Promise<void>;
   /** Retire les messages aux index donnés (relance d'une réponse). */
   dropMessages: (key: string, indexes: number[]) => void;
+  /** Modifie un message d'un fil (par son id local) : sert, par exemple, à mémoriser mon pouce. */
+  patchMessage: (key: string, messageId: string, patch: Partial<ChatMessage>) => void;
   stop: (key: string) => void;
   /** Derniers messages reçus par conversation non affichée (pastille + badge). */
   notices: Record<string, Notice>;
@@ -253,6 +255,13 @@ export function WorkspaceProvider({
     (key: string, indexes: number[]) => {
       const drop = new Set(indexes);
       patchThread(key, (thread) => ({ ...thread, messages: thread.messages.filter((_, i) => !drop.has(i)) }));
+    },
+    [patchThread],
+  );
+
+  const patchMessage = useCallback(
+    (key: string, messageId: string, patch: Partial<ChatMessage>) => {
+      patchThread(key, (thread) => ({ ...thread, messages: thread.messages.map((m) => (m.id === messageId ? { ...m, ...patch } : m)) }));
     },
     [patchThread],
   );
@@ -595,6 +604,7 @@ export function WorkspaceProvider({
       setActiveKey,
       send,
       dropMessages,
+      patchMessage,
       stop,
       notices,
       markRead,
@@ -631,6 +641,7 @@ export function WorkspaceProvider({
       activeKey,
       send,
       dropMessages,
+      patchMessage,
       stop,
       notices,
       markRead,
