@@ -183,6 +183,18 @@ function Dashboard({ lang, labels, data, metric, onMetric }: { lang: Locale; lab
           money={money}
           name={(bucket) => bucket.label ?? (bucket.key ? labels.projectGone : labels.noProject)}
         />
+        {(data.by_agent?.length ?? 0) > 0 && (
+          <Breakdown
+            title={labels.byAgent}
+            rows={data.by_agent ?? []}
+            total={totals.cost_usd}
+            totalTokens={totals.input_tokens + totals.output_tokens}
+            lang={lang}
+            labels={labels}
+            money={money}
+            name={(bucket) => bucket.label ?? labels.agentGone}
+          />
+        )}
         {data.top_conversations.length > 0 && (
           <section className="rounded-panel bg-white p-5 shadow-card">
             <h2 className="text-label font-medium text-ink">{labels.topConversations}</h2>

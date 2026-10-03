@@ -72,6 +72,8 @@ export type UsageSummary = {
   by_model: UsageBucket[];
   by_source: UsageBucket[];
   by_project: UsageBucket[];
+  /** Tours faits avec un agent de projet (label = son nom, absent si on a quitté le projet). */
+  by_agent?: UsageBucket[];
   top_conversations: UsageConversation[];
   budget: UsageBudgetState | null;
   /** Administrateur de l'espace : l'onglet « Équipe » est disponible. */

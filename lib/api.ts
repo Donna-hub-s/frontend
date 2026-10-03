@@ -110,6 +110,8 @@ export type ConversationOut = {
   // Absents des mises à jour optimistes locales (voir conversation.tsx::upsertConversation) —
   // toujours présents quand la donnée vient du backend (GET /app/chat/).
   project_id?: string | null;
+  /** Agent du projet choisi pour cette conversation (null/absent = DONNA seule). */
+  agent_id?: string | null;
   updated_at?: string;
 };
 

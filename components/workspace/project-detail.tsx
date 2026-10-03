@@ -23,6 +23,7 @@ import { FileLink } from "./file-viewer";
 import { ChatIcon, ChevronIcon, FileIcon, LockIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon, UsersIcon } from "./icons";
 import { GoogleDriveIcon } from "./brand-icons";
 import { DrivePicker } from "./drive-picker";
+import { AgentsCard } from "./agents-manager";
 import { ProjectIcon, ProjectIconPicker } from "./project-icon";
 import type { DriveErrorCode, DriveFileOut } from "@/lib/drive";
 import { useWorkspace } from "./workspace-provider";
@@ -185,6 +186,7 @@ export function ProjectDetail({
 
           <aside className="flex flex-col gap-4">
             <InstructionsCard labels={labels} project={liveProject} isOwner={isOwner} onSaved={upsertProject} />
+            <AgentsCard lang={lang} labels={dict.agents} projectLabels={labels} projectId={project.id} canEdit={canEdit} />
             <FilesCard
               lang={lang}
               driveLabels={dict.drive}
@@ -374,13 +376,26 @@ function ProjectMenu({ labels, isOwner, onEdit, onDelete, onLeave }: { labels: L
 function InlineComposer({ lang, dict, projectId }: { lang: Locale; dict: WorkspaceDict; projectId: string }) {
   const { setProjectDraft } = useWorkspace();
   const router = useRouter();
+  // Agent choisi avant d'écrire : il part avec le brouillon et devient celui de la nouvelle conversation.
+  const [agentId, setAgentId] = useState<string | null>(null);
 
   const handleSend = async (text: string, files: File[], webSearch: boolean, mentions: MentionSelection) => {
-    setProjectDraft({ message: text, files, webSearch, mentions });
+    setProjectDraft({ message: text, files, webSearch, mentions, agentId });
     router.push(`/${lang}/app?project=${projectId}`);
   };
 
-  return <Composer lang={lang} dict={dict} busy={false} conversationId={null} onSend={handleSend} onStop={() => {}} autoFocus={false} />;
+  return (
+    <Composer
+      lang={lang}
+      dict={dict}
+      busy={false}
+      conversationId={null}
+      onSend={handleSend}
+      onStop={() => {}}
+      autoFocus={false}
+      agent={{ projectId, value: agentId, onChange: setAgentId }}
+    />
+  );
 }
 
 function ConversationsList({ lang, labels, conversations }: { lang: Locale; labels: Labels; conversations: ConversationOut[] }) {

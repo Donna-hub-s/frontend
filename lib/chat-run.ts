@@ -94,6 +94,8 @@ export type RunInput = {  message: string;
   mentions: MentionSelection;
   conversationId: string | null;
   projectId?: string;
+  /** Agent du projet choisi (« » = aucun, à retirer) ; undefined = conversation hors projet, rien n'est envoyé. */
+  agentId?: string;
   signal: AbortSignal;
   callbacks: RunCallbacks;
 };
@@ -105,7 +107,7 @@ export type RunInput = {  message: string;
  * action a été proposée — le backend y ajoute alors la confirmation à valider.
  */
 export async function startChatRun(input: RunInput): Promise<RunOutcome> {
-  const { message, files, webSearch, mentions, projectId, signal, callbacks } = input;
+  const { message, files, webSearch, mentions, projectId, agentId, signal, callbacks } = input;
   let conversationId = input.conversationId;
   const bind = (id: string) => {
     if (!id || conversationId) return;
@@ -140,6 +142,7 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
       const modelFields = modelRequestFields();
       if (modelFields.model) form.set("model", modelFields.model);
       if (modelFields.effort) form.set("effort", modelFields.effort);
+      if (agentId !== undefined) form.set("agent_id", agentId);
       if (mentions.projectId) form.set("mentioned_project_id", mentions.projectId);
       if (mentions.documentIds.length) form.set("mentioned_document_ids", JSON.stringify(mentions.documentIds));
       for (const file of files) form.append("files", file);
@@ -185,6 +188,7 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
           message,
           conversation_id: conversationId,
           project_id: conversationId ? undefined : projectId,
+          agent_id: agentId,
           web_search: webSearch,
           mentioned_project_id: mentions.projectId,
           mentioned_document_ids: mentions.documentIds,

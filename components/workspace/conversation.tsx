@@ -27,6 +27,10 @@ import { Markdown, type MarkdownFile } from "./markdown";
 import { FeedbackBar } from "./feedback-bar";
 import { downloadDriveFiles, type DriveFileOut } from "@/lib/drive";
 import { EmailAttachmentList } from "./email-attachments";
+import { AgentMenu, AgentReviewDialog } from "./agent-menu";
+import { markSeen, needsReview, readSeen, type AgentOut } from "@/lib/agents";
+import { useProjectAgents } from "@/lib/use-project-agents";
+import { Bot } from "lucide-react";
 import { WorkflowDraft } from "./workflow-draft";
 import { useConversationContext } from "@/lib/use-conversation-context";
 import { GoogleDriveIcon } from "./brand-icons";
@@ -52,6 +56,7 @@ export function Conversation({
   loadError = false,
   projectId,
   projectName,
+  initialAgentId,
 }: {
   lang: Locale;
   dict: WorkspaceDict;
@@ -63,6 +68,8 @@ export function Conversation({
   /** Nouvelle conversation démarrée depuis une page de projet (voir app/[lang]/app/page.tsx?project=). */
   projectId?: string;
   projectName?: string;
+  /** Agent présélectionné pour une nouvelle conversation de projet (lien « Essayer » d'un agent : ?agent=). */
+  initialAgentId?: string;
 }) {
   const {
     send: sendRun,
@@ -77,6 +84,7 @@ export function Conversation({
     markRead,
     projectDraft,
     setProjectDraft,
+    conversations,
   } = useWorkspace();
   // Fil du provider : l'identifiant de conversation, ou un identifiant local
   // stable tant que le backend ne l'a pas créée. Le fil survit au démontage,
@@ -90,6 +98,15 @@ export function Conversation({
   const thread = threads[threadKey];
   const messages = thread?.messages ?? initialMessages;
   const busy = thread?.busy ?? false;
+  // Agent du projet : son projet est celui de la conversation (page projet ou liste des conversations), son choix suit la
+  // conversation. `picked` : undefined tant que l'utilisateur n'a rien choisi ici (on lit alors la conversation, ou le lien).
+  const liveConversationId = thread?.conversationId ?? conversationId;
+  const conversation = liveConversationId ? conversations.find((c) => c.id === liveConversationId) : undefined;
+  const agentProjectId = projectId ?? conversation?.project_id ?? null;
+  const [pickedAgent, setPickedAgent] = useState<string | null | undefined>(undefined);
+  const selectedAgentId = pickedAgent !== undefined ? pickedAgent : (conversation?.agent_id ?? initialAgentId ?? null);
+  const { agents: projectAgents } = useProjectAgents(agentProjectId);
+  const selectedAgent = projectAgents?.find((a) => a.id === selectedAgentId) ?? null;
   // L'orbe de l'accueil « écoute » dès que l'utilisateur écrit.
   const [composing, setComposing] = useState(false);
   // Le collage en bas repart à chaque conversation (resetKey), pas à chaque
@@ -112,10 +129,11 @@ export function Conversation({
   }, [threadKey, conversationId, setActiveKey, markRead, releaseThread, registerThread]);
 
   const send = useCallback(
-    async (text: string, files: File[], webSearch = false, mentions: MentionSelection = EMPTY_MENTIONS) => {
+    async (text: string, files: File[], webSearch = false, mentions: MentionSelection = EMPTY_MENTIONS, agentOverride?: string | null) => {
       const message = text.trim();
       if ((!message && !files.length) || busy) return;
       stick();
+      const agent = agentOverride !== undefined ? agentOverride : selectedAgentId;
       await sendRun({
         key: threadKey,
         message,
@@ -125,11 +143,13 @@ export function Conversation({
         // Le fil connaît déjà l'id si le backend l'a créé lors d'un envoi précédent.
         conversationId: thread?.conversationId ?? conversationId,
         projectId,
+        // Dans un projet, on envoie TOUJOURS le choix (« » = aucun) : c'est ce qui retire un agent devenu indisponible.
+        agentId: agentProjectId ? (agent ?? "") : undefined,
         lang,
         fallbackTitle: message || files[0]?.name || dict.meta.newTitle,
       });
     },
-    [busy, conversationId, dict.meta.newTitle, lang, projectId, sendRun, stick, thread?.conversationId, threadKey],
+    [agentProjectId, busy, conversationId, dict.meta.newTitle, lang, projectId, selectedAgentId, sendRun, stick, thread?.conversationId, threadKey],
   );
 
 
@@ -139,11 +159,14 @@ export function Conversation({
   // pas, et /app/* garde le même provider tout au long de la navigation client.
   useEffect(() => {
     if (!projectId || !projectDraft) return;
-    const { message, files, webSearch, mentions } = projectDraft;
+    const { message, files, webSearch, mentions, agentId } = projectDraft;
     setProjectDraft(null);
     // queueMicrotask : évite d'appeler setState (via send) de façon synchrone
     // dans le corps de l'effet (react-hooks/set-state-in-effect).
-    queueMicrotask(() => void send(message, files, webSearch, mentions));
+    queueMicrotask(() => {
+      setPickedAgent(agentId ?? null);
+      void send(message, files, webSearch, mentions, agentId ?? null);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, projectDraft]);
 
@@ -158,13 +181,27 @@ export function Conversation({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {projectId && projectName && (
-        <Link
-          href={`/${lang}/app/projects/${projectId}`}
-          className="mx-auto mt-3 flex w-fit items-center gap-1.5 rounded-badge bg-peche-100 px-2.5 py-1 text-meta font-medium text-bordeaux-900 no-underline hover:bg-peche-100/70"
-        >
-          {projectName}
-        </Link>
+      {((projectId && projectName) || selectedAgent) && (
+        <div className="mx-auto mt-3 flex w-fit flex-wrap items-center justify-center gap-2">
+          {projectId && projectName && (
+            <Link
+              href={`/${lang}/app/projects/${projectId}`}
+              className="flex w-fit items-center gap-1.5 rounded-badge bg-peche-100 px-2.5 py-1 text-meta font-medium text-bordeaux-900 no-underline hover:bg-peche-100/70"
+            >
+              {projectName}
+            </Link>
+          )}
+          {selectedAgent && (
+            <span
+              title={selectedAgent.description ?? undefined}
+              className="flex w-fit items-center gap-1.5 rounded-badge bg-bordeaux-700/10 px-2.5 py-1 text-meta font-medium text-bordeaux-700"
+            >
+              <Bot size={13} aria-hidden />
+              <span className="sr-only">{dict.agents.menuTitle} : </span>
+              {selectedAgent.name}
+            </span>
+          )}
+        </div>
       )}
       <div
         ref={scrollRef}
@@ -180,7 +217,13 @@ export function Conversation({
               </Link>
             </div>
           ) : empty ? (
-            <EmptyState dict={dict} firstName={firstName} listening={composing} onPick={(text) => void send(text, [])} />
+            <EmptyState
+              dict={dict}
+              firstName={firstName}
+              listening={composing}
+              suggestions={selectedAgent?.starters.length ? selectedAgent.starters : dict.chat.suggestions}
+              onPick={(text) => void send(text, [])}
+            />
           ) : (
             messages.map((m, index) =>
               m.role === "user" ? (
@@ -228,6 +271,7 @@ export function Conversation({
           onStop={() => stop(threadKey)}
           onComposingChange={setComposing}
           autoFocus={empty}
+          agent={agentProjectId ? { projectId: agentProjectId, value: selectedAgentId, onChange: setPickedAgent } : undefined}
         />
       )}
     </div>
@@ -240,11 +284,14 @@ function EmptyState({
   dict,
   firstName,
   listening,
+  suggestions,
   onPick,
 }: {
   dict: WorkspaceDict;
   firstName: string | null;
   listening: boolean;
+  /** Phrases de départ : celles de l'agent choisi, sinon les suggestions générales. */
+  suggestions: readonly string[];
   onPick: (text: string) => void;
 }) {
   return (
@@ -255,7 +302,7 @@ function EmptyState({
       </h1>
       <p className="mt-1 text-panel-title text-ink-2">{dict.chat.prompt}</p>
       <ul className="mt-10 flex w-full max-w-[34rem] flex-col gap-2">
-        {dict.chat.suggestions.map((suggestion) => (
+        {suggestions.map((suggestion) => (
           <li key={suggestion}>
             <button
               type="button"
@@ -859,6 +906,7 @@ export function Composer({
   onStop,
   onComposingChange,
   autoFocus,
+  agent,
 }: {
   lang: Locale;
   dict: WorkspaceDict;
@@ -869,8 +917,20 @@ export function Composer({
   onStop: () => void;
   onComposingChange?: (composing: boolean) => void;
   autoFocus: boolean;
+  /** Agents du projet : présent seulement dans un projet. `value` : l'agent choisi (null = DONNA seule). */
+  agent?: { projectId: string; value: string | null; onChange: (id: string | null) => void };
 }) {
   const { projects } = useWorkspace();
+  const { agents: projectAgents } = useProjectAgents(agent?.projectId);
+  // Relecture des consignes avant le premier emploi d'un agent (ou d'une nouvelle version de celui-ci).
+  // `send` : la relecture a interrompu un envoi (et non un simple choix dans le menu) — confirmée, le message part tout seul.
+  const [review, setReview] = useState<{ agent: AgentOut; changed: boolean; send: boolean } | null>(null);
+  const askReview = (candidate: AgentOut, send = false): boolean => {
+    const seen = readSeen();
+    if (!needsReview(candidate, seen)) return false;
+    setReview({ agent: candidate, changed: seen[candidate.id] !== undefined, send });
+    return true;
+  };
   const context = useConversationContext(conversationId, busy);
   const [value, setValue] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -1160,6 +1220,9 @@ export function Composer({
 
   const submit = () => {
     if (busy || driveFetch || (!value.trim() && !files.length)) return;
+    // Un agent jamais relu (lien « Essayer », consignes modifiées depuis) : on les montre d'abord ; le message reste là.
+    const chosen = projectAgents?.find((a) => a.id === agent?.value);
+    if (chosen && askReview(chosen, true)) return;
     const [text, attached] = [value, files];
     const activeMentions = mentions.filter((m) => text.includes(m.label));
     // Un document de projet mentionné sans son projet : le tour est cadré sur ce projet — le
@@ -1373,6 +1436,19 @@ export function Composer({
             </button>
             <ModelMenu lang={lang} labels={dict.chat.models} />
             <SkillsMenu lang={lang} labels={dict.chat} />
+            {agent && (Boolean(agent.value) || (projectAgents?.length ?? 0) > 0) && (
+              <AgentMenu
+                lang={lang}
+                labels={dict.agents}
+                projectId={agent.projectId}
+                agents={projectAgents ?? []}
+                value={agent.value}
+                onPick={(picked) => {
+                  if (picked && askReview(picked)) return;
+                  agent.onChange(picked?.id ?? null);
+                }}
+              />
+            )}
             {conversationId && (
               <ContextMenu labels={dict.chat} status={context.status} compacting={context.compacting} busy={busy} onCompact={runCompact} />
             )}
@@ -1409,6 +1485,21 @@ export function Composer({
         max={Math.max(MAX_FILES - files.length, 1)}
         confirmLabel="attach"
         onConfirm={attachFromDrive}
+      />
+
+      <AgentReviewDialog
+        lang={lang}
+        labels={dict.agents}
+        agent={review?.agent ?? null}
+        changed={review?.changed ?? false}
+        onCancel={() => setReview(null)}
+        onConfirm={(confirmed) => {
+          const resend = review?.send ?? false;
+          markSeen(confirmed);
+          agent?.onChange(confirmed.id);
+          setReview(null);
+          if (resend) queueMicrotask(submit); // l'agent était déjà choisi : les consignes sont maintenant relues, le message part
+        }}
       />
 
       {transcribing && <p className="mt-2 text-center text-meta text-ink-3">{dict.chat.micTranscribing}</p>}

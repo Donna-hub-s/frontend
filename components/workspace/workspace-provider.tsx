@@ -46,6 +46,8 @@ export type SendInput = {
   mentions: MentionSelection;
   conversationId: string | null;
   projectId?: string;
+  /** Agent du projet pour ce message : « » = aucun (à retirer de la conversation), undefined = conversation hors projet. */
+  agentId?: string;
   /** Langue courante : l'URL est mise à jour dès que le backend crée la conversation. */
   lang: Locale;
   /** Titre provisoire affiché avant le titre généré par le backend. */
@@ -64,7 +66,7 @@ type Activity = { status: "idle" | "running" | "done" | "error"; steps: Step[] }
  * (pas sessionStorage) : /app/* partage le même WorkspaceProvider tout au long
  * de la navigation client, ce qui permet de faire transiter de vrais File —
  * impossible à sérialiser. */
-type ProjectDraft = { message: string; files: File[]; webSearch: boolean; mentions: MentionSelection };
+type ProjectDraft = { message: string; files: File[]; webSearch: boolean; mentions: MentionSelection; agentId?: string | null };
 
 type WorkspaceValue = {
   conversations: ConversationOut[];
@@ -484,7 +486,7 @@ export function WorkspaceProvider({
 
   const send = useCallback(
     async (input: SendInput) => {
-      const { key, message, files, webSearch, mentions, projectId, fallbackTitle } = input;
+      const { key, message, files, webSearch, mentions, projectId, agentId, fallbackTitle } = input;
       if (runs.current.has(key)) return;
       const trimmed = message.trim();
       if (!trimmed && !files.length) return;
@@ -493,6 +495,11 @@ export function WorkspaceProvider({
       runs.current.set(key, controller);
       const wasNew = !input.conversationId;
       const assistantId = uid();
+      // L'agent choisi suit la conversation : la liste (barre latérale, sélecteur) le sait tout de suite.
+      if (input.conversationId && agentId !== undefined) {
+        const id = input.conversationId;
+        setConversations((list) => list.map((c) => (c.id === id ? { ...c, agent_id: agentId || null } : c)));
+      }
 
       patchThread(key, (thread) => ({
         ...thread,
@@ -510,6 +517,7 @@ export function WorkspaceProvider({
         webSearch,
         mentions,
         projectId,
+        agentId,
         conversationId: input.conversationId,
         signal: controller.signal,
         callbacks: {
@@ -544,6 +552,7 @@ export function WorkspaceProvider({
               title: fallbackTitle.slice(0, 60),
               created_at: new Date().toISOString(),
               project_id: projectId ?? null,
+              agent_id: agentId || null,
             });
             // L'URL passe à la conversation créée. Attention : Next.js réagit à
             // replaceState et remonte <Conversation key={id}>, donc la vue
