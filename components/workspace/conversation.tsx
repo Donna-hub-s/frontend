@@ -26,6 +26,8 @@ import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, Mic
 import { Markdown, type MarkdownFile } from "./markdown";
 import { FeedbackBar } from "./feedback-bar";
 import { RegenerateButton, VersionNav } from "./version-nav";
+import { ResearchProgress } from "./research-progress";
+import { estimateText, formatUsd, type ResearchRun } from "@/lib/research";
 import { downloadDriveFiles, type DriveFileOut } from "@/lib/drive";
 import { EmailAttachmentList } from "./email-attachments";
 import { AgentMenu, AgentReviewDialog } from "./agent-menu";
@@ -797,7 +799,7 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 
 /** Brouillon proposé par DONNA (email ou agenda) : rien ne part sans validation. */
 function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; call: ToolCall }) {
-  const { pending, decisions, decideAction } = useWorkspace();
+  const { pending, decisions, decideAction, selectBranch, activeKey, threads } = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [fetched, setFetched] = useState<PendingActionOut | null>(null);
@@ -835,6 +837,20 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
   const isEmail = call.name === "propose_email";
   const isDriveUpload = call.name === "propose_drive_upload";
   const isWorkflow = call.name === "propose_workflow";
+  const isResearch = call.name === "propose_research";
+  const research = listed?.research ?? fetched?.research ?? null;
+  // Une recherche approuvée (à l'instant, ou avant un rechargement) se suit ; le rapport rejoint la conversation tout seul.
+  const researchStarted = isResearch && (decision === "confirm" || fetched?.status === "executed");
+
+  // Fin de la recherche : si le rapport n'est pas déjà dans le fil, on recharge la branche affichée pour le montrer (avec ses fichiers).
+  const showReport = (messageId: string) => {
+    const thread = activeKey ? threads[activeKey] : null;
+    if (activeKey && thread?.conversationId) void selectBranch(activeKey, thread.conversationId, messageId);
+  };
+  const reportAlreadyShown = (run: ResearchRun) => {
+    const thread = activeKey ? threads[activeKey] : null;
+    return !run.report_message_id || Boolean(thread?.messages.some((m) => m.serverId === run.report_message_id));
+  };
   const eventAction = text(args.action) as keyof WorkspaceDict["chat"]["eventActions"];
   const when = [text(args.start_datetime), text(args.end_datetime)]
     .filter(Boolean)
@@ -858,7 +874,7 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
     <div className="rounded-panel border border-border bg-ivoire-50 p-4">
       <div className="flex items-center justify-between gap-3 text-meta">
         <span className="font-medium text-ink">
-          {isEmail ? dict.chat.draftEmail : isDriveUpload ? dict.chat.draftDriveUpload : isWorkflow ? dict.chat.draftWorkflow : dict.chat.draftEvent}
+          {isEmail ? dict.chat.draftEmail : isDriveUpload ? dict.chat.draftDriveUpload : isWorkflow ? dict.chat.draftWorkflow : isResearch ? dict.chat.draftResearch : dict.chat.draftEvent}
         </span>
         {decision ? (
           <span className={`inline-flex items-center gap-1 ${decision === "confirm" ? "text-success-ink" : "text-ink-3"}`}>
@@ -890,6 +906,33 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
         </>
       ) : isWorkflow ? (
         <WorkflowDraft draft={workflow ?? { name: text(args.name), lines: [] }} labels={dict.chat} />
+      ) : isResearch ? (
+        <>
+          <p className="mt-3 text-label font-medium text-ink">{research?.question ?? text(args.question)}</p>
+          {research && (
+            <>
+              <p className="mt-1 text-meta text-ink-3">
+                {dict.chat.researchDepth[research.depth as keyof typeof dict.chat.researchDepth] ?? research.depth}
+              </p>
+              <p className="mt-2 text-secondary text-ink-2 text-pretty">
+                {dict.chat.researchEstimateLine
+                  .replace("{estimate}", estimateText(research.cost_usd, { unknown: dict.chat.researchUnknown, free: dict.chat.researchFree }, lang))
+                  .replace("{cap}", formatUsd(research.cap_usd, lang))}
+              </p>
+            </>
+          )}
+          {researchStarted && id && (
+            <ResearchProgress
+              actionId={id}
+              lang={lang}
+              labels={dict.chat}
+              onFinished={(run) => {
+                if (run.status === "done" && !reportAlreadyShown(run) && run.report_message_id) showReport(run.report_message_id);
+              }}
+              onShowReport={showReport}
+            />
+          )}
+        </>
       ) : isDriveUpload ? (
         <>
           <p className="mt-3 text-label font-medium text-ink">{text(args.filename)}</p>
@@ -915,7 +958,7 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
             onClick={() => void decide("confirm")}
             className="rounded-button bg-bordeaux-700 px-3.5 py-2 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60"
           >
-            {dict.panel.approve}
+            {isResearch ? dict.chat.researchStart : dict.panel.approve}
           </button>
           <button
             type="button"

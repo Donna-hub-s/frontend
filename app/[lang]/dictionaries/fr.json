@@ -559,6 +559,28 @@
       "skillsLoadError": "Impossible de charger les compétences.",
       "skillsManage": "Tous les réglages",
       "draftWorkflow": "Automatisation à valider",
+      "draftResearch": "Recherche approfondie à valider",
+      "researchStart": "Lancer la recherche",
+      "researchEstimateLabel": "Estimation",
+      "researchCapLabel": "Plafond",
+      "researchUnknown": "coût inconnu",
+      "researchFree": "gratuit (modèle local)",
+      "researchDepth": {
+        "quick": "rapide",
+        "standard": "standard",
+        "deep": "approfondie"
+      },
+      "researchEstimateLine": "{estimate} · plafond {cap} — elle s'arrête et rédige avec ce qu'elle a trouvé si le plafond est atteint.",
+      "researchStarting": "Démarrage de la recherche…",
+      "researchRunning": "Recherche en cours",
+      "researchPages": "{read} page(s) lue(s), {failed} illisible(s)",
+      "researchCancel": "Annuler la recherche",
+      "researchCancelled": "Recherche annulée.",
+      "researchInterrupted": "Recherche interrompue (le serveur a redémarré).",
+      "researchFailed": "La recherche n'a pas abouti.",
+      "researchDone": "Rapport prêt dans la conversation",
+      "researchCost": "Coût estimé : {cost}",
+      "researchShow": "Afficher le rapport",
       "workflowNote": "Après votre accord, elle tourne seule — et ne s'adresse qu'à vous.",
       "contextMenu": "Contexte",
       "contextUsed": "{pct} % du contexte utilisé",
@@ -620,7 +642,9 @@
       "fallback": "Utilisation d'un outil",
       "propose_workflow": "Préparation d'une automatisation",
       "list_workflows": "Lecture de vos automatisations",
-      "pause_workflow": "Mise en pause d'une automatisation"
+      "pause_workflow": "Mise en pause d'une automatisation",
+      "fetch_page": "Lecture d'une page web",
+      "propose_research": "Préparation d'une recherche approfondie"
     },
     "panel": {
       "label": "Panneau d'activité",
@@ -639,7 +663,8 @@
         "send_email": "Email",
         "calendar_event": "Agenda",
         "drive_upload": "Drive",
-        "workflow": "Automatisation"
+        "workflow": "Automatisation",
+        "research": "Recherche"
       },
       "connectors": "Connecteurs",
       "google": "Google",
@@ -1002,7 +1027,8 @@
         "workflow_agent": "Agents d'automatisations",
         "workflow_summary": "Résumés d'automatisations",
         "compact": "Compactage de l'historique",
-        "title": "Titres de conversations"
+        "title": "Titres de conversations",
+        "research": "Recherches approfondies"
       },
       "noProject": "Hors projet",
       "projectGone": "Projet inaccessible",

@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { BACKEND_URL } from "./backend";
 import { COOKIES } from "./session-cookies";
+import type { ResearchDraft } from "./research";
 
 /**
  * Lectures côté serveur (Server Components) vers l'API DONNA, avec le jeton de la session.
@@ -236,6 +237,8 @@ export type PendingActionOut = {
   email?: EmailDraftOut | null;
   /** Automatisation proposée (kind « workflow ») : ce que l'utilisateur va approuver. */
   workflow?: WorkflowDraftOut | null;
+  /** Recherche approfondie proposée (kind « research ») : sujet, estimation de coût et plafond. */
+  research?: ResearchDraft | null;
 };
 
 /** GET /app/chat/memory/reminders (backend/app/chat/src/schemas.py::ReminderOut). */

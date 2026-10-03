@@ -559,6 +559,28 @@
       "skillsLoadError": "Couldn't load the skills.",
       "skillsManage": "All settings",
       "draftWorkflow": "Automation awaiting approval",
+      "draftResearch": "Deep research to approve",
+      "researchStart": "Start the research",
+      "researchEstimateLabel": "Estimate",
+      "researchCapLabel": "Cap",
+      "researchUnknown": "cost unknown",
+      "researchFree": "free (local model)",
+      "researchDepth": {
+        "quick": "quick",
+        "standard": "standard",
+        "deep": "deep"
+      },
+      "researchEstimateLine": "{estimate} · cap {cap} — it stops and writes up what it found if the cap is reached.",
+      "researchStarting": "Starting the research…",
+      "researchRunning": "Research in progress",
+      "researchPages": "{read} page(s) read, {failed} unreadable",
+      "researchCancel": "Cancel the research",
+      "researchCancelled": "Research cancelled.",
+      "researchInterrupted": "Research interrupted (the server restarted).",
+      "researchFailed": "The research did not complete.",
+      "researchDone": "Report ready in the conversation",
+      "researchCost": "Estimated cost: {cost}",
+      "researchShow": "Show the report",
       "workflowNote": "Once you approve, it runs on its own — and only ever writes to you.",
       "contextMenu": "Context",
       "contextUsed": "{pct}% of the context used",
@@ -620,7 +642,9 @@
       "fallback": "Using a tool",
       "propose_workflow": "Preparing an automation",
       "list_workflows": "Reading your automations",
-      "pause_workflow": "Pausing an automation"
+      "pause_workflow": "Pausing an automation",
+      "fetch_page": "Reading a web page",
+      "propose_research": "Preparing a deep research"
     },
     "panel": {
       "label": "Activity panel",
@@ -639,7 +663,8 @@
         "send_email": "Email",
         "calendar_event": "Calendar",
         "drive_upload": "Drive",
-        "workflow": "Automation"
+        "workflow": "Automation",
+        "research": "Research"
       },
       "connectors": "Connectors",
       "google": "Google",
@@ -1002,7 +1027,8 @@
         "workflow_agent": "Workflow agents",
         "workflow_summary": "Workflow summaries",
         "compact": "History compaction",
-        "title": "Conversation titles"
+        "title": "Conversation titles",
+        "research": "Deep research"
       },
       "noProject": "No project",
       "projectGone": "Inaccessible project",
