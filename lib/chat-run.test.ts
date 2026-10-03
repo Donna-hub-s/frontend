@@ -86,6 +86,7 @@ describe("startChatRun — régression id écrasé pendant le streaming", () => 
         setSteps: () => {},
         bind: () => {},
         settled: () => {},
+        patchUser: () => {},
       },
     });
 
@@ -119,6 +120,7 @@ describe("startChatRun — régression id écrasé pendant le streaming", () => 
         setSteps: () => {},
         bind: () => {},
         settled: () => {},
+        patchUser: () => {},
       },
     });
 
@@ -173,6 +175,7 @@ describe("startChatRun — tâches de préparation du contexte (événements ste
         },
         bind: () => {},
         settled: () => {},
+        patchUser: () => {},
       },
     });
     return { message: harness.getMessage(), history };
@@ -254,7 +257,7 @@ describe("startChatRun — refus du serveur et identifiant du message", () => {
     const harness = makeProviderLikeHarness();
     await startChatRun({
       message: "Salut", files: [], webSearch: false, mentions: EMPTY_MENTIONS, conversationId: null, signal: new AbortController().signal,
-      callbacks: { patch: harness.patch, setSteps: () => {}, bind: () => {}, settled: () => {} },
+      callbacks: { patch: harness.patch, setSteps: () => {}, bind: () => {}, settled: () => {}, patchUser: () => {} },
     });
     return harness.getMessage();
   };
@@ -282,5 +285,67 @@ describe("startChatRun — refus du serveur et identifiant du message", () => {
     const done = `event: done\ndata: ${JSON.stringify({ message_id: "m-42", sources: [], memory_notes: [], attachments: [] })}\n\n`;
     const message = await run(sseResponse([startEvent("c1"), deltaEvent("Bonjour"), done]));
     expect(message.serverId).toBe("m-42");
+  });
+});
+
+describe("startChatRun — branches (éditer/régénérer)", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("transmet edit_message_id/regenerate_message_id dans le corps de /stream quand ils sont fixés", async () => {
+    vi.mocked(fetch).mockResolvedValue(sseResponse([startEvent("c1"), doneEvent()]));
+    const harness = makeProviderLikeHarness();
+    await startChatRun({
+      message: "texte modifié",
+      files: [],
+      webSearch: false,
+      mentions: EMPTY_MENTIONS,
+      conversationId: "c1",
+      editMessageId: "msg-edit",
+      signal: new AbortController().signal,
+      callbacks: { patch: harness.patch, setSteps: () => {}, bind: () => {}, settled: () => {}, patchUser: () => {} },
+    });
+    const body = JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string);
+    expect(body.edit_message_id).toBe("msg-edit");
+    expect(body.regenerate_message_id).toBeUndefined();
+  });
+
+  it("appelle patchUser avec user_message_id reçu de l'événement done", async () => {
+    const done = `event: done\ndata: ${JSON.stringify({ message_id: "m-1", user_message_id: "u-1", sources: [], memory_notes: [], attachments: [] })}\n\n`;
+    const harness = makeProviderLikeHarness();
+    vi.mocked(fetch).mockResolvedValue(sseResponse([startEvent("c1"), done]));
+    let patchedUser: string | undefined;
+    await startChatRun({
+      message: "x",
+      files: [],
+      webSearch: false,
+      mentions: EMPTY_MENTIONS,
+      conversationId: "c1",
+      signal: new AbortController().signal,
+      callbacks: { patch: harness.patch, setSteps: () => {}, bind: () => {}, settled: () => {}, patchUser: (id) => (patchedUser = id) },
+    });
+    expect(patchedUser).toBe("u-1");
+  });
+
+  it("régénérer ne transmet pas de user_message_id (absent du serveur)", async () => {
+    const done = `event: done\ndata: ${JSON.stringify({ message_id: "m-2", sources: [], memory_notes: [], attachments: [] })}\n\n`;
+    const harness = makeProviderLikeHarness();
+    vi.mocked(fetch).mockResolvedValue(sseResponse([startEvent("c1"), done]));
+    let patchedUser: string | undefined = "not-called";
+    await startChatRun({
+      message: "",
+      files: [],
+      webSearch: false,
+      mentions: EMPTY_MENTIONS,
+      conversationId: "c1",
+      regenerateMessageId: "assistant-msg",
+      signal: new AbortController().signal,
+      callbacks: { patch: harness.patch, setSteps: () => {}, bind: () => {}, settled: () => {}, patchUser: (id) => (patchedUser = id) },
+    });
+    expect(patchedUser).toBeUndefined();
   });
 });

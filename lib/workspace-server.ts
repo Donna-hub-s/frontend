@@ -1,7 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { getMe, listLinkedAccounts, type MessageOut } from "./api";
-import { parseBackendDate, type ChatMessage } from "./workspace-types";
+import { getMe, listLinkedAccounts } from "./api";
 
 /**
  * Identité affichée (barre latérale, accueil, bulles) : compte Google lié s'il existe,
@@ -28,18 +27,3 @@ export const accountIdentity = cache(async () => {
     googleConnected: google !== null,
   };
 });
-
-export const toChatMessages = (messages: MessageOut[]): ChatMessage[] =>
-  messages
-    .filter((m) => m.role === "user" || m.role === "assistant")
-    .map((m, index) => ({
-      id: `h${index}`,
-      serverId: m.id ?? undefined,
-      feedback: m.feedback ?? null,
-      role: m.role as ChatMessage["role"],
-      content: m.content,
-      createdAt: parseBackendDate(m.created_at),
-      attachments: m.attachments,
-      tools: m.tool_calls ?? undefined,
-      status: "done",
-    }));

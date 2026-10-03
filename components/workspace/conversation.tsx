@@ -22,9 +22,10 @@ import {
   type SourceOut,
   type ToolCall,
 } from "@/lib/workspace-types";
-import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, SendIcon, SpeakerIcon, StopIcon } from "./icons";
+import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, PencilIcon, SendIcon, SpeakerIcon, StopIcon } from "./icons";
 import { Markdown, type MarkdownFile } from "./markdown";
 import { FeedbackBar } from "./feedback-bar";
+import { RegenerateButton, VersionNav } from "./version-nav";
 import { downloadDriveFiles, type DriveFileOut } from "@/lib/drive";
 import { EmailAttachmentList } from "./email-attachments";
 import { AgentMenu, AgentReviewDialog } from "./agent-menu";
@@ -76,6 +77,8 @@ export function Conversation({
     stop,
     dropMessages,
     patchMessage,
+    regenerate,
+    selectBranch,
     threads,
     registerThread,
     releaseThread,
@@ -177,6 +180,50 @@ export function Conversation({
     void send(question.content, []);
   };
 
+  // Un seul message éditable à la fois (voir UserMessage::canEdit et Composer busy ci-dessous).
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const editAndResend = (index: number, text: string) => {
+    const target = messages[index];
+    const trimmed = text.trim();
+    if (!target?.serverId || !trimmed || trimmed === target.content) {
+      setEditingId(null);
+      return;
+    }
+    // Tout ce qui suit (y compris l'ancienne réponse) disparaît de l'AFFICHAGE : la branche
+    // d'origine reste atteignable via la navigation de versions (voir branches.py).
+    dropMessages(threadKey, Array.from({ length: messages.length - index }, (_, i) => index + i));
+    setEditingId(null);
+    void sendRun({
+      key: threadKey,
+      message: trimmed,
+      files: [],
+      webSearch: false,
+      mentions: EMPTY_MENTIONS,
+      conversationId: thread?.conversationId ?? conversationId,
+      projectId,
+      agentId: agentProjectId ? (selectedAgentId ?? "") : undefined,
+      editing: { messageId: target.serverId, siblingIds: target.siblingIds ?? [] },
+      lang,
+      fallbackTitle: trimmed || dict.meta.newTitle,
+    });
+  };
+
+  const regenerateAnswer = (index: number): Promise<boolean> => {
+    const target = messages[index];
+    const convId = thread?.conversationId ?? conversationId;
+    if (!target?.serverId || !convId) return Promise.resolve(false);
+    return regenerate(threadKey, convId, target);
+  };
+
+  const selectVersion = (messageId: string): Promise<boolean> => {
+    const convId = thread?.conversationId ?? conversationId;
+    if (!convId) return Promise.resolve(false);
+    // Le message en cours d'édition peut ne plus exister dans la branche qu'on affiche ensuite.
+    setEditingId(null);
+    return selectBranch(threadKey, convId, messageId);
+  };
+
   const empty = messages.length === 0;
 
   return (
@@ -227,7 +274,20 @@ export function Conversation({
           ) : (
             messages.map((m, index) =>
               m.role === "user" ? (
-                <UserMessage key={m.id} lang={lang} message={m} initials={initials} label={dict.chat.you} />
+                <UserMessage
+                  key={m.id}
+                  lang={lang}
+                  message={m}
+                  initials={initials}
+                  label={dict.chat.you}
+                  chat={dict.chat}
+                  editing={editingId === m.id}
+                  canEdit={Boolean(m.serverId) && !m.attachments.length && !m.localFiles?.length && !busy && editingId === null}
+                  onStartEdit={() => setEditingId(m.id)}
+                  onCancelEdit={() => setEditingId(null)}
+                  onSaveEdit={(text) => editAndResend(index, text)}
+                  onSelectVersion={selectVersion}
+                />
               ) : (
                 <AssistantMessage
                   key={m.id}
@@ -239,6 +299,8 @@ export function Conversation({
                   onAnswer={(text) => void send(text, [])}
                   onRetry={() => retry(index)}
                   onFeedback={(feedback) => patchMessage(threadKey, m.id, { feedback })}
+                  onRegenerate={() => regenerateAnswer(index)}
+                  onSelectVersion={selectVersion}
                 />
               ),
             )
@@ -265,7 +327,7 @@ export function Conversation({
         <Composer
           lang={lang}
           dict={dict}
-          busy={busy}
+          busy={busy || editingId !== null}
           conversationId={thread?.conversationId ?? conversationId}
           onSend={send}
           onStop={() => stop(threadKey)}
@@ -329,35 +391,104 @@ function Time({ lang, at }: { lang: Locale; at: number | null }) {
   );
 }
 
-function UserMessage({ lang, message, initials, label }: { lang: Locale; message: ChatMessage; initials: string; label: string }) {
+function UserMessage({
+  lang,
+  message,
+  initials,
+  label,
+  chat,
+  editing,
+  canEdit,
+  onStartEdit,
+  onCancelEdit,
+  onSaveEdit,
+  onSelectVersion,
+}: {
+  lang: Locale;
+  message: ChatMessage;
+  initials: string;
+  label: string;
+  chat: WorkspaceDict["chat"];
+  /** Ce message est celui en cours d'édition (formulaire affiché à la place du texte). */
+  editing: boolean;
+  /** Crayon affiché : persisté, sans pièce jointe, rien d'autre en cours d'édition ou d'envoi. */
+  canEdit: boolean;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveEdit: (text: string) => void;
+  onSelectVersion: (messageId: string) => Promise<boolean>;
+}) {
   const chip = "inline-flex items-center gap-1.5 rounded-badge bg-white px-2 py-1 text-meta text-ink-2";
   const hasFiles = Boolean(message.localFiles?.length || message.attachments.length);
+  const draftRef = useRef<HTMLTextAreaElement>(null);
   return (
     <div className="flex justify-end gap-3">
       <div className="flex max-w-[85%] flex-col items-end gap-1.5">
-        <div className="rounded-panel rounded-tr-badge bg-active px-4 py-3">
-          <p className="sr-only">{label} :</p>
-          {message.content && <p className="text-message whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">{message.content}</p>}
-          {hasFiles && (
-            <ul className={`flex flex-wrap gap-1.5 ${message.content ? "mt-2" : ""}`}>
-              {message.localFiles?.map((name) => (
-                <li key={`local-${name}`} className={chip}>
-                  <FileIcon size={14} />
-                  {name}
-                </li>
-              ))}
-              {message.attachments.map((file) => (
-                <li key={file.id}>
-                  <FileLink url={fileHref(file.file_url)} name={file.original_name} className={`${chip} no-underline hover:text-ink`}>
+        {editing ? (
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              onSaveEdit(draftRef.current?.value ?? "");
+            }}
+            className="flex w-full flex-col gap-2 rounded-panel rounded-tr-badge border border-border bg-white p-3"
+          >
+            <textarea
+              ref={draftRef}
+              defaultValue={message.content}
+              autoFocus
+              rows={3}
+              className="w-full resize-none rounded-button border border-border bg-white px-3 py-2 text-message text-ink outline-none focus:border-bordeaux-700"
+            />
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={onCancelEdit} className="rounded-button px-3 py-1.5 text-label text-ink-2 hover:bg-active">
+                {chat.editCancel}
+              </button>
+              <button type="submit" className="rounded-button bg-bordeaux-700 px-3 py-1.5 text-label font-medium text-white hover:bg-bordeaux-900">
+                {chat.editSave}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="rounded-panel rounded-tr-badge bg-active px-4 py-3">
+            <p className="sr-only">{label} :</p>
+            {message.content && <p className="text-message whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">{message.content}</p>}
+            {hasFiles && (
+              <ul className={`flex flex-wrap gap-1.5 ${message.content ? "mt-2" : ""}`}>
+                {message.localFiles?.map((name) => (
+                  <li key={`local-${name}`} className={chip}>
                     <FileIcon size={14} />
-                    {file.original_name}
-                  </FileLink>
-                </li>
-              ))}
-            </ul>
+                    {name}
+                  </li>
+                ))}
+                {message.attachments.map((file) => (
+                  <li key={file.id}>
+                    <FileLink url={fileHref(file.file_url)} name={file.original_name} className={`${chip} no-underline hover:text-ink`}>
+                      <FileIcon size={14} />
+                      {file.original_name}
+                    </FileLink>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+        <div className="flex items-center gap-1">
+          <Time lang={lang} at={message.createdAt} />
+          {!editing && canEdit && (
+            <button
+              type="button"
+              aria-label={chat.edit}
+              title={chat.edit}
+              onClick={onStartEdit}
+              className="flex size-6 items-center justify-center rounded-full text-ink-3 hover:bg-active hover:text-ink"
+            >
+              <PencilIcon size={13} />
+            </button>
+          )}
+          {!editing && (message.siblingIds?.length ?? 0) > 1 && (
+            <VersionNav siblingIds={message.siblingIds!} siblingIndex={message.siblingIndex ?? 0} onSelect={onSelectVersion} labels={chat} />
           )}
         </div>
-        <Time lang={lang} at={message.createdAt} />
       </div>
       <span aria-hidden className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-peche-100 text-meta font-medium text-bordeaux-900">
         {initials}
@@ -382,6 +513,8 @@ function AssistantMessage({
   onAnswer,
   onRetry,
   onFeedback,
+  onRegenerate,
+  onSelectVersion,
 }: {
   lang: Locale;
   dict: WorkspaceDict;
@@ -391,6 +524,8 @@ function AssistantMessage({
   onAnswer: (text: string) => void;
   onRetry: () => void;
   onFeedback: (feedback: "up" | "down" | null) => void;
+  onRegenerate: () => Promise<boolean>;
+  onSelectVersion: (messageId: string) => Promise<boolean>;
 }) {
   const { chat } = dict;
   const streaming = message.status === "streaming";
@@ -511,6 +646,13 @@ function AssistantMessage({
             {message.content && <ListenButton text={message.content} chat={chat} />}
             {message.status !== "error" && message.serverId && message.content && (
               <FeedbackBar messageId={message.serverId} value={message.feedback} labels={chat} onChange={onFeedback} />
+            )}
+            {/* Seulement sur la DERNIÈRE réponse : régénérer une réponse plus ancienne abandonnerait tout ce qui la suit. */}
+            {last && message.status !== "error" && message.serverId && !busy && (
+              <RegenerateButton onRegenerate={onRegenerate} label={chat.regenerate} errorLabel={chat.regenerateError} />
+            )}
+            {(message.siblingIds?.length ?? 0) > 1 && (
+              <VersionNav siblingIds={message.siblingIds!} siblingIndex={message.siblingIndex ?? 0} onSelect={onSelectVersion} labels={chat} />
             )}
           </div>
         )}
@@ -660,13 +802,13 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
   const [failed, setFailed] = useState(false);
   const [fetched, setFetched] = useState<PendingActionOut | null>(null);
   const id = actionIdFrom(call.result);
-  // Email et workflow : le serveur est seul à savoir ce qui sera réellement envoyé / activé.
-  const isEmailCall = call.name === "propose_email" || call.name === "propose_workflow";
 
   // Brouillon RÉEL côté serveur (pièces jointes comprises) : ce que le modèle a demandé a pu être refusé,
   // résolu ou renommé — seul le serveur sait ce qui partira. Valable quel que soit le statut de l'action.
+  // Lu pour TOUTE proposition : c'est aussi lui qui dit qu'un brouillon a été « remplacé » (sa branche n'est plus
+  // celle qui est affichée — voir branches.py) et ne peut donc plus être approuvé.
   useEffect(() => {
-    if (!id || !isEmailCall) return;
+    if (!id) return;
     let live = true;
     void (async () => {
       try {
@@ -679,12 +821,13 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
     return () => {
       live = false;
     };
-  }, [id, isEmailCall]);
+  }, [id]);
 
   if (!id) return null;
 
   const decision = decisions[id];
   const awaiting = !decision && pending.some((a) => a.id === id);
+  const superseded = !decision && !awaiting && fetched?.status === "superseded";
   const listed = pending.find((a) => a.id === id);
   const draft = listed?.email ?? fetched?.email ?? null;
   const workflow = listed?.workflow ?? fetched?.workflow ?? null;
@@ -721,6 +864,11 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
           <span className={`inline-flex items-center gap-1 ${decision === "confirm" ? "text-success-ink" : "text-ink-3"}`}>
             {decision === "confirm" ? <CheckIcon size={14} /> : <CloseIcon size={14} />}
             {decision === "confirm" ? dict.panel.approved : dict.panel.declined}
+          </span>
+        ) : superseded ? (
+          <span className="inline-flex items-center gap-1 text-ink-3">
+            <CloseIcon size={14} />
+            {dict.chat.superseded}
           </span>
         ) : (
           awaiting && (

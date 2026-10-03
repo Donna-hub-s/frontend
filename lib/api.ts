@@ -130,6 +130,11 @@ export type MessageOut = {
   // sans ça une conversation rechargée (F5, réouverture) ne montre plus que
   // le texte brut de ces réponses (voir ANALYSE_COMPLETE.md §3.2).
   tool_calls?: ToolCallOut[] | null;
+  // Versions de ce message (édition d'un message utilisateur, régénération d'une
+  // réponse) — backend/app/chat/src/schemas.py::MessageOut.sibling_ids/sibling_index.
+  // Un seul élément (ou absent) = une seule version, rien à afficher.
+  sibling_ids?: string[];
+  sibling_index?: number;
 };
 
 /** backend/app/chat/src/schemas.py::EmailDraftOut — le brouillon RÉEL d'un email en attente. */
