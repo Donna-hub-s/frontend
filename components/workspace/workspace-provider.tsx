@@ -2,7 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { startChatRun, uid, visibleSteps, type RunInput } from "@/lib/chat-run";
-import { useProjectCapacityWs, type DocumentStatusUpdate } from "@/lib/use-project-ws";
+import { useProjectCapacityWs, type AppNotification, type DocumentStatusUpdate, type ReminderDue } from "@/lib/use-project-ws";
+import type { SkillSettings } from "@/lib/skills";
 import { installSessionGuard } from "@/lib/session-guard";
 import type { Locale } from "@/i18n/config";
 import type {
@@ -11,11 +12,15 @@ import type {
   MentionSelection,
   PendingActionOut,
   ProjectOut,
+  SkillOut,
   Step,
 } from "@/lib/workspace-types";
 
-/** Notification in-app : une réponse est arrivée, ou DONNA pose une question. */
-export type Notice = "response" | "question";
+/** Notification in-app : une réponse est arrivée, DONNA pose une question, un rappel s'est déclenché ou une automatisation a écrit. */
+export type Notice = "response" | "question" | "reminder" | "notification";
+
+/** Rappel ou notification d'automatisation, affiché jusqu'à ce que l'utilisateur le ferme (voir reminder-toasts.tsx). */
+export type ReminderAlert = { id: string; content: string; conversationId: string | null; title?: string | null };
 
 /** Nombre maximum de fils conservés en mémoire (historique complet de chacun). */
 const THREAD_LIMIT = 30;
@@ -41,6 +46,8 @@ export type SendInput = {
   mentions: MentionSelection;
   conversationId: string | null;
   projectId?: string;
+  /** Agent du projet pour ce message : « » = aucun (à retirer de la conversation), undefined = conversation hors projet. */
+  agentId?: string;
   /** Langue courante : l'URL est mise à jour dès que le backend crée la conversation. */
   lang: Locale;
   /** Titre provisoire affiché avant le titre généré par le backend. */
@@ -59,7 +66,7 @@ type Activity = { status: "idle" | "running" | "done" | "error"; steps: Step[] }
  * (pas sessionStorage) : /app/* partage le même WorkspaceProvider tout au long
  * de la navigation client, ce qui permet de faire transiter de vrais File —
  * impossible à sérialiser. */
-type ProjectDraft = { message: string; files: File[]; webSearch: boolean; mentions: MentionSelection };
+type ProjectDraft = { message: string; files: File[]; webSearch: boolean; mentions: MentionSelection; agentId?: string | null };
 
 type WorkspaceValue = {
   conversations: ConversationOut[];
@@ -101,10 +108,22 @@ type WorkspaceValue = {
   send: (input: SendInput) => Promise<void>;
   /** Retire les messages aux index donnés (relance d'une réponse). */
   dropMessages: (key: string, indexes: number[]) => void;
+  /** Modifie un message d'un fil (par son id local) : sert, par exemple, à mémoriser mon pouce. */
+  patchMessage: (key: string, messageId: string, patch: Partial<ChatMessage>) => void;
   stop: (key: string) => void;
   /** Derniers messages reçus par conversation non affichée (pastille + badge). */
   notices: Record<string, Notice>;
   markRead: (key: string) => void;
+  /** Rappels qui viennent de se déclencher (poussés en direct par le websocket). */
+  reminders: ReminderAlert[];
+  dismissReminder: (id: string) => void;
+  /** Catalogue des skills (null tant qu'il n'est pas chargé) et réglages EXPLICITES de l'utilisateur —
+   * partagés par le raccourci du chat et l'onglet Compétences des paramètres. */
+  skills: SkillOut[] | null;
+  skillSettings: SkillSettings;
+  refreshSkills: () => Promise<void>;
+  /** Active/coupe une skill tout de suite (appliqué dès le prochain message). false = non enregistré. */
+  setSkillEnabled: (id: string, enabled: boolean) => Promise<boolean>;
   /** Dernier statut connu par document RAG (clé = document id), mis à jour en
    * direct par le websocket dès qu'une ingestion change d'état — voir
    * project-detail.tsx::FilesCard, qui patche sa liste locale sur cette base. */
@@ -159,6 +178,7 @@ export function WorkspaceProvider({
   // doit surtout pas annuler le flux, seule l'action « Arrêter » le fait.
   const runs = useRef(new Map<string, AbortController>());
   const activeKeyRef = useRef<string | null>(null);
+  const conversationsRef = useRef(initialConversations);
   // Perte de session : le proxy a déjà tenté de renouveler le jeton ; s'il
   // échoue, on renvoie vers /login depuis n'importe quel appel (voir
   // lib/session-guard.ts). Le provider est monté sur tout /app, donc un seul
@@ -241,6 +261,13 @@ export function WorkspaceProvider({
     [patchThread],
   );
 
+  const patchMessage = useCallback(
+    (key: string, messageId: string, patch: Partial<ChatMessage>) => {
+      patchThread(key, (thread) => ({ ...thread, messages: thread.messages.map((m) => (m.id === messageId ? { ...m, ...patch } : m)) }));
+    },
+    [patchThread],
+  );
+
   const upsertConversation = useCallback((conversation: ConversationOut) => {
     setConversations((list) => {
       const rest = list.filter((c) => c.id !== conversation.id);
@@ -305,6 +332,136 @@ export function WorkspaceProvider({
 
   const [documentStatuses, setDocumentStatuses] = useState<Record<string, DocumentStatusUpdate>>({});
 
+  const [skills, setSkills] = useState<SkillOut[] | null>(null);
+  const [skillSettings, setSkillSettings] = useState<SkillSettings>({});
+  const refreshSkills = useCallback(async () => {
+    const [catalog, profile] = await Promise.all([
+      getJson<SkillOut[]>("/api/donna/chat/skills"),
+      getJson<{ skills?: SkillSettings }>("/api/donna/profile/me"),
+    ]);
+    if (catalog) setSkills(catalog);
+    if (profile) setSkillSettings(profile.skills ?? {});
+  }, []);
+  // Chargement initial (même lecture que refreshSkills, gardée contre un démontage en cours de route).
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([
+      getJson<SkillOut[]>("/api/donna/chat/skills"),
+      getJson<{ skills?: SkillSettings }>("/api/donna/profile/me"),
+    ]).then(([catalog, profile]) => {
+      if (cancelled) return;
+      if (catalog) setSkills(catalog);
+      if (profile) setSkillSettings(profile.skills ?? {});
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const setSkillEnabled = useCallback(async (id: string, enabled: boolean) => {
+    let previous: boolean | undefined;
+    // Optimiste : l'interrupteur bouge tout de suite ; on revient en arrière si le serveur refuse.
+    setSkillSettings((settings) => {
+      previous = settings[id];
+      return { ...settings, [id]: enabled };
+    });
+    const response = await fetch("/api/donna/profile/me", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ skills: { [id]: enabled } }),
+    }).catch(() => null);
+    if (response?.ok) return true;
+    setSkillSettings((settings) => {
+      const rest = { ...settings };
+      if (previous === undefined) delete rest[id];
+      else rest[id] = previous;
+      return rest;
+    });
+    return false;
+  }, []);
+
+  const [reminders, setReminders] = useState<ReminderAlert[]>([]);
+  const dismissReminder = useCallback((id: string) => setReminders((list) => list.filter((r) => r.id !== id)), []);
+
+  // Un rappel ou une notification d'automatisation vient d'arriver : le serveur a déjà posé le message dans
+  // la conversation. On l'ajoute aux fils chargés en mémoire (sinon il n'apparaît qu'au rechargement), on
+  // marque la conversation non lue, on affiche la carte et, onglet masqué, une notification du navigateur.
+  const deliver = useCallback(
+    (item: { id: string; title: string | null; content: string; conversationId: string | null; messageId: string; text: string; notice: Notice }) => {
+      setReminders((list) =>
+        list.some((r) => r.id === item.id)
+          ? list
+          : [...list, { id: item.id, title: item.title, content: item.content, conversationId: item.conversationId }].slice(-3),
+      );
+      if (item.conversationId) {
+        const conversationId = item.conversationId;
+        // Conversation créée par le serveur (première notification d'un workflow) : absente de la liste
+        // tant qu'on ne la recharge pas, donc ni entrée ni pastille dans la barre latérale.
+        if (!conversationsRef.current.some((c) => c.id === conversationId)) void refreshConversations();
+        setThreads((existing) => {
+          let changed = false;
+          const next = { ...existing };
+          for (const [key, thread] of Object.entries(existing)) {
+            if (thread.conversationId !== conversationId || thread.messages.some((m) => m.id === item.messageId)) continue;
+            changed = true;
+            // Même texte que celui déposé par le serveur (tasks.py::_insert_reminder_message, workflow_service.py::_deliver_app).
+            next[key] = {
+              ...thread,
+              messages: [
+                ...thread.messages,
+                { id: item.messageId, role: "assistant", content: item.text, createdAt: Date.now(), attachments: [], status: "done" },
+              ],
+            };
+          }
+          return changed ? next : existing;
+        });
+        const key = threadAlias[conversationId] ?? conversationId;
+        if (activeKeyRef.current !== key) {
+          // Une question en attente reste prioritaire sur un simple rappel ou une notification.
+          setNotices((existing) => (existing[key] === "question" ? existing : { ...existing, [key]: item.notice }));
+        }
+      }
+      try {
+        if (typeof Notification !== "undefined" && Notification.permission === "granted" && document.visibilityState === "hidden") {
+          new Notification(item.title ?? "DONNA", { body: item.content.slice(0, 300), tag: item.id });
+        }
+      } catch {
+        // Notification système indisponible : la carte dans l'application suffit.
+      }
+    },
+    [refreshConversations, threadAlias],
+  );
+
+  const handleReminder = useCallback(
+    (due: ReminderDue) =>
+      deliver({
+        id: due.reminderId,
+        title: null,
+        content: due.content,
+        conversationId: due.conversationId,
+        messageId: `reminder-${due.messageId ?? due.reminderId}`,
+        text: `Petit rappel : ${due.content}.`,
+        notice: "reminder",
+      }),
+    [deliver],
+  );
+
+  const handleNotification = useCallback(
+    (notification: AppNotification) => {
+      const id = notification.messageId ?? `${notification.title}-${notification.body.length}`;
+      deliver({
+        id: `notification-${id}`,
+        title: notification.title,
+        content: notification.body,
+        conversationId: notification.conversationId,
+        messageId: `notification-${id}`,
+        text: `**${notification.title}**\n\n${notification.body}`,
+        notice: "notification",
+      });
+    },
+    [deliver],
+  );
+
   useProjectCapacityWs(
     wsBaseUrl,
     useCallback(
@@ -315,16 +472,21 @@ export function WorkspaceProvider({
       (update: DocumentStatusUpdate) => setDocumentStatuses((map) => ({ ...map, [update.documentId]: update })),
       [],
     ),
+    handleReminder,
+    handleNotification,
   );
 
-  // Ref synchronisée après rendu : lue par les callbacks de flux, hors cycle de rendu.
+  // Refs synchronisées après rendu : lues par les callbacks de flux, hors cycle de rendu.
   useEffect(() => {
     activeKeyRef.current = activeKey;
   }, [activeKey]);
+  useEffect(() => {
+    conversationsRef.current = conversations;
+  }, [conversations]);
 
   const send = useCallback(
     async (input: SendInput) => {
-      const { key, message, files, webSearch, mentions, projectId, fallbackTitle } = input;
+      const { key, message, files, webSearch, mentions, projectId, agentId, fallbackTitle } = input;
       if (runs.current.has(key)) return;
       const trimmed = message.trim();
       if (!trimmed && !files.length) return;
@@ -333,6 +495,11 @@ export function WorkspaceProvider({
       runs.current.set(key, controller);
       const wasNew = !input.conversationId;
       const assistantId = uid();
+      // L'agent choisi suit la conversation : la liste (barre latérale, sélecteur) le sait tout de suite.
+      if (input.conversationId && agentId !== undefined) {
+        const id = input.conversationId;
+        setConversations((list) => list.map((c) => (c.id === id ? { ...c, agent_id: agentId || null } : c)));
+      }
 
       patchThread(key, (thread) => ({
         ...thread,
@@ -350,6 +517,7 @@ export function WorkspaceProvider({
         webSearch,
         mentions,
         projectId,
+        agentId,
         conversationId: input.conversationId,
         signal: controller.signal,
         callbacks: {
@@ -384,6 +552,7 @@ export function WorkspaceProvider({
               title: fallbackTitle.slice(0, 60),
               created_at: new Date().toISOString(),
               project_id: projectId ?? null,
+              agent_id: agentId || null,
             });
             // L'URL passe à la conversation créée. Attention : Next.js réagit à
             // replaceState et remonte <Conversation key={id}>, donc la vue
@@ -444,9 +613,16 @@ export function WorkspaceProvider({
       setActiveKey,
       send,
       dropMessages,
+      patchMessage,
       stop,
       notices,
       markRead,
+      reminders,
+      dismissReminder,
+      skills,
+      skillSettings,
+      refreshSkills,
+      setSkillEnabled,
       documentStatuses,
     }),
     [
@@ -474,9 +650,16 @@ export function WorkspaceProvider({
       activeKey,
       send,
       dropMessages,
+      patchMessage,
       stop,
       notices,
       markRead,
+      reminders,
+      dismissReminder,
+      skills,
+      skillSettings,
+      refreshSkills,
+      setSkillEnabled,
       documentStatuses,
     ],
   );
