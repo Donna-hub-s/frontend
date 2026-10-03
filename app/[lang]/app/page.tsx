@@ -14,6 +14,8 @@ export default async function NewConversationPage({ params, searchParams }: Page
   if (!isLocale(lang)) notFound();
   const query = await searchParams;
   const projectParam = typeof query.project === "string" ? query.project : undefined;
+  // ?agent=<id> : agent présélectionné (bouton « Essayer » d'un agent) — le serveur revérifie à chaque message.
+  const agentParam = typeof query.agent === "string" ? query.agent : undefined;
   const [dict, identity, project] = await Promise.all([
     getDictionary(lang),
     accountIdentity(),
@@ -30,6 +32,7 @@ export default async function NewConversationPage({ params, searchParams }: Page
       initials={identity.initials}
       projectId={project?.id}
       projectName={project?.name}
+      initialAgentId={project ? agentParam : undefined}
     />
   );
 }

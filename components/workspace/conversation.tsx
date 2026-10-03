@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { DonnaMark } from "@/components/brand/donna-mark";
@@ -9,6 +9,7 @@ import { DonnaOrb, type OrbState } from "@/components/brand/donna-orb";
 import { FileLink } from "./file-viewer";
 import { actionIdFrom } from "@/lib/chat-stream";
 import { EMPTY_MENTIONS, PROPOSALS, uid, visibleSteps } from "@/lib/chat-run";
+import { inlineImageNames, isImageName } from "@/lib/file-links";
 import { useStickToBottom } from "@/lib/use-stick-to-bottom";
 import {
   fileHref,
@@ -16,18 +17,34 @@ import {
   type Mention,
   type MentionKind,
   type MentionSelection,
-  type PersonalDocumentOut,
+  type AccessibleDocumentOut,
+  type PendingActionOut,
   type SourceOut,
   type ToolCall,
 } from "@/lib/workspace-types";
 import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, SendIcon, SpeakerIcon, StopIcon } from "./icons";
-import { Markdown } from "./markdown";
-import { StepDot, stepLabel } from "./side-panel";
+import { Markdown, type MarkdownFile } from "./markdown";
+import { FeedbackBar } from "./feedback-bar";
+import { downloadDriveFiles, type DriveFileOut } from "@/lib/drive";
+import { EmailAttachmentList } from "./email-attachments";
+import { AgentMenu, AgentReviewDialog } from "./agent-menu";
+import { markSeen, needsReview, readSeen, type AgentOut } from "@/lib/agents";
+import { useProjectAgents } from "@/lib/use-project-agents";
+import { Bot } from "lucide-react";
+import { WorkflowDraft } from "./workflow-draft";
+import { useConversationContext } from "@/lib/use-conversation-context";
+import { GoogleDriveIcon } from "./brand-icons";
+import { ContextMenu } from "./context-menu";
+import { ModelMenu } from "./model-menu";
+import { SkillsMenu } from "./skills-menu";
+import { DrivePicker } from "./drive-picker";
+import { StepDot, stepDetail, stepLabel } from "./side-panel";
 import { useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
 
-const MAX_FILES = 5;
+// Même plafond que DONNA_MAX_FILES_PER_REQUEST côté backend (10 par défaut).
+const MAX_FILES = 10;
 
 export function Conversation({
   lang,
@@ -39,6 +56,7 @@ export function Conversation({
   loadError = false,
   projectId,
   projectName,
+  initialAgentId,
 }: {
   lang: Locale;
   dict: WorkspaceDict;
@@ -50,11 +68,14 @@ export function Conversation({
   /** Nouvelle conversation démarrée depuis une page de projet (voir app/[lang]/app/page.tsx?project=). */
   projectId?: string;
   projectName?: string;
+  /** Agent présélectionné pour une nouvelle conversation de projet (lien « Essayer » d'un agent : ?agent=). */
+  initialAgentId?: string;
 }) {
   const {
     send: sendRun,
     stop,
     dropMessages,
+    patchMessage,
     threads,
     registerThread,
     releaseThread,
@@ -63,6 +84,7 @@ export function Conversation({
     markRead,
     projectDraft,
     setProjectDraft,
+    conversations,
   } = useWorkspace();
   // Fil du provider : l'identifiant de conversation, ou un identifiant local
   // stable tant que le backend ne l'a pas créée. Le fil survit au démontage,
@@ -76,6 +98,15 @@ export function Conversation({
   const thread = threads[threadKey];
   const messages = thread?.messages ?? initialMessages;
   const busy = thread?.busy ?? false;
+  // Agent du projet : son projet est celui de la conversation (page projet ou liste des conversations), son choix suit la
+  // conversation. `picked` : undefined tant que l'utilisateur n'a rien choisi ici (on lit alors la conversation, ou le lien).
+  const liveConversationId = thread?.conversationId ?? conversationId;
+  const conversation = liveConversationId ? conversations.find((c) => c.id === liveConversationId) : undefined;
+  const agentProjectId = projectId ?? conversation?.project_id ?? null;
+  const [pickedAgent, setPickedAgent] = useState<string | null | undefined>(undefined);
+  const selectedAgentId = pickedAgent !== undefined ? pickedAgent : (conversation?.agent_id ?? initialAgentId ?? null);
+  const { agents: projectAgents } = useProjectAgents(agentProjectId);
+  const selectedAgent = projectAgents?.find((a) => a.id === selectedAgentId) ?? null;
   // L'orbe de l'accueil « écoute » dès que l'utilisateur écrit.
   const [composing, setComposing] = useState(false);
   // Le collage en bas repart à chaque conversation (resetKey), pas à chaque
@@ -98,10 +129,11 @@ export function Conversation({
   }, [threadKey, conversationId, setActiveKey, markRead, releaseThread, registerThread]);
 
   const send = useCallback(
-    async (text: string, files: File[], webSearch = false, mentions: MentionSelection = EMPTY_MENTIONS) => {
+    async (text: string, files: File[], webSearch = false, mentions: MentionSelection = EMPTY_MENTIONS, agentOverride?: string | null) => {
       const message = text.trim();
       if ((!message && !files.length) || busy) return;
       stick();
+      const agent = agentOverride !== undefined ? agentOverride : selectedAgentId;
       await sendRun({
         key: threadKey,
         message,
@@ -111,11 +143,13 @@ export function Conversation({
         // Le fil connaît déjà l'id si le backend l'a créé lors d'un envoi précédent.
         conversationId: thread?.conversationId ?? conversationId,
         projectId,
+        // Dans un projet, on envoie TOUJOURS le choix (« » = aucun) : c'est ce qui retire un agent devenu indisponible.
+        agentId: agentProjectId ? (agent ?? "") : undefined,
         lang,
         fallbackTitle: message || files[0]?.name || dict.meta.newTitle,
       });
     },
-    [busy, conversationId, dict.meta.newTitle, lang, projectId, sendRun, stick, thread?.conversationId, threadKey],
+    [agentProjectId, busy, conversationId, dict.meta.newTitle, lang, projectId, selectedAgentId, sendRun, stick, thread?.conversationId, threadKey],
   );
 
 
@@ -125,11 +159,14 @@ export function Conversation({
   // pas, et /app/* garde le même provider tout au long de la navigation client.
   useEffect(() => {
     if (!projectId || !projectDraft) return;
-    const { message, files, webSearch, mentions } = projectDraft;
+    const { message, files, webSearch, mentions, agentId } = projectDraft;
     setProjectDraft(null);
     // queueMicrotask : évite d'appeler setState (via send) de façon synchrone
     // dans le corps de l'effet (react-hooks/set-state-in-effect).
-    queueMicrotask(() => void send(message, files, webSearch, mentions));
+    queueMicrotask(() => {
+      setPickedAgent(agentId ?? null);
+      void send(message, files, webSearch, mentions, agentId ?? null);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, projectDraft]);
 
@@ -144,13 +181,27 @@ export function Conversation({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      {projectId && projectName && (
-        <Link
-          href={`/${lang}/app/projects/${projectId}`}
-          className="mx-auto mt-3 flex w-fit items-center gap-1.5 rounded-badge bg-peche-100 px-2.5 py-1 text-meta font-medium text-bordeaux-900 no-underline hover:bg-peche-100/70"
-        >
-          {projectName}
-        </Link>
+      {((projectId && projectName) || selectedAgent) && (
+        <div className="mx-auto mt-3 flex w-fit flex-wrap items-center justify-center gap-2">
+          {projectId && projectName && (
+            <Link
+              href={`/${lang}/app/projects/${projectId}`}
+              className="flex w-fit items-center gap-1.5 rounded-badge bg-peche-100 px-2.5 py-1 text-meta font-medium text-bordeaux-900 no-underline hover:bg-peche-100/70"
+            >
+              {projectName}
+            </Link>
+          )}
+          {selectedAgent && (
+            <span
+              title={selectedAgent.description ?? undefined}
+              className="flex w-fit items-center gap-1.5 rounded-badge bg-bordeaux-700/10 px-2.5 py-1 text-meta font-medium text-bordeaux-700"
+            >
+              <Bot size={13} aria-hidden />
+              <span className="sr-only">{dict.agents.menuTitle} : </span>
+              {selectedAgent.name}
+            </span>
+          )}
+        </div>
       )}
       <div
         ref={scrollRef}
@@ -166,7 +217,13 @@ export function Conversation({
               </Link>
             </div>
           ) : empty ? (
-            <EmptyState dict={dict} firstName={firstName} listening={composing} onPick={(text) => void send(text, [])} />
+            <EmptyState
+              dict={dict}
+              firstName={firstName}
+              listening={composing}
+              suggestions={selectedAgent?.starters.length ? selectedAgent.starters : dict.chat.suggestions}
+              onPick={(text) => void send(text, [])}
+            />
           ) : (
             messages.map((m, index) =>
               m.role === "user" ? (
@@ -181,6 +238,7 @@ export function Conversation({
                   busy={busy}
                   onAnswer={(text) => void send(text, [])}
                   onRetry={() => retry(index)}
+                  onFeedback={(feedback) => patchMessage(threadKey, m.id, { feedback })}
                 />
               ),
             )
@@ -205,12 +263,15 @@ export function Conversation({
 
       {!loadError && (
         <Composer
+          lang={lang}
           dict={dict}
           busy={busy}
+          conversationId={thread?.conversationId ?? conversationId}
           onSend={send}
           onStop={() => stop(threadKey)}
           onComposingChange={setComposing}
           autoFocus={empty}
+          agent={agentProjectId ? { projectId: agentProjectId, value: selectedAgentId, onChange: setPickedAgent } : undefined}
         />
       )}
     </div>
@@ -223,11 +284,14 @@ function EmptyState({
   dict,
   firstName,
   listening,
+  suggestions,
   onPick,
 }: {
   dict: WorkspaceDict;
   firstName: string | null;
   listening: boolean;
+  /** Phrases de départ : celles de l'agent choisi, sinon les suggestions générales. */
+  suggestions: readonly string[];
   onPick: (text: string) => void;
 }) {
   return (
@@ -238,7 +302,7 @@ function EmptyState({
       </h1>
       <p className="mt-1 text-panel-title text-ink-2">{dict.chat.prompt}</p>
       <ul className="mt-10 flex w-full max-w-[34rem] flex-col gap-2">
-        {dict.chat.suggestions.map((suggestion) => (
+        {suggestions.map((suggestion) => (
           <li key={suggestion}>
             <button
               type="button"
@@ -302,6 +366,13 @@ function UserMessage({ lang, message, initials, label }: { lang: Locale; message
   );
 }
 
+/** Lien du texte vers un fichier joint à CE message : aperçu dans DONNA (voir `Markdown`). */
+const renderFile = (file: MarkdownFile, label: ReactNode, variant: "link" | "image") => (
+  <FileLink url={file.url} name={file.name} className={variant === "image" ? "inline-block no-underline" : "underline decoration-rose-300 underline-offset-2"}>
+    {label}
+  </FileLink>
+);
+
 function AssistantMessage({
   lang,
   dict,
@@ -310,6 +381,7 @@ function AssistantMessage({
   busy,
   onAnswer,
   onRetry,
+  onFeedback,
 }: {
   lang: Locale;
   dict: WorkspaceDict;
@@ -318,12 +390,20 @@ function AssistantMessage({
   busy: boolean;
   onAnswer: (text: string) => void;
   onRetry: () => void;
+  onFeedback: (feedback: "up" | "down" | null) => void;
 }) {
   const { chat } = dict;
   const streaming = message.status === "streaming";
   const tools = message.tools ?? [];
   const question = tools.findLast((t) => t.name === "ask_user");
   const proposals = tools.filter((t) => PROPOSALS.has(t.name));
+  const files = useMemo(() => message.attachments.map((file) => ({ name: file.original_name, url: fileHref(file.file_url) })), [message.attachments]);
+  // Images produites (graphique, schéma…) : montrées en ligne (sauf si le texte les affiche déjà), en plus de leur carte
+  // « Fichiers ». SVG exclu (scripts possibles).
+  const images = useMemo(() => {
+    const inline = inlineImageNames(message.content, files);
+    return message.attachments.filter((file) => file.mime_type.startsWith("image/") && isImageName(file.original_name) && !inline.has(file.original_name.normalize("NFC").toLowerCase().trim()));
+  }, [files, message.attachments, message.content]);
 
   return (
     <div className="flex gap-3">
@@ -339,7 +419,9 @@ function AssistantMessage({
 
         {message.content ? (
           <div aria-live={streaming ? "polite" : undefined}>
-            <Markdown>{message.content}</Markdown>
+            <Markdown files={files} renderFile={renderFile} streaming={streaming}>
+              {message.content}
+            </Markdown>
             {streaming && <span aria-hidden className="demo-caret ml-0.5 inline-block h-4 w-px translate-y-0.5 bg-bordeaux-700" />}
           </div>
         ) : null}
@@ -350,6 +432,19 @@ function AssistantMessage({
 
         {question && (
           <QuestionCard dict={dict} call={question} disabled={busy || !last} onAnswer={onAnswer} />
+        )}
+
+        {images.length > 0 && (
+          <ul className="flex flex-wrap gap-2">
+            {images.map((file) => (
+              <li key={file.id}>
+                <FileLink url={fileHref(file.file_url)} name={file.original_name} className="block no-underline">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- fichier du message servi par la passerelle, taille inconnue */}
+                  <img src={fileHref(file.file_url)} alt={file.original_name} loading="lazy" className="max-h-60 max-w-full rounded-card border border-border" />
+                </FileLink>
+              </li>
+            ))}
+          </ul>
         )}
 
         {message.attachments.length > 0 && (
@@ -393,7 +488,7 @@ function AssistantMessage({
                   ? chat.errorTooMany
                   : message.error === "unavailable"
                     ? chat.errorUnavailable
-                    : chat.errorGeneric}
+                    : (message.errorDetail ?? chat.errorGeneric)}
             </span>
             {message.error === "session" ? (
               <Link href={`/${lang}/login?next=/${lang}/app`} className="font-medium text-danger underline hover:text-danger">
@@ -411,9 +506,12 @@ function AssistantMessage({
         )}
 
         {!streaming && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Time lang={lang} at={message.createdAt} />
             {message.content && <ListenButton text={message.content} chat={chat} />}
+            {message.status !== "error" && message.serverId && message.content && (
+              <FeedbackBar messageId={message.serverId} value={message.feedback} labels={chat} onChange={onFeedback} />
+            )}
           </div>
         )}
       </div>
@@ -532,13 +630,21 @@ function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict;
       </div>
       {expanded && (
         <ol className="flex flex-col gap-2 border-t border-border px-4 py-3">
-          {steps.map((step) => (
-            <li key={step.id} className="flex items-center gap-2.5 text-secondary">
-              <StepDot status={step.status} />
-              <span className={`flex-1 ${step.status === "done" ? "text-ink-2" : "text-ink"}`}>{stepLabel(dict, step.key)}</span>
-              <Time lang={lang} at={step.at} />
-            </li>
-          ))}
+          {steps.map((step) => {
+            const detail = stepDetail(dict, step);
+            return (
+              <li key={step.id} className="flex items-start gap-2.5 text-secondary">
+                <span className="mt-0.5 flex">
+                  <StepDot status={step.status} warn={detail?.warn} />
+                </span>
+                <span className={`flex-1 ${step.status === "done" ? "text-ink-2" : "text-ink"}`}>
+                  {stepLabel(dict, step.key)}
+                  {detail && <span className={`block text-meta text-pretty ${detail.warn ? "text-danger" : "text-ink-3"}`}>{detail.text}</span>}
+                </span>
+                <Time lang={lang} at={step.at} />
+              </li>
+            );
+          })}
         </ol>
       )}
     </div>
@@ -552,14 +658,40 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
   const { pending, decisions, decideAction } = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [fetched, setFetched] = useState<PendingActionOut | null>(null);
   const id = actionIdFrom(call.result);
+  // Email et workflow : le serveur est seul à savoir ce qui sera réellement envoyé / activé.
+  const isEmailCall = call.name === "propose_email" || call.name === "propose_workflow";
+
+  // Brouillon RÉEL côté serveur (pièces jointes comprises) : ce que le modèle a demandé a pu être refusé,
+  // résolu ou renommé — seul le serveur sait ce qui partira. Valable quel que soit le statut de l'action.
+  useEffect(() => {
+    if (!id || !isEmailCall) return;
+    let live = true;
+    void (async () => {
+      try {
+        const response = await fetch(`/api/donna/chat/memory/actions/${encodeURIComponent(id)}`, { cache: "no-store" });
+        if (response.ok && live) setFetched((await response.json()) as PendingActionOut);
+      } catch {
+        // Silencieux : la carte reste utilisable sans la liste des pièces jointes.
+      }
+    })();
+    return () => {
+      live = false;
+    };
+  }, [id, isEmailCall]);
+
   if (!id) return null;
 
   const decision = decisions[id];
   const awaiting = !decision && pending.some((a) => a.id === id);
+  const listed = pending.find((a) => a.id === id);
+  const draft = listed?.email ?? fetched?.email ?? null;
+  const workflow = listed?.workflow ?? fetched?.workflow ?? null;
   const args = call.arguments;
   const isEmail = call.name === "propose_email";
   const isDriveUpload = call.name === "propose_drive_upload";
+  const isWorkflow = call.name === "propose_workflow";
   const eventAction = text(args.action) as keyof WorkspaceDict["chat"]["eventActions"];
   const when = [text(args.start_datetime), text(args.end_datetime)]
     .filter(Boolean)
@@ -583,7 +715,7 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
     <div className="rounded-panel border border-border bg-ivoire-50 p-4">
       <div className="flex items-center justify-between gap-3 text-meta">
         <span className="font-medium text-ink">
-          {isEmail ? dict.chat.draftEmail : isDriveUpload ? dict.chat.draftDriveUpload : dict.chat.draftEvent}
+          {isEmail ? dict.chat.draftEmail : isDriveUpload ? dict.chat.draftDriveUpload : isWorkflow ? dict.chat.draftWorkflow : dict.chat.draftEvent}
         </span>
         {decision ? (
           <span className={`inline-flex items-center gap-1 ${decision === "confirm" ? "text-success-ink" : "text-ink-3"}`}>
@@ -606,7 +738,10 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
           </p>
           <p className="mt-0.5 text-label font-medium text-ink">{text(args.subject)}</p>
           <p className="mt-2 text-secondary leading-5 whitespace-pre-wrap text-ink-2">{text(args.body)}</p>
+          {draft && <EmailAttachmentList actionId={id} attachments={draft.attachments} openable={awaiting} labels={dict.chat} />}
         </>
+      ) : isWorkflow ? (
+        <WorkflowDraft draft={workflow ?? { name: text(args.name), lines: [] }} labels={dict.chat} />
       ) : isDriveUpload ? (
         <>
           <p className="mt-3 text-label font-medium text-ink">{text(args.filename)}</p>
@@ -686,6 +821,9 @@ function QuestionCard({
 function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] }) {
   // Un document peut apparaître plusieurs fois (plusieurs extraits) : une puce par document.
   const unique = sources.filter((s, i) => sources.findIndex((o) => o.doc_id === s.doc_id) === i);
+  // Extraits réellement injectés dans le contexte du modèle (les fichiers générés n'en ont pas).
+  const excerpts = sources.filter((s) => s.excerpt.trim());
+  const [showExcerpts, setShowExcerpts] = useState(false);
   return (
     <div>
       <p className="text-meta text-ink-3">{dict.chat.sources}</p>
@@ -704,6 +842,29 @@ function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] 
           </li>
         ))}
       </ul>
+      {excerpts.length > 0 && (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowExcerpts((v) => !v)}
+            aria-expanded={showExcerpts}
+            className="mt-2 inline-flex items-center gap-1 text-meta text-ink-2 hover:text-ink"
+          >
+            {showExcerpts ? dict.chat.sourcesHideExcerpts : `${dict.chat.sourcesExcerpts} (${excerpts.length})`}
+            <ChevronIcon size={14} className={`transition-transform ${showExcerpts ? "rotate-180" : ""}`} />
+          </button>
+          {showExcerpts && (
+            <ol className="mt-1.5 flex flex-col gap-2">
+              {excerpts.map((source, index) => (
+                <li key={`${source.doc_id}-${index}`} className="rounded-card border border-border bg-white px-3 py-2">
+                  <p className="truncate text-meta font-medium text-ink-2">{source.original_name}</p>
+                  <p className="mt-0.5 line-clamp-4 text-meta whitespace-pre-line text-ink-3">{source.excerpt}</p>
+                </li>
+              ))}
+            </ol>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -719,8 +880,9 @@ type MenuAction =
   | { type: "mention"; mention: Mention }
   | { type: "web" }
   | { type: "clear" }
+  | { type: "compact" }
   | { type: "shortcut"; kind: MentionKind };
-type MenuItem = { id: string; label: string; kind: "project" | "document" | "command"; action: MenuAction };
+type MenuItem = { id: string; label: string; /** Projet d'un document (affiché en discret). */ hint?: string; kind: "project" | "document" | "command"; action: MenuAction };
 
 /** Repère un déclencheur "@"/"/" en cours de frappe juste avant le curseur —
  * précédé d'un début de chaîne ou d'un espace, sans espace entre lui et le
@@ -736,23 +898,48 @@ function detectTrigger(value: string, caret: number): { trigger: "@" | "/"; quer
 }
 
 export function Composer({
+  lang,
   dict,
   busy,
+  conversationId,
   onSend,
   onStop,
   onComposingChange,
   autoFocus,
+  agent,
 }: {
+  lang: Locale;
   dict: WorkspaceDict;
   busy: boolean;
+  /** Conversation en cours (null sur l'accueil) : la jauge de contexte et /compact n'existent qu'avec elle. */
+  conversationId: string | null;
   onSend: (text: string, files: File[], webSearch: boolean, mentions: MentionSelection) => Promise<void>;
   onStop: () => void;
   onComposingChange?: (composing: boolean) => void;
   autoFocus: boolean;
+  /** Agents du projet : présent seulement dans un projet. `value` : l'agent choisi (null = DONNA seule). */
+  agent?: { projectId: string; value: string | null; onChange: (id: string | null) => void };
 }) {
   const { projects } = useWorkspace();
+  const { agents: projectAgents } = useProjectAgents(agent?.projectId);
+  // Relecture des consignes avant le premier emploi d'un agent (ou d'une nouvelle version de celui-ci).
+  // `send` : la relecture a interrompu un envoi (et non un simple choix dans le menu) — confirmée, le message part tout seul.
+  const [review, setReview] = useState<{ agent: AgentOut; changed: boolean; send: boolean } | null>(null);
+  const askReview = (candidate: AgentOut, send = false): boolean => {
+    const seen = readSeen();
+    if (!needsReview(candidate, seen)) return false;
+    setReview({ agent: candidate, changed: seen[candidate.id] !== undefined, send });
+    return true;
+  };
+  const context = useConversationContext(conversationId, busy);
   const [value, setValue] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  // Pièces jointes : message d'information (plafond atteint, fichiers Drive en échec) et
+  // récupération Drive en cours — jamais d'abandon silencieux d'un fichier.
+  const [notice, setNotice] = useState<string | null>(null);
+  const [driveOpen, setDriveOpen] = useState(false);
+  const [driveFetch, setDriveFetch] = useState<{ done: number; total: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
   // Reste actif d'un message à l'autre, jusqu'à ce que l'utilisateur le désactive.
   const [webSearch, setWebSearch] = useState(false);
   const [recording, setRecording] = useState(false);
@@ -773,7 +960,7 @@ export function Composer({
   const [menu, setMenu] = useState<MenuState | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [mentions, setMentions] = useState<Mention[]>([]);
-  const [personalDocs, setPersonalDocs] = useState<PersonalDocumentOut[] | null>(null);
+  const [accessibleDocs, setAccessibleDocs] = useState<AccessibleDocumentOut[] | null>(null);
   const docsFetchedRef = useRef(false);
 
   const ensurePersonalDocs = useCallback(() => {
@@ -781,8 +968,9 @@ export function Composer({
     docsFetchedRef.current = true;
     void (async () => {
       try {
-        const response = await fetch("/api/donna/rag/documents", { cache: "no-store" });
-        if (response.ok) setPersonalDocs((await response.json()) as PersonalDocumentOut[]);
+        // Documents personnels ET ceux des projets dont l'utilisateur est membre.
+        const response = await fetch("/api/donna/chat/documents", { cache: "no-store" });
+        if (response.ok) setAccessibleDocs((await response.json()) as AccessibleDocumentOut[]);
       } catch {
         // Silencieux — le menu @ retombe sur les projets seuls.
       }
@@ -862,6 +1050,7 @@ export function Composer({
       const commands: MenuItem[] = [
         { id: "web", label: dict.chat.cmdWeb, kind: "command", action: { type: "web" } },
         { id: "clear", label: dict.chat.cmdClear, kind: "command", action: { type: "clear" } },
+        ...(conversationId ? [{ id: "compact", label: dict.chat.cmdCompact, kind: "command" as const, action: { type: "compact" as const } }] : []),
         { id: "project", label: dict.chat.cmdProject, kind: "command", action: { type: "shortcut", kind: "project" } },
         { id: "document", label: dict.chat.cmdDocument, kind: "command", action: { type: "shortcut", kind: "document" } },
       ];
@@ -877,14 +1066,21 @@ export function Composer({
       }
     }
     if (menu.kind !== "project") {
-      for (const d of personalDocs ?? []) {
-        if (q && !d.original_name.toLowerCase().includes(q)) continue;
-        const mention: Mention = { id: d.id, label: `@${d.original_name}`, kind: "document" };
-        items.push({ id: `document:${d.id}`, label: mention.label, kind: "document", action: { type: "mention", mention } });
+      for (const d of accessibleDocs ?? []) {
+        // Seuls les documents indexés ont un contenu à injecter (un échec ou une attente n'en ont pas).
+        if (d.status !== "done" || (q && !d.original_name.toLowerCase().includes(q))) continue;
+        const mention: Mention = { id: d.id, label: `@${d.original_name}`, kind: "document", projectId: d.project_id };
+        items.push({ id: `document:${d.id}`, label: mention.label, hint: d.project_name ?? d.conversation_title ?? undefined, kind: "document", action: { type: "mention", mention } });
       }
     }
     return items.slice(0, 8);
-  }, [menu, projects, personalDocs, dict.chat]);
+  }, [menu, projects, accessibleDocs, dict.chat, conversationId]);
+
+  // Compaction à la demande (bouton de la jauge ou /compact) : renvoie le message à afficher.
+  const runCompact = useCallback(async (): Promise<string> => {
+    const outcome = await context.compact();
+    return outcome === "compacted" ? dict.chat.contextDone : outcome === "nothing" ? dict.chat.contextNothing : dict.chat.contextError;
+  }, [context, dict.chat]);
 
   // Seul point d'exécution réel des actions du menu — appelé depuis de vrais
   // gestionnaires d'événement (onClick, Entrée), jamais pendant le rendu :
@@ -906,12 +1102,16 @@ export function Composer({
           setMentions([]);
           setMenu(null);
           break;
+        case "compact":
+          insertToken("");
+          void runCompact().then(setNotice);
+          break;
         case "shortcut":
           runSlashShortcut(item.action.kind);
           break;
       }
     },
-    [selectMention, insertToken, runSlashShortcut],
+    [selectMention, insertToken, runSlashShortcut, runCompact],
   );
 
   // Délégation d'événement sur le <ul> plutôt qu'un onClick recréé à chaque
@@ -996,23 +1196,53 @@ export function Composer({
     el.style.height = `${Math.min(el.scrollHeight, 220)}px`;
   }, [value]);
 
+  const addFiles = (picked: File[]) => {
+    if (!picked.length) return;
+    const room = Math.max(MAX_FILES - files.length, 0);
+    const accepted = picked.slice(0, room);
+    setFiles((list) => [...list, ...accepted]);
+    const skipped = picked.length - accepted.length;
+    setNotice(skipped > 0 ? dict.chat.filesLimit.replace("{max}", String(MAX_FILES)).replace("{n}", String(skipped)) : null);
+  };
+
+  const attachFromDrive = async (picked: DriveFileOut[]) => {
+    setNotice(null);
+    setDriveFetch({ done: 0, total: picked.length });
+    const result = await downloadDriveFiles(picked, (done, total) => setDriveFetch({ done, total }));
+    setDriveFetch(null);
+    addFiles(result.files);
+    if (result.failed.length) {
+      const reasons = dict.drive.errors as Record<string, string>;
+      const detail = result.failed.map((f) => `${f.name} (${reasons[f.code] ?? reasons.unavailable})`).join(", ");
+      setNotice(dict.chat.driveFailed.replace("{files}", detail));
+    }
+  };
+
   const submit = () => {
-    if (busy || (!value.trim() && !files.length)) return;
+    if (busy || driveFetch || (!value.trim() && !files.length)) return;
+    // Un agent jamais relu (lien « Essayer », consignes modifiées depuis) : on les montre d'abord ; le message reste là.
+    const chosen = projectAgents?.find((a) => a.id === agent?.value);
+    if (chosen && askReview(chosen, true)) return;
     const [text, attached] = [value, files];
     const activeMentions = mentions.filter((m) => text.includes(m.label));
+    // Un document de projet mentionné sans son projet : le tour est cadré sur ce projet — le
+    // backend n'accorde un document de projet que dans le périmètre effectif du tour.
+    const documentMentions = activeMentions.filter((m) => m.kind === "document");
     const selection: MentionSelection = {
-      documentIds: activeMentions.filter((m) => m.kind === "document").map((m) => m.id),
-      projectId: activeMentions.find((m) => m.kind === "project")?.id ?? null,
+      documentIds: documentMentions.map((m) => m.id),
+      projectId:
+        activeMentions.find((m) => m.kind === "project")?.id ?? documentMentions.find((m) => m.projectId)?.projectId ?? null,
     };
     setValue("");
     setFiles([]);
+    setNotice(null);
     setMentions([]);
     setMenu(null);
     onComposingChange?.(false);
     void onSend(text, attached, webSearch, selection);
   };
 
-  const canSend = !busy && (value.trim().length > 0 || files.length > 0);
+  const canSend = !busy && !driveFetch && (value.trim().length > 0 || files.length > 0);
 
   return (
     <div className="px-4 pb-4 md:px-8">
@@ -1021,8 +1251,27 @@ export function Composer({
           event.preventDefault();
           submit();
         }}
-        className="relative mx-auto w-full max-w-[46rem] rounded-panel border border-border bg-white shadow-float focus-within:border-bordeaux-700/40"
+        onDragOver={(event) => {
+          if (busy || !event.dataTransfer.types.includes("Files")) return;
+          event.preventDefault();
+          setDragging(true);
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node)) setDragging(false);
+        }}
+        onDrop={(event) => {
+          if (busy || !event.dataTransfer.files.length) return;
+          event.preventDefault();
+          setDragging(false);
+          addFiles(Array.from(event.dataTransfer.files));
+        }}
+        className={`relative mx-auto w-full max-w-[46rem] rounded-panel border bg-white shadow-float focus-within:border-bordeaux-700/40 ${dragging ? "border-bordeaux-700 shadow-focus" : "border-border"}`}
       >
+        {dragging && (
+          <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-panel bg-white/85 text-label font-medium text-bordeaux-700">
+            {dict.chat.dropFiles}
+          </p>
+        )}
         {menu && (
           <ul
             role="listbox"
@@ -1045,12 +1294,23 @@ export function Composer({
                   {item.kind === "project" && <FolderIcon size={16} className="shrink-0 text-bordeaux-700" />}
                   {item.kind === "document" && <FileIcon size={16} className="shrink-0 text-ink-3" />}
                   <span className="truncate">{item.label}</span>
+                  {item.hint && <span className="ml-auto shrink-0 pl-2 text-meta text-ink-3">{item.hint}</span>}
                 </li>
               ))
             ) : (
               <li className="px-2.5 py-2 text-label text-ink-3">{dict.chat.mentionNoResults}</li>
             )}
           </ul>
+        )}
+        {driveFetch && (
+          <p role="status" className="px-4 pt-3 text-meta text-ink-2">
+            {dict.chat.driveFetching.replace("{done}", String(driveFetch.done)).replace("{total}", String(driveFetch.total))}
+          </p>
+        )}
+        {notice && (
+          <p role="status" className="px-4 pt-3 text-meta text-bordeaux-700">
+            {notice}
+          </p>
         )}
         {files.length > 0 && (
           <ul className="flex flex-wrap gap-2 px-4 pt-3">
@@ -1125,8 +1385,7 @@ export function Composer({
               multiple
               hidden
               onChange={(event) => {
-                const picked = Array.from(event.target.files ?? []);
-                setFiles((list) => [...list, ...picked].slice(0, MAX_FILES));
+                addFiles(Array.from(event.target.files ?? []));
                 event.target.value = "";
               }}
             />
@@ -1139,6 +1398,16 @@ export function Composer({
               className="flex size-9 items-center justify-center rounded-button text-ink-2 hover:bg-active hover:text-ink disabled:opacity-50"
             >
               <PaperclipIcon size={19} />
+            </button>
+            <button
+              type="button"
+              disabled={busy || Boolean(driveFetch) || files.length >= MAX_FILES}
+              onClick={() => setDriveOpen(true)}
+              aria-label={dict.chat.attachDrive}
+              title={dict.chat.attachDrive}
+              className="flex size-9 items-center justify-center rounded-button text-ink-2 hover:bg-active hover:text-ink disabled:opacity-50"
+            >
+              <GoogleDriveIcon size={18} />
             </button>
             <button
               type="button"
@@ -1165,6 +1434,24 @@ export function Composer({
               <GlobeIcon size={18} />
               <span className={webSearch ? "" : "sr-only"}>{dict.chat.webSearch}</span>
             </button>
+            <ModelMenu lang={lang} labels={dict.chat.models} />
+            <SkillsMenu lang={lang} labels={dict.chat} />
+            {agent && (Boolean(agent.value) || (projectAgents?.length ?? 0) > 0) && (
+              <AgentMenu
+                lang={lang}
+                labels={dict.agents}
+                projectId={agent.projectId}
+                agents={projectAgents ?? []}
+                value={agent.value}
+                onPick={(picked) => {
+                  if (picked && askReview(picked)) return;
+                  agent.onChange(picked?.id ?? null);
+                }}
+              />
+            )}
+            {conversationId && (
+              <ContextMenu labels={dict.chat} status={context.status} compacting={context.compacting} busy={busy} onCompact={runCompact} />
+            )}
           </div>
           {busy ? (
             <button
@@ -1189,6 +1476,32 @@ export function Composer({
           )}
         </div>
       </form>
+      {/* Hors du <form> : Entrée dans la recherche du sélecteur ne doit jamais envoyer le message. */}
+      <DrivePicker
+        lang={lang}
+        labels={dict.drive}
+        open={driveOpen}
+        onClose={() => setDriveOpen(false)}
+        max={Math.max(MAX_FILES - files.length, 1)}
+        confirmLabel="attach"
+        onConfirm={attachFromDrive}
+      />
+
+      <AgentReviewDialog
+        lang={lang}
+        labels={dict.agents}
+        agent={review?.agent ?? null}
+        changed={review?.changed ?? false}
+        onCancel={() => setReview(null)}
+        onConfirm={(confirmed) => {
+          const resend = review?.send ?? false;
+          markSeen(confirmed);
+          agent?.onChange(confirmed.id);
+          setReview(null);
+          if (resend) queueMicrotask(submit); // l'agent était déjà choisi : les consignes sont maintenant relues, le message part
+        }}
+      />
+
       {transcribing && <p className="mt-2 text-center text-meta text-ink-3">{dict.chat.micTranscribing}</p>}
       {micError && (
         <p className="mt-2 text-center text-meta text-danger">

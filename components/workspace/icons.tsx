@@ -67,6 +67,16 @@ export const SpeakerIcon = (p: IconProps) => (
     <path d="M13 7.3a4 4 0 0 1 0 5.4M15.3 5a7.2 7.2 0 0 1 0 10" />
   </Icon>
 );
+export const ThumbUpIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M7 9v7.5H4V9zM7 9l3-5.5a1.6 1.6 0 0 1 3 .9L12.4 8h3.2a1.5 1.5 0 0 1 1.5 1.8l-1.1 5.3a2 2 0 0 1-2 1.6H7" strokeLinejoin="round" />
+  </Icon>
+);
+export const ThumbDownIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M7 11V3.5H4V11zM7 11l3 5.5a1.6 1.6 0 0 0 3-.9L12.4 12h3.2a1.5 1.5 0 0 0 1.5-1.8l-1.1-5.3a2 2 0 0 0-2-1.6H7" strokeLinejoin="round" />
+  </Icon>
+);
 export const CheckIcon = (p: IconProps) => (
   <Icon {...p}>
     <path d="m4.5 10.5 3.5 3.5 7.5-8" />

@@ -34,6 +34,8 @@ export const toChatMessages = (messages: MessageOut[]): ChatMessage[] =>
     .filter((m) => m.role === "user" || m.role === "assistant")
     .map((m, index) => ({
       id: `h${index}`,
+      serverId: m.id ?? undefined,
+      feedback: m.feedback ?? null,
       role: m.role as ChatMessage["role"],
       content: m.content,
       createdAt: parseBackendDate(m.created_at),

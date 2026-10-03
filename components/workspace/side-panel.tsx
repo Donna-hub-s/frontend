@@ -6,6 +6,8 @@ import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { GmailIcon, GoogleCalendarIcon, GoogleDriveIcon, WhatsAppIcon } from "./brand-icons";
 import { visibleSteps } from "@/lib/chat-run";
 import { parseBackendDate, type ConnectorsOut, type PendingActionOut, type Step } from "@/lib/workspace-types";
+import { EmailAttachmentList } from "./email-attachments";
+import { WorkflowDraft } from "./workflow-draft";
 import { useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
@@ -16,16 +18,82 @@ export { visibleSteps };
 
 export const stepLabel = (dict: WorkspaceDict, key: string) => {
   if (key === "rag") return dict.chat.stepRag;
+  if (key === "rerank") return dict.chat.stepRerank;
+  if (key === "documents") return dict.chat.stepDocuments;
+  if (key === "project") return dict.chat.stepProject;
+  if (key === "memory") return dict.chat.stepMemory;
+  if (key === "conversation_files") return dict.chat.stepConversationFiles;
   if (key === "read") return dict.chat.stepRead;
   if (key === "answer") return dict.chat.stepAnswer;
   if (key === "files") return dict.chat.stepFiles;
   return (dict.tools as Record<string, string>)[key] ?? dict.tools.fallback;
 };
 
+/** Ligne secondaire d'une étape : ce que la tâche a donné (extraits injectés, documents lus, mémoire…)
+ * ou, tant qu'elle tourne, ce qu'elle fait. `warn` : panne ou résultat dégradé, à montrer comme tel. */
+export const stepDetail = (dict: WorkspaceDict, step: Step): { text: string; warn: boolean } | null => {
+  const t = dict.chat;
+  const fill = (template: string, values: Record<string, string | number>) =>
+    Object.entries(values).reduce((text, [key, value]) => text.replace(`{${key}}`, String(value)), template);
+  const data = step.data;
+
+  if (step.key === "rag" && step.status === "running") return { text: t.ragRunning, warn: false };
+  if (step.key === "rerank" && step.status === "running") return { text: t.rerankRunning, warn: false };
+  if (!data) return null;
+
+  switch (data.kind) {
+    case "rag": {
+      const info = data.info;
+      const project = info.scope === "project";
+      if (info.status === "failed") {
+        const text = info.error === "index_mismatch" ? t.ragErrorIndexMismatch : info.error === "embeddings_auth" ? t.ragErrorAuth : t.ragErrorUnavailable;
+        return { text, warn: true };
+      }
+      if (info.status === "completed") {
+        return { text: fill(project ? t.ragFoundProject : t.ragFound, { n: info.sources_count, m: info.documents_count }), warn: false };
+      }
+      if (info.status === "empty") {
+        if (info.indexed_documents === 0) return { text: project ? t.ragNoDocumentsProject : t.ragNoDocuments, warn: false };
+        return { text: fill(project ? t.ragEmptyProject : t.ragEmpty, { n: info.indexed_documents }), warn: false };
+      }
+      return null;
+    }
+    case "rerank":
+      return data.failed ? { text: t.rerankFailed, warn: true } : data.count != null ? { text: fill(t.rerankDone, { n: data.count }), warn: false } : null;
+    case "documents":
+      return { text: data.names.length ? data.names.join(", ") : t.documentsNone, warn: !data.names.length };
+    case "project": {
+      const parts = [data.instructions ? t.projectInstructions : null, data.facts ? fill(t.projectFacts, { n: data.facts }) : null].filter(Boolean);
+      return { text: [data.name, parts.join(" · ")].filter(Boolean).join(" — "), warn: false };
+    }
+    case "memory":
+      return { text: fill(t.memoryFacts, { n: data.facts }), warn: false };
+    case "convfiles": {
+      const shown = data.names.slice(0, 3).join(", ");
+      const more = data.names.length > 3 ? ` +${data.names.length - 3}` : "";
+      const waiting = data.pending ? ` · ${fill(t.conversationFilesPending, { n: data.pending })}` : "";
+      return { text: shown + more + waiting, warn: false };
+    }
+    case "files": {
+      const truncated = data.files.filter((f) => f.truncated);
+      const read = fill(t.filesRead, { n: data.files.length });
+      const cut = truncated.length ? ` · ${fill(t.filesTruncated, { n: truncated.length }).replace("{names}", truncated.map((f) => f.filename).join(", "))}` : "";
+      return { text: read + cut, warn: false };
+    }
+  }
+};
+
 const timeFormat = (lang: Locale) => new Intl.DateTimeFormat(lang, { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
 /** Pastille d'étape : cercle en cours (anneau animé) ou coche. */
-export function StepDot({ status }: { status: Step["status"] }) {
+export function StepDot({ status, warn = false }: { status: Step["status"]; warn?: boolean }) {
+  if (warn) {
+    return (
+      <span aria-hidden className="flex size-4 shrink-0 items-center justify-center rounded-full bg-danger text-[10px] leading-none font-bold text-white">
+        !
+      </span>
+    );
+  }
   return status === "done" ? (
     <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-success">
       <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden>
@@ -60,10 +128,15 @@ export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: Work
             {activity.steps.map((step) => (
               <li key={step.id} className="relative flex items-start gap-3">
                 <span className="mt-0.5 flex rounded-full bg-surface">
-                  <StepDot status={step.status} />
+                  <StepDot status={step.status} warn={stepDetail(dict, step)?.warn} />
                 </span>
                 <span className={`min-w-0 flex-1 text-label ${step.status === "done" ? "text-ink" : "font-medium text-ink"}`}>
                   {stepLabel(dict, step.key)}
+                  {stepDetail(dict, step) && (
+                    <span className={`mt-0.5 block text-meta font-normal text-pretty ${stepDetail(dict, step)?.warn ? "text-danger" : "text-ink-3"}`}>
+                      {stepDetail(dict, step)?.text}
+                    </span>
+                  )}
                 </span>
                 <time className="text-meta text-ink-3 tabular-nums" suppressHydrationWarning>
                   {timeFormat(lang).format(step.at)}
@@ -132,6 +205,8 @@ function PendingItem({ lang, dict, action }: { lang: Locale; dict: WorkspaceDict
         )}
       </div>
       <p className="mt-2 text-label text-ink text-pretty">{action.summary}</p>
+      {action.email && <EmailAttachmentList actionId={action.id} attachments={action.email.attachments} openable labels={dict.chat} />}
+      {action.workflow && <WorkflowDraft draft={action.workflow} labels={dict.chat} />}
       {failed && <p className="mt-2 text-secondary text-danger">{panel.actionError}</p>}
       <div className="mt-3 flex gap-2">
         <button

@@ -1,61 +1,69 @@
 // Types partagés par les composants de l'espace de travail (navigateur).
 import type {
+  AccessibleDocumentOut,
+  AttachedFileOut,
   AttachmentOut,
   ConnectorsOut,
+  ContextStatusOut,
+  ModelOut,
+  ModelsOut,
   ConversationOut,
+  DocumentHitOut,
+  DocumentSearchOut,
+  EmailAttachmentOut,
+  EmailDraftOut,
   PendingActionOut,
   ProfileOut,
+  ProjectDocumentBatchOut,
   ProjectDocumentOut,
   ProjectFactOut,
   ProjectInviteOut,
   ProjectMemberOut,
   ProjectOut,
   ProjectRole,
+  RagInfoOut,
   ReminderOut,
   SearchHitOut,
+  SkillOut,
   SourceOut,
+  WorkflowDraftOut,
+  WorkflowOut,
+  WorkflowRunOut,
+  WorkflowStepRunOut,
 } from "./api";
 
 export type {
+  AccessibleDocumentOut,
+  AttachedFileOut,
   AttachmentOut,
   ConnectorsOut,
+  ContextStatusOut,
+  ModelOut,
+  ModelsOut,
   ConversationOut,
+  DocumentHitOut,
+  DocumentSearchOut,
+  EmailAttachmentOut,
+  EmailDraftOut,
   PendingActionOut,
   ProfileOut,
+  ProjectDocumentBatchOut,
   ProjectDocumentOut,
   ProjectFactOut,
   ProjectInviteOut,
   ProjectMemberOut,
   ProjectOut,
   ProjectRole,
+  RagInfoOut,
   ReminderOut,
   SearchHitOut,
+  SkillOut,
   SourceOut,
+  WorkflowDraftOut,
+  WorkflowOut,
+  WorkflowRunOut,
+  WorkflowStepRunOut,
 };
-
-/** Clé de skill = nom d'un champ `enable_*` de ProfileOut (./api). */
-export type SkillKey =
-  | "enable_web_search"
-  | "enable_sub_agents"
-  | "enable_reminders"
-  | "enable_memory"
-  | "enable_email_calendar"
-  | "enable_drive"
-  | "enable_create_document";
-
-/** Ordre d'affichage des skills. Vit ici et pas dans ./api : ce module est
- * côté navigateur, ./api est `server-only` (un réexport de valeur l'y
- * entraînerait). Les libellés sont dans les dictionnaires
- * (settings.skill.<clé>), voir settings-dialog.tsx. */
-export const SKILL_KEYS: SkillKey[] = [
-  "enable_web_search",
-  "enable_memory",
-  "enable_reminders",
-  "enable_email_calendar",
-  "enable_drive",
-  "enable_create_document",
-  "enable_sub_agents",
-];
 
 export type StepStatus = "running" | "done";
 
@@ -66,7 +74,19 @@ export type Step = {
   key: string;
   status: StepStatus;
   at: number;
+  /** Résultat structuré de l'étape (RAG, reclassement, mentions, projet, mémoire) — voir stepDetail. */
+  data?: StepData;
 };
+
+/** Issue d'une tâche de préparation du contexte, annoncée par le backend (événement SSE « step »). */
+export type StepData =
+  | { kind: "rag"; info: RagInfoOut }
+  | { kind: "rerank"; count: number | null; failed?: boolean }
+  | { kind: "documents"; names: string[] }
+  | { kind: "project"; name: string; instructions: boolean; facts: number }
+  | { kind: "memory"; facts: number }
+  | { kind: "files"; files: AttachedFileOut[] }
+  | { kind: "convfiles"; names: string[]; pending: number };
 
 export type ToolCall = { name: string; arguments: Record<string, unknown>; result: string };
 
@@ -85,7 +105,9 @@ export type PersonalDocumentOut = {
  * `label` est le texte littéralement inséré (`@Nom`), utilisé pour savoir si la
  * mention est encore présente au moment d'envoyer (texte brut, pas de puce). */
 export type MentionKind = "document" | "project";
-export type Mention = { id: string; label: string; kind: MentionKind };
+/** `projectId` : pour un document, projet auquel il appartient (null = document personnel) —
+ * mentionner un document de projet cadre le tour sur ce projet (voir conversation.tsx::submit). */
+export type Mention = { id: string; label: string; kind: MentionKind; projectId?: string | null };
 /** Ce qui part réellement dans la requête (ChatRequest.mentioned_document_ids/
  * mentioned_project_id) — un seul projet mentionné à la fois, comme le backend. */
 export type MentionSelection = { documentIds: string[]; projectId: string | null };
@@ -102,9 +124,17 @@ export type ChatMessage = {
   steps?: Step[];
   tools?: ToolCall[];
   sources?: SourceOut[];
+  /** Lecture de la base documentaire de ce tour (extraits injectés, aucun résultat, ou panne). */
+  rag?: RagInfoOut;
   memory?: string[];
   status?: "streaming" | "done" | "stopped" | "error";
+  /** Identifiant du message côté serveur (absent tant qu'il n'est pas enregistré) : nécessaire pour le noter. */
+  serverId?: string;
+  /** Mon pouce sur cette réponse. */
+  feedback?: "up" | "down" | null;
   error?: "generic" | "session" | "unavailable" | "tooMany";
+  /** Raison renvoyée par le serveur pour un refus actionnable (fichier trop gros, type refusé…). */
+  errorDetail?: string;
 };
 
 /** Dates backend : datetime UTC sans fuseau (SQLite) ou ISO complet. */

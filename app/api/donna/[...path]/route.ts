@@ -15,6 +15,8 @@ const ALLOWED = [
   /^auth\/oauth\/me\/accounts$/,
   /^auth\/oauth\/[^/]+\/unlink$/,
   /^profile(\/|$)/,
+  // Page Workflows (components/workspace/workflows-page.tsx) : l'activation reste un geste de l'utilisateur.
+  /^workflows(\/|$)/,
   /^auth\/ws\/ticket$/,
   /^rag\/documents$/,
   // Fenêtre des paramètres, onglet Sécurité (settings-dialog.tsx).
@@ -109,4 +111,4 @@ async function forward(request: NextRequest, { params }: RouteContext<"/api/donn
   return new Response(upstream.body, { status: upstream.status, headers });
 }
 
-export { forward as GET, forward as POST, forward as PATCH, forward as DELETE };
+export { forward as GET, forward as POST, forward as PUT, forward as PATCH, forward as DELETE };

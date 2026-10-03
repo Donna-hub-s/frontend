@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { parseUserChannelMessage, type AppNotification, type CapacityUpdate, type DocumentStatusUpdate, type ReminderDue } from "./user-channel";
+
+export type { AppNotification, DocumentStatusUpdate, ReminderDue } from "./user-channel";
 
 /**
  * Connexion WebSocket temps réel (canal "user", voir extensions/xwebsocket) —
  * relaie les mises à jour de capacité de contexte d'un projet dès qu'une
- * ingestion RAG se termine, sans recharger la page.
+ * ingestion RAG se termine, et les rappels qui se déclenchent, sans recharger la page.
  *
  * Le jeton d'accès reste httpOnly (jamais lu par ce module) : chaque
  * connexion échange d'abord un ticket à usage unique, courte durée de vie
@@ -16,19 +19,12 @@ import { useEffect, useRef } from "react";
 const RECONNECT_INITIAL_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
 
-type CapacityUpdate = { projectId: string; contextChunksUsed: number };
-/** Statut à jour d'UN document précis (voir backend/app/rag/src/tasks.py::_publish_status "current"). */
-export type DocumentStatusUpdate = {
-  documentId: string;
-  status: string;
-  chunkCount: number;
-  error: string | null;
-};
-
 export function useProjectCapacityWs(
   wsBaseUrl: string | null,
   onUpdate: (update: CapacityUpdate) => void,
   onDocumentUpdate?: (update: DocumentStatusUpdate) => void,
+  onReminder?: (reminder: ReminderDue) => void,
+  onNotification?: (notification: AppNotification) => void,
 ) {
   const onUpdateRef = useRef(onUpdate);
   useEffect(() => {
@@ -38,6 +34,14 @@ export function useProjectCapacityWs(
   useEffect(() => {
     onDocumentUpdateRef.current = onDocumentUpdate;
   }, [onDocumentUpdate]);
+  const onReminderRef = useRef(onReminder);
+  useEffect(() => {
+    onReminderRef.current = onReminder;
+  }, [onReminder]);
+  const onNotificationRef = useRef(onNotification);
+  useEffect(() => {
+    onNotificationRef.current = onNotification;
+  }, [onNotification]);
 
   useEffect(() => {
     if (!wsBaseUrl) return;
@@ -65,32 +69,11 @@ export function useProjectCapacityWs(
           backoff = RECONNECT_INITIAL_MS;
         };
         socket.onmessage = (event) => {
-          try {
-            const message = JSON.parse(event.data as string) as {
-              action?: string;
-              payload?: {
-                project_id?: string;
-                project_chunk_total?: number;
-                current?: { document_id?: string; status?: string; chunk_count?: number; error?: string | null };
-              };
-            };
-            if (message.action !== "RAG_INGESTION_STATUS") return;
-            const projectId = message.payload?.project_id;
-            const chunkTotal = message.payload?.project_chunk_total;
-            if (projectId && typeof chunkTotal === "number") {
-              onUpdateRef.current({ projectId, contextChunksUsed: chunkTotal });
-            }
-            const current = message.payload?.current;
-            if (current?.document_id && current.status) {
-              onDocumentUpdateRef.current?.({
-                documentId: current.document_id,
-                status: current.status,
-                chunkCount: current.chunk_count ?? 0,
-                error: current.error ?? null,
-              });
-            }
-          } catch {
-            // Message non JSON ou inattendu — ignoré, pas fatal pour la connexion.
+          for (const update of parseUserChannelMessage(event.data as string)) {
+            if (update.kind === "capacity") onUpdateRef.current(update.update);
+            else if (update.kind === "document") onDocumentUpdateRef.current?.(update.update);
+            else if (update.kind === "reminder") onReminderRef.current?.(update.reminder);
+            else onNotificationRef.current?.(update.notification);
           }
         };
         socket.onclose = () => {
