@@ -8,6 +8,7 @@ import { parseBackendDate } from "@/lib/workspace-types";
 import { connectorName, setSkill, skillChanges, skillDescription, skillEnabled, skillLabel, type SkillSettings } from "@/lib/skills";
 import { Dialog } from "./dialog";
 import { BellIcon, ClockIcon, CloseIcon, PlugIcon, ShieldIcon, SlidersIcon, UserIcon } from "./icons";
+import { InstallApp } from "./install-app";
 import { SecurityPane } from "./security-pane";
 import { ConnectorRows } from "./side-panel";
 import { useWorkspace } from "./workspace-provider";
@@ -410,6 +411,8 @@ function PreferencesPane({ labels, draft, update }: PaneProps) {
           <input id={id} value={draft.preferred_tts_voice} onChange={(e) => update("preferred_tts_voice", e.target.value)} placeholder="fr_FR-siwis-medium" className={fieldClass} />
         )}
       </Field>
+      <div className="border-t border-border" />
+      <InstallApp labels={labels} />
     </Pane>
   );
 }

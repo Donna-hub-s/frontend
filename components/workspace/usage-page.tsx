@@ -149,6 +149,16 @@ function Dashboard({ lang, labels, data, metric, onMetric }: { lang: Locale; lab
         <Card title={labels.tokensOut} value={`${totals.estimated ? "≈ " : ""}${formatTokens(totals.output_tokens, lang)}`} />
       </section>
 
+      {data.images && (
+        <section aria-label={labels.images}>
+          <Card
+            title={labels.images}
+            value={fill(labels.imagesValue, { used: data.images.used_today, limit: data.images.limit_per_day })}
+            hint={fill(labels.imagesHint, { remaining: data.images.remaining })}
+          />
+        </section>
+      )}
+
       <DailyChart lang={lang} labels={labels} data={data} money={money} metric={shown} onMetric={onMetric} />
 
       <div className="grid gap-4 md:grid-cols-2">

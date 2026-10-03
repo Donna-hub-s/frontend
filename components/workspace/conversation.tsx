@@ -577,7 +577,7 @@ function AssistantMessage({
               <li key={file.id}>
                 <FileLink url={fileHref(file.file_url)} name={file.original_name} className="block no-underline">
                   {/* eslint-disable-next-line @next/next/no-img-element -- fichier du message servi par la passerelle, taille inconnue */}
-                  <img src={fileHref(file.file_url)} alt={file.original_name} loading="lazy" className="max-h-60 max-w-full rounded-card border border-border" />
+                  <img src={fileHref(file.file_url)} alt={file.original_name} loading="lazy" className="max-h-96 max-w-full rounded-card border border-border" />
                 </FileLink>
               </li>
             ))}

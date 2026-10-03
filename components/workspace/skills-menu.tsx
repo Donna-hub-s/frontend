@@ -44,7 +44,7 @@ export function SkillsMenu({ lang, labels }: { lang: Locale; labels: Dictionary[
   };
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="sm:relative">
       <button
         type="button"
         aria-haspopup="true"
@@ -64,7 +64,7 @@ export function SkillsMenu({ lang, labels }: { lang: Locale; labels: Dictionary[
       </button>
 
       {open && (
-        <div role="group" aria-label={labels.skillsMenu} className="absolute bottom-full left-0 z-30 mb-2 w-[min(20rem,calc(100vw-3rem))] rounded-panel border border-border bg-white p-2 shadow-float">
+        <div role="group" aria-label={labels.skillsMenu} className="absolute bottom-full inset-x-0 z-30 mb-2 sm:inset-x-auto sm:left-0 sm:w-[20rem] rounded-panel border border-border bg-white p-2 shadow-float">
           <p className="px-2 pt-1 pb-2 text-meta text-ink-3">{labels.skillsMenuHint}</p>
           {!skills ? (
             <p className="px-2 py-3 text-secondary text-ink-3">…</p>

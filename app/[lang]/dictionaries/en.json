@@ -644,7 +644,8 @@
       "list_workflows": "Reading your automations",
       "pause_workflow": "Pausing an automation",
       "fetch_page": "Reading a web page",
-      "propose_research": "Preparing a deep research"
+      "propose_research": "Preparing a deep research",
+      "generate_image": "Generating an image"
     },
     "panel": {
       "label": "Activity panel",
@@ -936,7 +937,13 @@
       "linkedSince": "Linked on {date}",
       "loadFailed": "Some security information could not be loaded.",
       "skillNeeds": "Needs {connectors}: connect Google in the Connectors tab.",
-      "skillsLoadError": "Couldn't load the skills."
+      "skillsLoadError": "Couldn't load the skills.",
+      "installTitle": "App",
+      "installHint": "Install DONNA on this device's home screen: it opens full screen, like an app. Nothing from your conversations is kept offline.",
+      "installButton": "Install DONNA",
+      "installDone": "DONNA is installed on this device.",
+      "installIos": "On iPhone or iPad: tap Share, then “Add to Home Screen”.",
+      "installOther": "In Chrome or Edge, use the install icon in the address bar or the “Install app” menu. Safari on Mac: File › Add to Dock."
     },
     "drive": {
       "title": "Google Drive",
@@ -1028,7 +1035,8 @@
         "workflow_summary": "Workflow summaries",
         "compact": "History compaction",
         "title": "Conversation titles",
-        "research": "Deep research"
+        "research": "Deep research",
+        "image": "Generated images"
       },
       "noProject": "No project",
       "projectGone": "Inaccessible project",
@@ -1086,7 +1094,10 @@
       "saveError": "The budget could not be saved. Try again.",
       "invalidAmount": "Invalid amount.",
       "invalidTokens": "Invalid number of tokens.",
-      "close": "Close"
+      "close": "Close",
+      "images": "Images today",
+      "imagesValue": "{used} of {limit}",
+      "imagesHint": "{remaining} left. The quota is per person and per day (UTC day); each image is counted in the cost."
     },
     "workflows": {
       "indexTitle": "Automations",
@@ -1247,7 +1258,8 @@
       "reviewIntro": "Its instructions were written by a project member and will be read by DONNA for you. They can neither lift DONNA's rules nor give it an extra tool; every send still needs your approval.",
       "reviewChanged": "The instructions have changed since you last used it.",
       "reviewUse": "Use this agent"
-    }
+    },
+    "offline": "You are offline: DONNA can't load your conversations or answer until the network is back."
   },
   "invite": {
     "title": "Project invitation",

@@ -644,7 +644,8 @@
       "list_workflows": "Lecture de vos automatisations",
       "pause_workflow": "Mise en pause d'une automatisation",
       "fetch_page": "Lecture d'une page web",
-      "propose_research": "Préparation d'une recherche approfondie"
+      "propose_research": "Préparation d'une recherche approfondie",
+      "generate_image": "Génération d'une image"
     },
     "panel": {
       "label": "Panneau d'activité",
@@ -936,7 +937,13 @@
       "linkedSince": "Lié le {date}",
       "loadFailed": "Certaines informations de sécurité n’ont pas pu être chargées.",
       "skillNeeds": "Nécessite {connectors} : connecte Google dans l'onglet Connecteurs.",
-      "skillsLoadError": "Impossible de charger les compétences."
+      "skillsLoadError": "Impossible de charger les compétences.",
+      "installTitle": "Application",
+      "installHint": "Installez DONNA sur l'écran d'accueil de cet appareil : elle s'ouvre en plein écran, comme une application. Rien de vos conversations n'est conservé hors ligne.",
+      "installButton": "Installer DONNA",
+      "installDone": "DONNA est installée sur cet appareil.",
+      "installIos": "Sur iPhone ou iPad : touchez Partager, puis « Sur l'écran d'accueil ».",
+      "installOther": "Dans Chrome ou Edge, utilisez l'icône d'installation de la barre d'adresse ou le menu « Installer l'application ». Safari sur Mac : Fichier › Ajouter au Dock."
     },
     "drive": {
       "title": "Google Drive",
@@ -1028,7 +1035,8 @@
         "workflow_summary": "Résumés d'automatisations",
         "compact": "Compactage de l'historique",
         "title": "Titres de conversations",
-        "research": "Recherches approfondies"
+        "research": "Recherches approfondies",
+        "image": "Images générées"
       },
       "noProject": "Hors projet",
       "projectGone": "Projet inaccessible",
@@ -1086,7 +1094,10 @@
       "saveError": "Le budget n'a pas pu être enregistré. Réessayez.",
       "invalidAmount": "Montant invalide.",
       "invalidTokens": "Nombre de jetons invalide.",
-      "close": "Fermer"
+      "close": "Fermer",
+      "images": "Images aujourd'hui",
+      "imagesValue": "{used} sur {limit}",
+      "imagesHint": "Il en reste {remaining}. Le quota est par personne et par jour (jour UTC) ; chaque image est comptée dans le coût."
     },
     "workflows": {
       "indexTitle": "Automatisations",
@@ -1247,7 +1258,8 @@
       "reviewIntro": "Ses consignes ont été écrites par un membre du projet et seront lues par DONNA pour vous. Elles ne peuvent ni lever les règles de DONNA ni lui donner un outil de plus ; tout envoi reste soumis à votre approbation.",
       "reviewChanged": "Les consignes ont changé depuis votre dernière utilisation.",
       "reviewUse": "Utiliser cet agent"
-    }
+    },
+    "offline": "Vous êtes hors connexion : DONNA ne peut ni charger vos conversations ni répondre avant le retour du réseau."
   },
   "invite": {
     "title": "Invitation à un projet",

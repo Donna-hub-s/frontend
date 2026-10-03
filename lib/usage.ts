@@ -64,6 +64,8 @@ export type UsageTeam = {
   default_budget: UsageBudgetRow | null;
   directory_ok: boolean;
 };
+export type UsageImageQuota = { used_today: number; limit_per_day: number; remaining: number };
+
 export type UsageSummary = {
   period: { from: string; to: string; days: number; timezone: string };
   currency: UsageCurrency;
@@ -76,6 +78,8 @@ export type UsageSummary = {
   by_agent?: UsageBucket[];
   top_conversations: UsageConversation[];
   budget: UsageBudgetState | null;
+  /** Images du jour (UTC) ; absent quand la génération d'images est fermée sur ce serveur. */
+  images?: UsageImageQuota | null;
   /** Administrateur de l'espace : l'onglet « Équipe » est disponible. */
   is_admin: boolean;
 };

@@ -11,6 +11,7 @@ import { ConnectorRows, SidePanel } from "./side-panel";
 import { Sidebar, type Account } from "./sidebar";
 import { FileViewer } from "./file-viewer";
 import { MarkdownLabelsProvider } from "./markdown";
+import { OfflineBanner } from "./offline-banner";
 import { ReminderToasts } from "./reminder-toasts";
 import { SettingsDialog } from "./settings-dialog";
 import { WorkspaceProvider } from "./workspace-provider";
@@ -67,6 +68,7 @@ export function WorkspaceShell({
           onClose={() => setSidebarOpen(false)}
         />
         <main className="flex min-w-0 flex-1 flex-col">
+          <OfflineBanner label={dict.offline} />
           {/* Sous xl, le panneau latéral est masqué : barre avec menu (mobile) et connecteurs. */}
           <header className="flex items-center gap-3 border-b border-border px-4 py-3 xl:hidden">
             <button

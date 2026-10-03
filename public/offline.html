@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#591a29" />
+    <title>DONNA — hors connexion</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; min-height: 100dvh; display: grid; place-items: center; padding: 24px;
+        background: #fbfafa; color: #2b1d20; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      main { max-width: 26rem; text-align: center; }
+      img { width: 72px; height: 72px; border-radius: 22%; }
+      h1 { margin: 20px 0 8px; font-size: 1.375rem; color: #591a29; }
+      p { margin: 0 0 20px; color: #5d4a4e; }
+      button {
+        font: inherit; font-weight: 600; color: #fff; background: #7c3040; border: 0; border-radius: 10px;
+        padding: 10px 20px; cursor: pointer;
+      }
+      button:hover { background: #591a29; }
+      button:focus-visible { outline: 3px solid rgb(124 48 64 / 0.35); outline-offset: 2px; }
+      [hidden] { display: none; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="" width="72" height="72" />
+      <section data-lang="fr">
+        <h1>Vous êtes hors connexion</h1>
+        <p>DONNA a besoin d'Internet pour lire vos conversations et répondre. Rien n'est conservé sur cet appareil : reconnectez-vous puis réessayez.</p>
+        <button type="button" data-retry>Réessayer</button>
+      </section>
+      <section data-lang="en" hidden>
+        <h1>You are offline</h1>
+        <p>DONNA needs the Internet to read your conversations and answer. Nothing is kept on this device: reconnect, then try again.</p>
+        <button type="button" data-retry>Try again</button>
+      </section>
+    </main>
+    <script>
+      // Langue de la page qu'on voulait ouvrir (/en/…, /fr/…), à défaut celle du navigateur.
+      var fromPath = /^\/(fr|en)(\/|$)/.exec(location.pathname);
+      var english = fromPath ? fromPath[1] === "en" : /^en/i.test(navigator.language || "");
+      document.documentElement.lang = english ? "en" : "fr";
+      document.title = english ? "DONNA — offline" : "DONNA — hors connexion";
+      document.querySelector('[data-lang="fr"]').hidden = english;
+      document.querySelector('[data-lang="en"]').hidden = !english;
+      Array.prototype.forEach.call(document.querySelectorAll("[data-retry]"), function (button) {
+        button.addEventListener("click", function () { location.reload(); });
+      });
+      window.addEventListener("online", function () { location.reload(); });
+    </script>
+  </body>
+</html>
