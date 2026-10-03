@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { barHeights, dayLabel, formatTokens, isEmptyUsage, MIN_BAR, moneyFormatter, sharePercent, splitModelKey, usageUrl, type UsageDay, type UsageSummary } from "./usage";
+import {
+  barHeights, budgetBarWidth, budgetPercent, budgetTone, budgetUrl, dayLabel, formatTokens, isEmptyUsage, limitToInput, MIN_BAR, moneyFormatter,
+  parseLimit, parseTokens, sharePercent, splitModelKey, teamExportUrl, teamUrl, usageUrl, type UsageDay, type UsageSummary,
+} from "./usage";
 
 const day = (date: string, cost: number): UsageDay => ({ date, cost_usd: cost, input_tokens: 0, output_tokens: 0, requests: 0 });
 
@@ -80,5 +83,50 @@ describe("petits utilitaires", () => {
     const empty = { totals: { requests: 0 } } as UsageSummary;
     expect(isEmptyUsage(empty)).toBe(true);
     expect(isEmptyUsage({ totals: { requests: 3 } } as UsageSummary)).toBe(false);
+  });
+});
+
+describe("budgets", () => {
+  it("le pourcentage dit la vérité, la barre se plafonne", () => {
+    expect(budgetPercent(0.804)).toBe(80);
+    expect(budgetPercent(1.32)).toBe(132);
+    expect(budgetBarWidth(1.32)).toBe(100);
+    expect(budgetBarWidth(-1)).toBe(0);
+  });
+
+  it("le ton suit le niveau du serveur", () => {
+    expect(budgetTone({ level: "exceeded" })).toBe("exceeded");
+    expect(budgetTone({ level: "warn" })).toBe("warn");
+    expect(budgetTone({ level: "ok" })).toBe("ok");
+    expect(budgetTone(null)).toBe("ok");
+  });
+
+  it("parseLimit convertit la devise d'affichage en dollars, vide = sans limite, invalide = refusé", () => {
+    expect(parseLimit("12,5", 1)).toBe(12.5);
+    expect(parseLimit("1 250", 1)).toBe(1250);
+    expect(parseLimit("600", 600)).toBe(1);
+    expect(parseLimit("300", 600)).toBe(0.5);
+    expect(parseLimit("   ", 1)).toBeNull();
+    for (const bad of ["abc", "-5", "1e3", "12,5,3", "12 $"]) expect(parseLimit(bad, 1)).toBeUndefined();
+    expect(parseLimit("5", 0)).toBeUndefined();
+  });
+
+  it("parseTokens n'accepte que des entiers", () => {
+    expect(parseTokens("5 000 000")).toBe(5_000_000);
+    expect(parseTokens("")).toBeNull();
+    for (const bad of ["1,5", "-1", "dix", "9".repeat(20)]) expect(parseTokens(bad)).toBeUndefined();
+  });
+
+  it("limitToInput reconvertit en devise d'affichage", () => {
+    expect(limitToInput(null, 1)).toBe("");
+    expect(limitToInput(1, 600)).toBe("600");
+    expect(limitToInput(12.5, 1)).toBe("12.5");
+  });
+
+  it("les adresses encodent fuseau et membre", () => {
+    expect(teamUrl(7, "Africa/Ouagadougou")).toBe("/api/donna/chat/usage/tenant?days=7&tz=Africa%2FOuagadougou");
+    expect(teamExportUrl(30, "UTC")).toBe("/api/donna/chat/usage/tenant/export?days=30&tz=UTC");
+    expect(budgetUrl("*")).toBe("/api/donna/chat/usage/budgets/*");
+    expect(budgetUrl("a/b")).toBe("/api/donna/chat/usage/budgets/a%2Fb");
   });
 });

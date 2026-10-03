@@ -240,3 +240,47 @@ describe("applyPrepStep", () => {
     expect(direct[0]).toMatchObject({ key: "memory", status: "done", data: { kind: "memory", facts: 2 } });
   });
 });
+
+describe("startChatRun — refus du serveur et identifiant du message", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const run = async (response: Response) => {
+    vi.mocked(fetch).mockResolvedValue(response);
+    const harness = makeProviderLikeHarness();
+    await startChatRun({
+      message: "Salut", files: [], webSearch: false, mentions: EMPTY_MENTIONS, conversationId: null, signal: new AbortController().signal,
+      callbacks: { patch: harness.patch, setSteps: () => {}, bind: () => {}, settled: () => {} },
+    });
+    return harness.getMessage();
+  };
+
+  it("un budget atteint (402) affiche la raison donnée par le serveur, comme pour le chat sans flux", async () => {
+    const reason = "Le budget du mois est atteint (5.00 USD sur 5.00 USD). Un administrateur de ton espace peut le relever.";
+    const message = await run(new Response(JSON.stringify({ detail: reason }), { status: 402, headers: { "content-type": "application/json" } }));
+    expect(message.status).toBe("error");
+    expect(message.error).toBe("generic");
+    expect(message.errorDetail).toBe(reason);
+  });
+
+  it("un refus sans corps lisible garde le message générique", async () => {
+    const message = await run(new Response("pas du json", { status: 402 }));
+    expect(message.error).toBe("generic");
+    expect(message.errorDetail).toBeUndefined();
+  });
+
+  it("les erreurs de session et de débit gardent leur propre message", async () => {
+    expect((await run(new Response("{}", { status: 401 }))).error).toBe("session");
+    expect((await run(new Response("{}", { status: 429 }))).error).toBe("tooMany");
+  });
+
+  it("l'événement done transmet l'identifiant du message enregistré (pour le noter)", async () => {
+    const done = `event: done\ndata: ${JSON.stringify({ message_id: "m-42", sources: [], memory_notes: [], attachments: [] })}\n\n`;
+    const message = await run(sseResponse([startEvent("c1"), deltaEvent("Bonjour"), done]));
+    expect(message.serverId).toBe("m-42");
+  });
+});

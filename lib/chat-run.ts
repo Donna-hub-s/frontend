@@ -193,7 +193,7 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
       });
       if (!response.ok) {
         if (modelFields.model) clearStaleModel(response.status);
-        throw Object.assign(new Error("http"), { kind: errorFromStatus(response.status) });
+        throw Object.assign(new Error("http"), { kind: errorFromStatus(response.status), detail: await readDetail(response) });
       }
 
       let answering = false;

@@ -20,7 +20,9 @@ import {
   type UsageBucket,
   type UsageSummary,
 } from "@/lib/usage";
+import { BudgetBar } from "./budget-bar";
 import { ChevronIcon } from "./icons";
+import { TeamUsage } from "./team-usage";
 
 type Labels = Dictionary["workspace"]["usage"];
 type Money = (usd: number) => string;
@@ -33,6 +35,7 @@ export function UsagePage({ lang, labels }: { lang: Locale; labels: Labels }) {
   // Résultat tagué par la période demandée : « en cours » se déduit (result.days !== days), sans setState dans l'effet.
   const [result, setResult] = useState<{ days: number; data: UsageSummary | null } | null>(null);
   const [metric, setMetric] = useState<"cost" | "tokens" | null>(null);
+  const [tab, setTab] = useState<"mine" | "team">("mine");
 
   useEffect(() => {
     let cancelled = false;
@@ -50,6 +53,8 @@ export function UsagePage({ lang, labels }: { lang: Locale; labels: Labels }) {
   const loading = result?.days !== days;
   const data = loading ? null : result?.data ?? null;
   const failed = !loading && data === null;
+  // L'onglet « Équipe » n'existe que pour un administrateur de l'espace (le serveur le dit : is_admin).
+  const showTeam = tab === "team" && data?.is_admin === true;
 
   return (
     <div className="scrollbar-none flex-1 overflow-y-auto">
@@ -82,13 +87,32 @@ export function UsagePage({ lang, labels }: { lang: Locale; labels: Labels }) {
           </div>
         </div>
 
-        {failed ? (
+        {data?.is_admin && (
+          <div role="tablist" aria-label={labels.indexTitle} className="inline-flex w-fit rounded-button bg-fill p-0.5">
+            {(["mine", "team"] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="tab"
+                aria-selected={tab === option}
+                onClick={() => setTab(option)}
+                className={`rounded-badge px-3 py-1.5 text-label ${tab === option ? "bg-white font-medium text-ink shadow-card" : "text-ink-2 hover:text-ink"}`}
+              >
+                {option === "mine" ? labels.tabMine : labels.tabTeam}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {showTeam ? (
+          <TeamUsage lang={lang} labels={labels} days={days} />
+        ) : failed ? (
           <p role="alert" className="rounded-panel bg-surface px-5 py-8 text-center text-message text-danger shadow-card">
             {labels.loadError}
           </p>
         ) : !data ? (
           <p className="py-10 text-center text-secondary text-ink-3">{labels.loading}</p>
-        ) : isEmptyUsage(data) ? (
+        ) : isEmptyUsage(data) && !data.budget ? (
           <div className="flex flex-col items-center gap-2 rounded-panel border-2 border-dashed border-border bg-fill/40 px-6 py-12 text-center">
             <span className="flex size-10 items-center justify-center rounded-full bg-peche-100 text-bordeaux-700">
               <BarChart3 size={18} />
@@ -113,6 +137,7 @@ function Dashboard({ lang, labels, data, metric, onMetric }: { lang: Locale; lab
 
   return (
     <>
+      {data.budget && <BudgetCard labels={labels} lang={lang} budget={data.budget} money={money} />}
       <section aria-label={labels.indexTitle} className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Card title={labels.cost} value={`${approx}${totals.unpriced ? "≥ " : ""}${money(totals.cost_usd)}`} hint={totals.unpriced ? labels.unpricedHint : totals.estimated ? labels.estimatedHint : undefined} />
         <Card
@@ -294,6 +319,33 @@ function Breakdown({
           );
         })}
       </ul>
+    </section>
+  );
+}
+
+/** Mon budget du mois : barre d'avancement, et — dès 80 % — ce que ça change (alerte, ou refus des nouvelles requêtes). */
+function BudgetCard({ labels, lang, budget, money }: { labels: Labels; lang: Locale; budget: NonNullable<UsageSummary["budget"]>; money: Money }) {
+  const message =
+    budget.level === "exceeded"
+      ? budget.block_at_limit
+        ? labels.budgetExceededBlocking
+        : labels.budgetExceededAlert
+      : budget.level === "warn"
+        ? fill(labels.budgetWarn, { percent: Math.round(budget.ratio * 100) })
+        : null;
+  return (
+    <section className="flex flex-col gap-2 rounded-panel bg-white p-5 shadow-card" aria-label={labels.budgetTitle}>
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 className="text-label font-medium text-ink">{labels.budgetTitle}</h2>
+        <span className="text-meta text-ink-3">{budget.source === "default" ? labels.budgetDefault : labels.budgetOwn}</span>
+      </div>
+      <BudgetBar state={budget} money={money} lang={lang} labels={labels} />
+      {message && (
+        <p role="status" className={`rounded-badge px-3 py-2 text-secondary text-pretty ${budget.level === "exceeded" ? "bg-danger/[0.06] text-danger" : "bg-peche-100 text-bordeaux-900"}`}>
+          {message}
+        </p>
+      )}
+      <p className="text-meta text-ink-3">{labels.budgetMonthNote}</p>
     </section>
   );
 }

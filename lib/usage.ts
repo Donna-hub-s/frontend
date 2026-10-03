@@ -28,6 +28,42 @@ export type UsageBucket = {
   local: boolean;
 };
 export type UsageConversation = { conversation_id: string; title: string | null; cost_usd: number; input_tokens: number; output_tokens: number; requests: number };
+/** Où en est un utilisateur ce mois-ci (mois civil UTC) face à son budget — backend/app/chat/src/budgets.py. */
+export type UsageBudgetState = {
+  source: "user" | "default" | string;
+  limit_cost_usd: number | null;
+  limit_tokens: number | null;
+  block_at_limit: boolean;
+  used_cost_usd: number;
+  used_tokens: number;
+  ratio: number;
+  level: "ok" | "warn" | "exceeded" | string;
+  month: string;
+};
+export type UsageBudgetRow = { user_id: string; limit_cost_usd: number | null; limit_tokens: number | null; block_at_limit: boolean; updated_by: string | null; updated_at: string | null };
+export type TeamMember = {
+  user_id: string;
+  email: string | null;
+  is_owner: boolean;
+  is_active: boolean;
+  former: boolean;
+  cost_usd: number;
+  input_tokens: number;
+  output_tokens: number;
+  requests: number;
+  estimated: boolean;
+  unpriced: boolean;
+  budget: UsageBudgetState | null;
+};
+export type UsageTeam = {
+  period: UsageSummary["period"];
+  currency: UsageCurrency;
+  totals: UsageTotals;
+  by_day: UsageDay[];
+  members: TeamMember[];
+  default_budget: UsageBudgetRow | null;
+  directory_ok: boolean;
+};
 export type UsageSummary = {
   period: { from: string; to: string; days: number; timezone: string };
   currency: UsageCurrency;
@@ -37,6 +73,9 @@ export type UsageSummary = {
   by_source: UsageBucket[];
   by_project: UsageBucket[];
   top_conversations: UsageConversation[];
+  budget: UsageBudgetState | null;
+  /** Administrateur de l'espace : l'onglet « Équipe » est disponible. */
+  is_admin: boolean;
 };
 
 export const PERIOD_OPTIONS = [7, 30, 90] as const;
@@ -110,3 +149,47 @@ export const browserTimezone = (): string => {
     return "UTC";
   }
 };
+
+// ── Équipe et budgets ─────────────────────────────────────────────────────────
+
+export const teamUrl = (days: number, timezone: string): string => `/api/donna/chat/usage/tenant?days=${days}&tz=${encodeURIComponent(timezone)}`;
+export const teamExportUrl = (days: number, timezone: string): string => `/api/donna/chat/usage/tenant/export?days=${days}&tz=${encodeURIComponent(timezone)}`;
+/** « * » désigne le budget par défaut de l'espace (membres sans budget propre). */
+export const DEFAULT_BUDGET_USER = "*";
+export const budgetUrl = (userId: string): string => `/api/donna/chat/usage/budgets/${encodeURIComponent(userId)}`;
+
+/** Avancement en pourcentage entier, jamais négatif ; la barre se plafonne à 100 mais le texte dit la vérité (« 132 % »). */
+export const budgetPercent = (ratio: number): number => Math.max(0, Math.round(ratio * 100));
+export const budgetBarWidth = (ratio: number): number => Math.min(100, budgetPercent(ratio));
+
+export type BudgetTone = "ok" | "warn" | "exceeded";
+export const budgetTone = (state: Pick<UsageBudgetState, "level"> | null): BudgetTone => (state?.level === "exceeded" ? "exceeded" : state?.level === "warn" ? "warn" : "ok");
+
+/**
+ * Saisie d'un montant dans la devise d'affichage → dollars (les budgets sont stockés en dollars). Accepte la virgule
+ * décimale et les espaces (« 1 250,5 »). Vide → null (pas de limite) ; invalide ou négatif → undefined.
+ */
+export function parseLimit(input: string, rate: number): number | null | undefined {
+  const cleaned = input.trim().replace(/[\s\u00a0\u202f]/g, "").replace(",", ".");
+  if (cleaned === "") return null;
+  if (!/^\d+(\.\d+)?$/.test(cleaned)) return undefined;
+  const value = Number(cleaned);
+  if (!Number.isFinite(value) || !(rate > 0)) return undefined;
+  return Math.round((value / rate) * 1e6) / 1e6;
+}
+
+/** Entier de jetons saisi (« 5 000 000 »). Vide → null ; invalide → undefined. */
+export function parseTokens(input: string): number | null | undefined {
+  const cleaned = input.trim().replace(/[\s\u00a0\u202f]/g, "");
+  if (cleaned === "") return null;
+  if (!/^\d+$/.test(cleaned)) return undefined;
+  const value = Number(cleaned);
+  return Number.isSafeInteger(value) ? value : undefined;
+}
+
+/** Valeur à remettre dans le champ d'édition : dollars → devise d'affichage, sans décimales superflues. */
+export function limitToInput(usd: number | null, rate: number): string {
+  if (usd === null) return "";
+  const value = Math.round(usd * rate * 100) / 100;
+  return String(value);
+}
