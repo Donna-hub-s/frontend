@@ -2,25 +2,22 @@ import { useId } from "react";
 import { ORB_GEOMETRY } from "./orb-geometry";
 
 /**
- * Orbe de DONNA : un disque, cinq états (design/fondations/etats).
+ * Orbe de DONNA : un disque, cinq états (fondations/etats).
  * - idle      : point et halo qui respire — disponible
- * - listening : ondes qui partent du point — l'utilisateur écrit
+ * - listening : ondes qui partent du point — l'utilisateur écrit ou parle
  * - thinking  : trait en S qui oscille — elle réfléchit, avant toute action
  * - working   : boucle qui tourne — elle agit (outils, recherche, documents)
  * - answering : logo et halo — elle répond
- * Les animations s'arrêtent avec « réduire les animations » (voir globals.css).
+ *
+ * Le dessin des cinq états vient de la référence (fondations/etats/*.svg) via orb-geometry.ts, généré par
+ * scripts/orb-geometry.mjs : AUCUNE valeur n'est recopiée ici. Un test (donna-orb.test.ts) compare le rendu à la référence.
+ * Les animations s'arrêtent avec « réduire les animations » (voir globals.css) : l'orbe retombe alors sur le dessin de la
+ * référence, tel quel.
  */
 export type OrbState = "idle" | "listening" | "thinking" | "working" | "answering";
 
-const DISCS: Record<OrbState, readonly string[]> = {
-  idle: ["#F7F1EE", "#F2EDEB", "#F3EFED"],
-  listening: ["#FAEBE5", "#F7EEEA", "#F5F0EE"],
-  thinking: ORB_GEOMETRY.thinking.disc,
-  working: ORB_GEOMETRY.working.disc,
-  answering: ORB_GEOMETRY.answering.disc,
-};
-
-const FIGURE_CLASS: Record<"thinking" | "working" | "answering", string> = {
+/** Enveloppe d'animation de la figure entière (idle et listening animent des éléments précis, repérés dans la géométrie). */
+const FIGURE_CLASS: Partial<Record<OrbState, string>> = {
   thinking: "orb-think",
   working: "orb-work",
   answering: "orb-answer",
@@ -44,8 +41,7 @@ export function DonnaOrb({
   className?: string;
 }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
-  const disc = DISCS[state];
-  const figure = state === "thinking" || state === "working" || state === "answering" ? ORB_GEOMETRY[state] : null;
+  const { disc, defs, halo, figure } = ORB_GEOMETRY[state];
 
   return (
     <svg
@@ -64,49 +60,15 @@ export function DonnaOrb({
           <stop offset="0.8" stopColor={disc[1]} />
           <stop offset="1" stopColor={disc[2]} />
         </radialGradient>
-        <radialGradient id={`orb-dot-${uid}`} cx="0.4" cy="0.35" r="0.7">
-          <stop offset="0" stopColor="#9A4A56" />
-          <stop offset="0.6" stopColor="#873844" />
-          <stop offset="1" stopColor="#7A2D3B" />
-        </radialGradient>
-        <radialGradient id={`orb-glow-${uid}`}>
-          <stop offset="0" stopColor="#F2C9C2" stopOpacity="0.9" />
-          <stop offset="0.35" stopColor="#F6DCD4" stopOpacity="0.7" />
-          <stop offset="1" stopColor="#F7EDEA" stopOpacity="0" />
-        </radialGradient>
-        <filter id={`orb-soft-${uid}`} x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="1.1" />
-        </filter>
-        <filter id={`orb-halo-${uid}`} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2.6" />
-        </filter>
-        {figure && <g dangerouslySetInnerHTML={{ __html: scoped(figure.defs, uid) }} />}
+        <g dangerouslySetInnerHTML={{ __html: scoped(defs, uid) }} />
       </defs>
 
-      {state === "answering" && (
-        <circle className="orb-halo" cx="50" cy="50" r="51.5" fill="#F3DCD5" filter={`url(#orb-halo-${uid})`} />
-      )}
+      {halo && <g dangerouslySetInnerHTML={{ __html: scoped(halo, uid) }} />}
       <circle cx="50" cy="50" r="50" fill={`url(#orb-disc-${uid})`} />
       <circle cx="50" cy="50" r="49.6" fill="none" stroke="#FFFFFF" strokeOpacity="0.55" strokeWidth="0.8" />
 
       <g key={state} className="orb-enter">
-        {state === "idle" && (
-          <>
-            <circle className="orb-breathe" cx="50" cy="50" r="30" fill={`url(#orb-glow-${uid})`} />
-            <circle cx="50" cy="50" r="7.8" fill={`url(#orb-dot-${uid})`} />
-          </>
-        )}
-        {state === "listening" && (
-          <>
-            <circle cx="50" cy="50" r="18" fill={`url(#orb-glow-${uid})`} opacity="0.8" />
-            <circle className="orb-ripple" cx="50" cy="50" r="22.5" fill="none" stroke="#E9BDB6" strokeWidth="3.6" filter={`url(#orb-soft-${uid})`} />
-            <circle className="orb-ripple orb-ripple-late" cx="50" cy="50" r="22.5" fill="none" stroke="#EAC6C0" strokeWidth="3.8" filter={`url(#orb-soft-${uid})`} />
-            <circle cx="50" cy="50" r="6.9" fill={`url(#orb-dot-${uid})`} />
-          </>
-        )}
-        {figure && (
-          <g className={FIGURE_CLASS[state as keyof typeof FIGURE_CLASS]} dangerouslySetInnerHTML={{ __html: scoped(figure.figure, uid) }} />
-        )}
+        <g className={FIGURE_CLASS[state]} dangerouslySetInnerHTML={{ __html: scoped(figure, uid) }} />
       </g>
     </svg>
   );

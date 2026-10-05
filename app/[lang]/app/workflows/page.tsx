@@ -14,5 +14,5 @@ export default async function WorkflowsRoute({ params }: PageProps<"/[lang]/app/
   if (!isLocale(lang)) notFound();
   const dict = await getDictionary(lang);
 
-  return <WorkflowsPage lang={lang} labels={dict.workspace.workflows} />;
+  return <WorkflowsPage lang={lang} labels={dict.workspace.workflows} agentLabels={dict.workspace.workflowAgents} />;
 }

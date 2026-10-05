@@ -110,7 +110,7 @@ export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: Work
   const { panel } = dict;
 
   return (
-    <aside aria-label={panel.label} className="scrollbar-none hidden w-[20rem] shrink-0 flex-col gap-4 overflow-y-auto bg-page p-4 xl:flex">
+    <aside aria-label={panel.label} className="scrollbar-none hidden w-[20rem] shrink-0 flex-col gap-4 overflow-y-auto bg-page p-4 xl:flex [body[data-canvas-open]_&]:hidden">
       <section className="rounded-panel bg-surface">
         <header className="flex items-center justify-between border-b border-border px-4 py-3.5">
           <h2 className="text-panel-title font-medium text-ink">{panel.activity}</h2>
@@ -206,7 +206,7 @@ function PendingItem({ lang, dict, action }: { lang: Locale; dict: WorkspaceDict
       </div>
       <p className="mt-2 text-label text-ink text-pretty">{action.summary}</p>
       {action.email && <EmailAttachmentList actionId={action.id} attachments={action.email.attachments} openable labels={dict.chat} />}
-      {action.workflow && <WorkflowDraft draft={action.workflow} labels={dict.chat} />}
+      {action.workflow && <WorkflowDraft draft={action.workflow} labels={dict.chat} agentLabels={dict.workflowAgents} />}
       {failed && <p className="mt-2 text-secondary text-danger">{panel.actionError}</p>}
       <div className="mt-3 flex gap-2">
         <button

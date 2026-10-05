@@ -56,7 +56,7 @@ export function applyPrepStep(steps: Step[], event: PrepStep, now = Date.now()):
 }
 
 /** Outils qui créent une action en attente de confirmation humaine. */
-export const PROPOSALS = new Set(["propose_email", "propose_calendar_event", "propose_drive_upload", "propose_workflow"]);
+export const PROPOSALS = new Set(["propose_email", "propose_calendar_event", "propose_drive_upload", "propose_workflow", "propose_research"]);
 
 export type ErrorKind = NonNullable<ChatMessage["error"]>;
 
@@ -84,6 +84,9 @@ export type RunCallbacks = {
   bind: (id: string) => void;
   /** Étape terminée (réponse complète, ou question posée). */
   settled: (kind: "response" | "question") => void;
+  /** Identifiant serveur du message UTILISATEUR de ce tour (absent en régénération :
+   * il existait déjà) — voir ChatResponse.user_message_id / l'événement SSE "done". */
+  patchUser: (serverId: string | undefined) => void;
 };
 
 export type RunOutcome = { conversationId: string | null; proposed: boolean };
@@ -96,6 +99,14 @@ export type RunInput = {  message: string;
   projectId?: string;
   /** Agent du projet choisi (« » = aucun, à retirer) ; undefined = conversation hors projet, rien n'est envoyé. */
   agentId?: string;
+  /** Remplace un message UTILISATEUR de la branche affichée par `message` (nouvelle
+   * version sœur) — voir branches.py. Jamais combiné avec des fichiers. */
+  editMessageId?: string;
+  /** Régénère la réponse de DONNA visée (nouvelle version sœur) ; `message` est alors
+   * ignoré par le serveur (le texte original est rejoué) — voir branches.py. */
+  regenerateMessageId?: string;
+  /** Mode vocal : la réponse sera lue à voix haute (le serveur ajoute une consigne de style à ce tour seulement). */
+  voice?: boolean;
   signal: AbortSignal;
   callbacks: RunCallbacks;
 };
@@ -107,7 +118,7 @@ export type RunInput = {  message: string;
  * action a été proposée — le backend y ajoute alors la confirmation à valider.
  */
 export async function startChatRun(input: RunInput): Promise<RunOutcome> {
-  const { message, files, webSearch, mentions, projectId, agentId, signal, callbacks } = input;
+  const { message, files, webSearch, mentions, projectId, agentId, editMessageId, regenerateMessageId, voice, signal, callbacks } = input;
   let conversationId = input.conversationId;
   const bind = (id: string) => {
     if (!id || conversationId) return;
@@ -162,8 +173,10 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
         memory_notes: string[];
         attachments: AttachmentOut[];
         message_id?: string | null;
+        user_message_id?: string | null;
       };
       bind(data.conversation_id);
+      callbacks.patchUser(data.user_message_id ?? undefined);
       const tools: ToolCall[] = data.question
         ? [{ name: "ask_user", arguments: { question: data.question, options: data.options }, result: "" }]
         : [];
@@ -189,7 +202,10 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
           conversation_id: conversationId,
           project_id: conversationId ? undefined : projectId,
           agent_id: agentId,
+          edit_message_id: editMessageId,
+          regenerate_message_id: regenerateMessageId,
           web_search: webSearch,
+          voice: voice || undefined,
           mentioned_project_id: mentions.projectId,
           mentioned_document_ids: mentions.documentIds,
         }),
@@ -242,6 +258,7 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
           finished = true;
           setSteps(finishSteps(), "done");
           callbacks.patch({ sources: event.sources, memory: event.memory, attachments: event.attachments, status: "done", serverId: event.messageId });
+          callbacks.patchUser(event.userMessageId);
         }
       }
       if (!finished) throw Object.assign(new Error("interrupted"), { kind: "generic" as ErrorKind });

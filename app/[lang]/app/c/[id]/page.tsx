@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { Conversation } from "@/components/workspace/conversation";
 import { isLocale } from "@/i18n/config";
 import { getMessages } from "@/lib/api";
-import { accountIdentity, toChatMessages } from "@/lib/workspace-server";
+import { accountIdentity } from "@/lib/workspace-server";
+import { toChatMessages } from "@/lib/workspace-types";
 import { getDictionary } from "../../../dictionaries";
 
 /** Conversation existante : historique chargé côté serveur. */

@@ -2,18 +2,21 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { startChatRun, uid, visibleSteps, type RunInput } from "@/lib/chat-run";
+import { nextSiblings, selectMessageBranch } from "@/lib/branches";
 import { useProjectCapacityWs, type AppNotification, type DocumentStatusUpdate, type ReminderDue } from "@/lib/use-project-ws";
 import type { SkillSettings } from "@/lib/skills";
 import { installSessionGuard } from "@/lib/session-guard";
 import type { Locale } from "@/i18n/config";
-import type {
-  ChatMessage,
-  ConversationOut,
-  MentionSelection,
-  PendingActionOut,
-  ProjectOut,
-  SkillOut,
-  Step,
+import {
+  EMPTY_MENTIONS,
+  toChatMessages,
+  type ChatMessage,
+  type ConversationOut,
+  type MentionSelection,
+  type PendingActionOut,
+  type ProjectOut,
+  type SkillOut,
+  type Step,
 } from "@/lib/workspace-types";
 
 /** Notification in-app : une réponse est arrivée, DONNA pose une question, un rappel s'est déclenché ou une automatisation a écrit. */
@@ -48,6 +51,11 @@ export type SendInput = {
   projectId?: string;
   /** Agent du projet pour ce message : « » = aucun (à retirer de la conversation), undefined = conversation hors projet. */
   agentId?: string;
+  /** Message dit en mode vocal : sa réponse sera lue à voix haute. */
+  voice?: boolean;
+  /** Message UTILISATEUR remplacé (nouvelle version sœur) — voir conversation.tsx::editAndResend.
+   * `siblingIds` : ses versions déjà connues (vide si c'est la première édition). */
+  editing?: { messageId: string; siblingIds: string[] };
   /** Langue courante : l'URL est mise à jour dès que le backend crée la conversation. */
   lang: Locale;
   /** Titre provisoire affiché avant le titre généré par le backend. */
@@ -106,10 +114,14 @@ type WorkspaceValue = {
   activeKey: string | null;
   setActiveKey: (key: string | null) => void;
   send: (input: SendInput) => Promise<void>;
-  /** Retire les messages aux index donnés (relance d'une réponse). */
+  /** Retire les messages aux index donnés (relance d'une réponse, ou tout ce qui suit un message édité). */
   dropMessages: (key: string, indexes: number[]) => void;
   /** Modifie un message d'un fil (par son id local) : sert, par exemple, à mémoriser mon pouce. */
   patchMessage: (key: string, messageId: string, patch: Partial<ChatMessage>) => void;
+  /** Régénère la réponse `original` (même position, nouvelle version sœur côté serveur) — voir branches.py. */
+  regenerate: (key: string, conversationId: string, original: ChatMessage) => Promise<boolean>;
+  /** Bascule la branche affichée sur celle qui passe par `messageId` (navigation ‹ i/n ›, ou juste après une édition/régénération). */
+  selectBranch: (key: string, conversationId: string, messageId: string) => Promise<boolean>;
   stop: (key: string) => void;
   /** Derniers messages reçus par conversation non affichée (pastille + badge). */
   notices: Record<string, Notice>;
@@ -486,7 +498,7 @@ export function WorkspaceProvider({
 
   const send = useCallback(
     async (input: SendInput) => {
-      const { key, message, files, webSearch, mentions, projectId, agentId, fallbackTitle } = input;
+      const { key, message, files, webSearch, mentions, projectId, agentId, editing, fallbackTitle, voice } = input;
       if (runs.current.has(key)) return;
       const trimmed = message.trim();
       if (!trimmed && !files.length) return;
@@ -494,6 +506,7 @@ export function WorkspaceProvider({
       const controller = new AbortController();
       runs.current.set(key, controller);
       const wasNew = !input.conversationId;
+      const userId = uid();
       const assistantId = uid();
       // L'agent choisi suit la conversation : la liste (barre latérale, sélecteur) le sait tout de suite.
       if (input.conversationId && agentId !== undefined) {
@@ -506,7 +519,7 @@ export function WorkspaceProvider({
         busy: true,
         messages: [
           ...thread.messages,
-          { id: uid(), role: "user", content: trimmed, createdAt: Date.now(), attachments: [], localFiles: files.map((f) => f.name) },
+          { id: userId, role: "user", content: trimmed, createdAt: Date.now(), attachments: [], localFiles: files.map((f) => f.name) },
           { id: assistantId, role: "assistant", content: "", createdAt: Date.now(), attachments: [], steps: [], tools: [], status: "streaming" },
         ],
       }));
@@ -518,6 +531,8 @@ export function WorkspaceProvider({
         mentions,
         projectId,
         agentId,
+        voice,
+        editMessageId: editing?.messageId,
         conversationId: input.conversationId,
         signal: controller.signal,
         callbacks: {
@@ -525,6 +540,15 @@ export function WorkspaceProvider({
             patchThread(key, (thread) => ({
               ...thread,
               messages: thread.messages.map((m) => (m.id === assistantId ? { ...m, ...(typeof p === "function" ? p(m) : p) } : m)),
+            })),
+          patchUser: (serverId) =>
+            patchThread(key, (thread) => ({
+              ...thread,
+              messages: thread.messages.map((m) =>
+                m.id === userId
+                  ? { ...m, serverId, ...(editing && serverId ? nextSiblings(editing.siblingIds, editing.messageId, serverId) : {}) }
+                  : m,
+              ),
             })),
           setSteps: (next, status = "running") => {
             patchThread(key, (thread) => ({
@@ -576,9 +600,108 @@ export function WorkspaceProvider({
       } finally {
         runs.current.delete(key);
         patchThread(key, (thread) => ({ ...thread, busy: false }));
+        // Une édition a déjà déplacé la tête de la branche (et donc pu rendre une action
+        // en attente "superseded") AVANT même l'appel au modèle — qu'il réussisse ou non.
+        if (editing) void refreshPending();
       }
     },
     [notify, patchThread, refreshConversations, refreshPending, upsertConversation],
+  );
+
+  const regenerate = useCallback(
+    async (key: string, conversationId: string, original: ChatMessage): Promise<boolean> => {
+      if (runs.current.has(key) || !original.serverId) return false;
+      const controller = new AbortController();
+      runs.current.set(key, controller);
+      patchThread(key, (thread) => ({
+        ...thread,
+        busy: true,
+        messages: thread.messages.map((m) =>
+          m.id === original.id
+            ? { ...m, content: "", status: "streaming" as const, tools: [], steps: [], sources: undefined, rag: undefined, memory: undefined }
+            : m,
+        ),
+      }));
+
+      // Les patches "error"/"stopped" de startChatRun sont interceptés (jamais appliqués
+      // au fil) : une régénération ratée ne committe rien côté serveur, donc rien de
+      // nouveau à montrer — on restaure `original` tel quel plutôt qu'une bulle vidée.
+      let terminal: "error" | "stopped" | null = null;
+      const run: RunInput = {
+        message: "",
+        files: [],
+        webSearch: false,
+        mentions: EMPTY_MENTIONS,
+        regenerateMessageId: original.serverId,
+        conversationId,
+        signal: controller.signal,
+        callbacks: {
+          patch: (p) =>
+            patchThread(key, (thread) => ({
+              ...thread,
+              messages: thread.messages.map((m) => {
+                if (m.id !== original.id) return m;
+                const partial = typeof p === "function" ? p(m) : p;
+                if (partial.status === "error" || partial.status === "stopped") {
+                  terminal = partial.status;
+                  return m;
+                }
+                return partial.serverId && partial.serverId !== original.serverId
+                  ? { ...m, ...partial, ...nextSiblings(original.siblingIds, original.serverId as string, partial.serverId) }
+                  : { ...m, ...partial };
+              }),
+            })),
+          setSteps: (next, status = "running") => {
+            patchThread(key, (thread) => ({
+              ...thread,
+              steps: next,
+              messages: thread.messages.map((m) => (m.id === original.id ? { ...m, steps: next } : m)),
+            }));
+            if (activeKeyRef.current === key) {
+              const shown = visibleSteps(next);
+              setActivity(shown.length ? { status, steps: shown } : { status: "idle", steps: [] });
+            }
+          },
+          bind: () => {},
+          patchUser: () => {},
+          settled: (kind) => notify(key, kind),
+        },
+      };
+
+      try {
+        await startChatRun(run);
+        if (terminal) {
+          patchThread(key, (thread) => ({ ...thread, messages: thread.messages.map((m) => (m.id === original.id ? original : m)) }));
+          return false;
+        }
+        void refreshPending();
+        return true;
+      } finally {
+        runs.current.delete(key);
+        patchThread(key, (thread) => ({ ...thread, busy: false }));
+      }
+    },
+    [notify, patchThread, refreshPending],
+  );
+
+  const selectBranch = useCallback(
+    async (key: string, conversationId: string, messageId: string): Promise<boolean> => {
+      if (runs.current.has(key)) return false;
+      const controller = new AbortController();
+      runs.current.set(key, controller);
+      patchThread(key, (thread) => ({ ...thread, busy: true }));
+      try {
+        const result = await selectMessageBranch(conversationId, messageId);
+        if (!result) return false;
+        patchThread(key, (thread) => ({ ...thread, messages: toChatMessages(result) }));
+        void refreshPending();
+        return true;
+      } finally {
+        runs.current.delete(key);
+        patchThread(key, (thread) => ({ ...thread, busy: false }));
+      }
+    },
+    [patchThread, refreshPending],
   );
 
   const value = useMemo(
@@ -614,6 +737,8 @@ export function WorkspaceProvider({
       send,
       dropMessages,
       patchMessage,
+      regenerate,
+      selectBranch,
       stop,
       notices,
       markRead,
@@ -651,6 +776,8 @@ export function WorkspaceProvider({
       send,
       dropMessages,
       patchMessage,
+      regenerate,
+      selectBranch,
       stop,
       notices,
       markRead,

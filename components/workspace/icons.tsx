@@ -244,3 +244,10 @@ export const KeyIcon = (p: IconProps) => (
     <path d="M9.3 10.7 15.5 4.5M13 7l2 2M15.5 4.5 17.5 6.5" />
   </Icon>
 );
+/** Régénérer une réponse — flèche circulaire. */
+export const RegenerateIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M15.8 6.2A6.3 6.3 0 1 0 16.3 11" />
+    <path d="M16.6 3v3.3h-3.3" />
+  </Icon>
+);

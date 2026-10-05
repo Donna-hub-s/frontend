@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { BACKEND_URL } from "./backend";
 import { COOKIES } from "./session-cookies";
+import type { ResearchDraft } from "./research";
 
 /**
  * Lectures côté serveur (Server Components) vers l'API DONNA, avec le jeton de la session.
@@ -130,6 +131,11 @@ export type MessageOut = {
   // sans ça une conversation rechargée (F5, réouverture) ne montre plus que
   // le texte brut de ces réponses (voir ANALYSE_COMPLETE.md §3.2).
   tool_calls?: ToolCallOut[] | null;
+  // Versions de ce message (édition d'un message utilisateur, régénération d'une
+  // réponse) — backend/app/chat/src/schemas.py::MessageOut.sibling_ids/sibling_index.
+  // Un seul élément (ou absent) = une seule version, rien à afficher.
+  sibling_ids?: string[];
+  sibling_index?: number;
 };
 
 /** backend/app/chat/src/schemas.py::EmailDraftOut — le brouillon RÉEL d'un email en attente. */
@@ -169,7 +175,7 @@ export type ContextStatusOut = {
 };
 
 /** Automatisation proposée par DONNA (kind "workflow") : nom, déclencheur puis une ligne par étape. */
-export type WorkflowDraftOut = { name: string; lines: string[] };
+export type WorkflowDraftOut = { name: string; lines: string[]; /** Agents de projet que ce workflow fige (id + version). */ agent_refs?: { id: string; version: number }[] };
 
 /** GET /app/workflows (backend/app/workflows/src/schemas.py::WorkflowOut). */
 export type WorkflowOut = {
@@ -231,6 +237,8 @@ export type PendingActionOut = {
   email?: EmailDraftOut | null;
   /** Automatisation proposée (kind « workflow ») : ce que l'utilisateur va approuver. */
   workflow?: WorkflowDraftOut | null;
+  /** Recherche approfondie proposée (kind « research ») : sujet, estimation de coût et plafond. */
+  research?: ResearchDraft | null;
 };
 
 /** GET /app/chat/memory/reminders (backend/app/chat/src/schemas.py::ReminderOut). */
@@ -269,6 +277,10 @@ export type ProfileOut = {
   language: string | null;
   preferred_llm_provider: string | null;
   preferred_tts_voice: string | null;
+  /** Locuteur d'une voix multi-locuteurs (upmc : 2, mls : 125) ; null = celui du modèle. */
+  preferred_tts_speaker: number | null;
+  /** Voix des bouts anglais (chat/src/tts.py::lingual_spans) ; null = celle du serveur. */
+  preferred_tts_english_voice: string | null;
   default_force_web_search: boolean;
   notify_reminders_email: boolean;
   notify_reminders_whatsapp: boolean;
@@ -331,7 +343,15 @@ export type ProjectInviteOut = {
   token: string | null;
 };
 
-export type ProjectFactOut = { id: string; fact: string; created_by: string; created_at: string };
+export type ProjectFactOut = {
+  id: string;
+  fact: string;
+  created_by: string;
+  created_at: string;
+  version: number;
+  updated_by: string | null;
+  updated_at: string | null;
+};
 
 /** backend/app/chat/src/schemas.py::ProjectDocumentOut. */
 export type ProjectDocumentOut = {
@@ -366,6 +386,22 @@ export const getMe = () => getJson<{ id: string; email: string }>("/app/auth/me"
 export const getTenant = (tenantId: string) => getJson<TenantOut>(`/app/auth/tenants/${encodeURIComponent(tenantId)}`);
 
 export const getProfile = () => getJson<ProfileOut>("/app/profile/me");
+
+/** GET /app/chat/voices — catalogue des voix + voix réellement installées (backend/app/chat/src/schemas.py::VoiceOut). */
+export type VoiceOut = {
+  name: string;
+  language: string;
+  /** Indication saisie à la main : Piper ne publie pas de métadonnée de genre. */
+  gender: "f" | "m" | "mf" | "?";
+  speakers: number;
+  sample_rate: number | null;
+  installed: boolean;
+  default: boolean;
+  default_english: boolean;
+  note: string;
+};
+
+export const listVoices = async () => (await getJson<VoiceOut[]>("/app/chat/voices")) ?? [];
 
 export const listProjects = async () => (await getJson<ProjectOut[]>("/app/chat/projects")) ?? [];
 

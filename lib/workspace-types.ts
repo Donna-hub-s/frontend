@@ -12,6 +12,7 @@ import type {
   DocumentSearchOut,
   EmailAttachmentOut,
   EmailDraftOut,
+  MessageOut,
   PendingActionOut,
   ProfileOut,
   ProjectDocumentBatchOut,
@@ -45,6 +46,7 @@ export type {
   DocumentSearchOut,
   EmailAttachmentOut,
   EmailDraftOut,
+  MessageOut,
   PendingActionOut,
   ProfileOut,
   ProjectDocumentBatchOut,
@@ -135,6 +137,10 @@ export type ChatMessage = {
   error?: "generic" | "session" | "unavailable" | "tooMany";
   /** Raison renvoyée par le serveur pour un refus actionnable (fichier trop gros, type refusé…). */
   errorDetail?: string;
+  /** Versions de ce message (édition d'un message utilisateur, régénération d'une
+   * réponse) — voir lib/branches.ts::nextSiblings. Absent/longueur ≤ 1 = rien à afficher. */
+  siblingIds?: string[];
+  siblingIndex?: number;
 };
 
 /** Dates backend : datetime UTC sans fuseau (SQLite) ou ISO complet. */
@@ -147,6 +153,40 @@ export function parseBackendDate(value: string | null | undefined): number | nul
 
 /** URL d'un fichier backend (/app/…) servie par la passerelle /api/donna/…. */
 export const fileHref = (fileUrl: string) => fileUrl.replace(/^\/app\//, "/api/donna/");
+
+/** Borne des consignes de projet. Elle vit ICI, pas dans lib/api.ts : api.ts importe « server-only » et
+ *  workspace-types est lu par des composants clients et par des tests purs — un simple réexport l'aurait cassé.
+ *  Doit suivre backend/app/chat/src/schemas.py::PROJECT_INSTRUCTIONS_MAX (le serveur refuse au-delà : le compteur du
+ *  formulaire n'est qu'un confort, pas la garantie). */
+export const PROJECT_INSTRUCTIONS_MAX = 4000;
+
+/** Historique backend (GET .../messages ou POST .../messages/{id}/select) → bulles du fil.
+ * Pure (aucune I/O) : utilisée au chargement serveur ET après un changement de branche côté client. */
+export const toChatMessages = (messages: MessageOut[]): ChatMessage[] =>
+  messages
+    .filter((m) => m.role === "user" || m.role === "assistant")
+    .map((m, index) => {
+      const tools = m.tool_calls ?? undefined;
+      const at = parseBackendDate(m.created_at) ?? 0;
+      return {
+        id: `h${index}`,
+        serverId: m.id ?? undefined,
+        feedback: m.feedback ?? null,
+        role: m.role as ChatMessage["role"],
+        content: m.content,
+        createdAt: parseBackendDate(m.created_at),
+        attachments: m.attachments,
+        tools,
+        // Rejoue les outils appelés comme des étapes « terminées » : sans ça, la carte
+        // d'activité (StepsCard) disparaît après un rechargement — elle ne vivait que
+        // pendant le direct — alors que les outils eux-mêmes, persistés, sont bien là.
+        // Pas d'horodatage individuel conservé : toutes reprennent celui du message.
+        steps: tools?.length ? tools.map((tool, i) => ({ id: `h${index}-step-${i}`, key: tool.name, status: "done" as const, at })) : undefined,
+        status: "done" as const,
+        siblingIds: (m.sibling_ids?.length ?? 0) > 1 ? m.sibling_ids : undefined,
+        siblingIndex: m.sibling_index,
+      };
+    });
 
 /** sessionStorage : message tapé sur la page projet (project-detail.tsx), consommé
  * une fois par la nouvelle conversation (conversation.tsx) dès son montage. */

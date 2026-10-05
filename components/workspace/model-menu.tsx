@@ -49,7 +49,7 @@ export function ModelMenu({ lang, labels }: { lang: Locale; labels: Labels }) {
   const setEffort = (effort: Effort | null) => active && writeModelChoice({ id: active.model.id, effort });
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="sm:relative">
       <button
         type="button"
         aria-haspopup="true"
@@ -66,7 +66,7 @@ export function ModelMenu({ lang, labels }: { lang: Locale; labels: Labels }) {
       </button>
 
       {open && (
-        <div role="dialog" aria-label={labels.title} className="absolute bottom-full left-0 z-30 mb-2 flex max-h-[min(34rem,70dvh)] w-[min(24rem,calc(100vw-3rem))] flex-col overflow-hidden rounded-panel border border-border bg-white shadow-float">
+        <div role="dialog" aria-label={labels.title} className="absolute bottom-full inset-x-0 z-30 mb-2 sm:inset-x-auto sm:left-0 flex max-h-[min(34rem,70dvh)] sm:w-[24rem] flex-col overflow-hidden rounded-panel border border-border bg-white shadow-float">
           <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto p-2">
             <p className="px-2 pt-1 pb-1.5 text-meta text-ink-3">{labels.hint}</p>
             <Row selected={!active} onSelect={() => writeModelChoice(null)} title={labels.defaultModel} detail={data?.default_provider} />

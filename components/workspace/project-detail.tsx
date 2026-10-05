@@ -16,7 +16,7 @@ import type {
   ProjectOut,
   ProjectRole,
 } from "@/lib/workspace-types";
-import { parseBackendDate } from "@/lib/workspace-types";
+import { parseBackendDate, PROJECT_INSTRUCTIONS_MAX } from "@/lib/workspace-types";
 import { Composer } from "./conversation";
 import { Dialog, DialogHeader } from "./dialog";
 import { FileLink } from "./file-viewer";
@@ -26,6 +26,7 @@ import { DrivePicker } from "./drive-picker";
 import { AgentsCard } from "./agents-manager";
 import { ProjectIcon, ProjectIconPicker } from "./project-icon";
 import type { DriveErrorCode, DriveFileOut } from "@/lib/drive";
+import { authorName, canSave, deletePath, historyPath, isConflict, lastChange, type FactVersion } from "@/lib/project-memory";
 import { useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
@@ -197,7 +198,7 @@ export function ProjectDetail({
               contextChunksUsed={liveProject.context_chunks_used}
               contextChunksLimit={liveProject.context_chunks_limit}
             />
-            <MemoryCard labels={labels} projectId={project.id} initialFacts={initialFacts} canEdit={canEdit} />
+            <MemoryCard labels={labels} projectId={project.id} initialFacts={initialFacts} canEdit={canEdit} members={members} currentUserId={currentUserId} />
           </aside>
         </div>
       </div>
@@ -505,8 +506,11 @@ function InstructionsCard({ labels, project, isOwner, onSaved }: { labels: Label
           <label htmlFor={fieldId} className="sr-only">
             {labels.instructionsTitle}
           </label>
-          <textarea id={fieldId} autoFocus rows={6} value={value} onChange={(e) => setValue(e.target.value)} className={`resize-y py-2 text-secondary ${fieldClass}`} />
+          <textarea id={fieldId} autoFocus rows={6} value={value} maxLength={PROJECT_INSTRUCTIONS_MAX} onChange={(e) => setValue(e.target.value)} className={`resize-y py-2 text-secondary ${fieldClass}`} />
           <p className="text-meta text-ink-3">{labels.instructionsHint}</p>
+          <p className="self-end text-meta tabular-nums text-ink-3">
+            {labels.counter.replace("{n}", String(value.length)).replace("{max}", String(PROJECT_INSTRUCTIONS_MAX))}
+          </p>
           <div className="flex items-center gap-2">
             <button type="submit" disabled={busy} className="rounded-button bg-bordeaux-700 px-3 py-1.5 text-meta font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60">
               {busy ? labels.saving : labels.save}
@@ -833,13 +837,104 @@ function DocStatus({ labels, doc }: { labels: Labels; doc: ProjectDocumentOut })
   );
 }
 
-function MemoryCard({ labels, projectId, initialFacts, canEdit }: { labels: Labels; projectId: string; initialFacts: ProjectFactOut[]; canEdit: boolean }) {
+function MemoryCard({
+  labels,
+  projectId,
+  initialFacts,
+  canEdit,
+  members,
+  currentUserId,
+}: {
+  labels: Labels;
+  projectId: string;
+  initialFacts: ProjectFactOut[];
+  canEdit: boolean;
+  members: ProjectMemberOut[];
+  currentUserId: string;
+}) {
   const [facts, setFacts] = useState(initialFacts);
   const [adding, setAdding] = useState(false);
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<"add" | "delete" | null>(null);
+  const [error, setError] = useState<"add" | "delete" | "edit" | "conflictDelete" | "gone" | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  // La version enregistrée par quelqu'un d'autre pendant qu'on corrigeait : montrée avant tout écrasement (rien n'est perdu).
+  const [conflict, setConflict] = useState<ProjectFactOut | null>(null);
+  const [history, setHistory] = useState<{ scope: string; rows: FactVersion[] | null; failed: boolean } | null>(null);
   const factId = useId();
+
+  const who = (userId: string | null | undefined) => authorName(userId, members, currentUserId, { you: labels.you, unknown: labels.memberUnknown });
+  const when = (iso: string) => {
+    const time = parseBackendDate(iso);
+    return time === null ? "" : new Date(time).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  };
+  const stampOf = (fact: ProjectFactOut) => {
+    const change = lastChange(fact);
+    const text = (change.edited ? labels.factEditedBy : labels.factAddedBy).replace("{name}", who(change.by)).replace("{date}", when(change.at));
+    return change.version > 1 ? `${text} · ${labels.factVersion.replace("{n}", String(change.version))}` : text;
+  };
+
+  const loadFacts = async (): Promise<ProjectFactOut[] | null> => {
+    const { ok, data } = await api<ProjectFactOut[]>(`/${projectId}/memory/facts`);
+    if (ok && data) setFacts(data);
+    return ok && data ? data : null;
+  };
+
+  const openHistory = async (factIdOrNull: string | null) => {
+    const scope = factIdOrNull ?? "all";
+    if (history?.scope === scope) {
+      setHistory(null);
+      return;
+    }
+    setHistory({ scope, rows: null, failed: false });
+    const { ok, data } = await api<FactVersion[]>(historyPath(projectId, factIdOrNull));
+    setHistory((current) => (current?.scope === scope ? { scope, rows: ok ? (data ?? []) : null, failed: !ok } : current));
+  };
+
+  const startEdit = (fact: ProjectFactOut) => {
+    setEditingId(fact.id);
+    setDraft(fact.fact);
+    setConflict(null);
+    setError(null);
+  };
+
+  const stopEdit = () => {
+    setEditingId(null);
+    setConflict(null);
+  };
+
+  const save = async (fact: ProjectFactOut) => {
+    if (!canSave(draft, fact.fact, busy)) return;
+    setBusy(true);
+    setError(null);
+    const { ok, data, status } = await api<ProjectFactOut>(`/${projectId}/memory/facts/${encodeURIComponent(fact.id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ fact: draft.trim(), expected_version: fact.version }),
+    });
+    if (ok && data) {
+      setFacts((list) => list.map((f) => (f.id === data.id ? data : f)));
+      setHistory(null); // l'historique affiché ne serait plus à jour
+      stopEdit();
+    } else if (isConflict(status)) {
+      const list = await loadFacts();
+      const current = list?.find((f) => f.id === fact.id) ?? null;
+      if (current) setConflict(current);
+      else {
+        stopEdit();
+        setError("gone");
+      }
+    } else setError("edit");
+    setBusy(false);
+  };
+
+  // « Garder mon texte » : on repart de la version enregistrée que la personne vient de voir, sans rien lui cacher.
+  const keepMine = async () => {
+    if (!conflict) return;
+    const fresh = conflict;
+    setConflict(null);
+    await save(fresh);
+  };
 
   const add = async () => {
     const trimmed = value.trim();
@@ -858,10 +953,16 @@ function MemoryCard({ labels, projectId, initialFacts, canEdit }: { labels: Labe
     } else setError("add");
   };
 
-  const remove = async (id: string) => {
-    const { ok } = await api<{ deleted: boolean }>(`/${projectId}/memory/facts/${encodeURIComponent(id)}`, { method: "DELETE" });
-    if (ok) setFacts((list) => list.filter((f) => f.id !== id));
-    else setError("delete");
+  const remove = async (fact: ProjectFactOut) => {
+    setError(null);
+    const { ok, status } = await api<{ deleted: boolean }>(deletePath(projectId, fact.id, fact.version), { method: "DELETE" });
+    if (ok) {
+      setFacts((list) => list.filter((f) => f.id !== fact.id));
+      setHistory(null);
+    } else if (isConflict(status)) {
+      await loadFacts(); // modifié entre-temps : la liste est rechargée, on ne l'oublie pas à l'aveugle
+      setError("conflictDelete");
+    } else setError("delete");
   };
 
   return (
@@ -876,12 +977,21 @@ function MemoryCard({ labels, projectId, initialFacts, canEdit }: { labels: Labe
         </>
       }
       action={
-        canEdit &&
-        !adding && (
-          <button type="button" onClick={() => setAdding(true)} aria-label={labels.factAdd} title={labels.factAdd} className="flex size-7 items-center justify-center rounded-badge text-ink-2 hover:bg-active hover:text-bordeaux-700">
-            <PlusIcon size={16} />
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => void openHistory(null)}
+            aria-pressed={history?.scope === "all"}
+            className="rounded-badge px-2 py-1 text-meta text-ink-2 hover:bg-active hover:text-bordeaux-700 aria-pressed:bg-active aria-pressed:text-bordeaux-700"
+          >
+            {labels.memoryHistory}
           </button>
-        )
+          {canEdit && !adding && (
+            <button type="button" onClick={() => setAdding(true)} aria-label={labels.factAdd} title={labels.factAdd} className="flex size-7 items-center justify-center rounded-badge text-ink-2 hover:bg-active hover:text-bordeaux-700">
+              <PlusIcon size={16} />
+            </button>
+          )}
+        </div>
       }
     >
       {adding && (
@@ -918,27 +1028,129 @@ function MemoryCard({ labels, projectId, initialFacts, canEdit }: { labels: Labe
       {facts.length ? (
         <ul className="flex flex-col border-t border-border py-1">
           {facts.map((fact) => (
-            <li key={fact.id} className="group flex items-start gap-2 px-4 py-2">
-              <span className="mt-2 size-1 shrink-0 rounded-full bg-rose-300" />
-              <span className="flex-1 text-secondary text-ink-2 text-pretty">{fact.fact}</span>
-              {canEdit && (
-                <button
-                  type="button"
-                  onClick={() => void remove(fact.id)}
-                  aria-label={`${labels.factDelete} : ${fact.fact}`}
-                  title={labels.factDelete}
-                  className="shrink-0 rounded-badge p-1 text-ink-3 opacity-0 group-hover:opacity-100 hover:text-danger focus:opacity-100"
-                >
-                  <TrashIcon size={14} />
-                </button>
+            <li key={fact.id} className="group flex flex-col gap-1 px-4 py-2">
+              <div className="flex items-start gap-2">
+                <span className="mt-2 size-1 shrink-0 rounded-full bg-rose-300" />
+                {editingId === fact.id ? (
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void save(fact);
+                    }}
+                    className="flex min-w-0 flex-1 flex-col gap-2"
+                  >
+                    <label htmlFor={`${factId}-${fact.id}`} className="sr-only">
+                      {labels.factEdit}
+                    </label>
+                    <textarea
+                      id={`${factId}-${fact.id}`}
+                      autoFocus
+                      rows={3}
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onKeyDown={(e) => e.key === "Escape" && stopEdit()}
+                      className={`text-secondary ${fieldClass}`}
+                    />
+                    <div className="flex gap-2">
+                      <button type="submit" disabled={!canSave(draft, fact.fact, busy)} className="rounded-button bg-bordeaux-700 px-3 py-1.5 text-meta font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60">
+                        {busy ? labels.saving : labels.save}
+                      </button>
+                      <button type="button" onClick={stopEdit} className="rounded-button px-3 py-1.5 text-meta font-medium text-ink hover:bg-active">
+                        {labels.cancel}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <span className="min-w-0 flex-1 whitespace-pre-wrap text-secondary text-ink-2 text-pretty">{fact.fact}</span>
+                )}
+                {canEdit && editingId !== fact.id && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(fact)}
+                      aria-label={`${labels.factEdit} : ${fact.fact}`}
+                      title={labels.factEdit}
+                      className="shrink-0 rounded-badge p-1 text-ink-3 opacity-0 group-hover:opacity-100 hover:text-bordeaux-700 focus:opacity-100"
+                    >
+                      <PencilIcon size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void remove(fact)}
+                      aria-label={`${labels.factDelete} : ${fact.fact}`}
+                      title={labels.factDelete}
+                      className="shrink-0 rounded-badge p-1 text-ink-3 opacity-0 group-hover:opacity-100 hover:text-danger focus:opacity-100"
+                    >
+                      <TrashIcon size={14} />
+                    </button>
+                  </>
+                )}
+              </div>
+              {conflict && conflict.id === fact.id && editingId === fact.id && (
+                <div role="alert" className="ml-3 flex flex-col gap-2 rounded-button border border-border bg-fill p-3 text-meta text-ink-2">
+                  <p>{lastChange(conflict).by === currentUserId ? labels.factConflictSelf : labels.factConflict.replace("{name}", who(lastChange(conflict).by))}</p>
+                  <p className="whitespace-pre-wrap text-ink">« {conflict.fact} »</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => void keepMine()} className="rounded-button bg-bordeaux-700 px-3 py-1.5 font-medium text-white hover:bg-bordeaux-900">
+                      {labels.factKeepMine}
+                    </button>
+                    <button type="button" onClick={stopEdit} className="rounded-button px-3 py-1.5 font-medium text-ink hover:bg-active">
+                      {labels.factTakeSaved}
+                    </button>
+                  </div>
+                </div>
               )}
+              <p className="flex flex-wrap items-center gap-x-2 pl-3 text-meta text-ink-3">
+                <span>{stampOf(fact)}</span>
+                {fact.version > 1 && (
+                  <button type="button" onClick={() => void openHistory(fact.id)} aria-pressed={history?.scope === fact.id} className="underline-offset-2 hover:text-bordeaux-700 hover:underline aria-pressed:text-bordeaux-700">
+                    {labels.factHistory}
+                  </button>
+                )}
+              </p>
             </li>
           ))}
         </ul>
       ) : (
         !adding && <p className="px-4 pb-4 text-secondary text-ink-3 text-pretty">{labels.memoryEmptyHint}</p>
       )}
-      {error && <p className="px-4 pb-3 text-meta text-danger">{error === "add" ? labels.factAddError : labels.factDeleteError}</p>}
+      {history && (
+        <div className="border-t border-border px-4 py-3">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <h3 className="text-label font-medium text-ink">{history.scope === "all" ? labels.memoryHistory : labels.factHistory}</h3>
+            <button type="button" onClick={() => setHistory(null)} className="rounded-badge px-2 py-1 text-meta text-ink-2 hover:bg-active">
+              {labels.close}
+            </button>
+          </div>
+          {history.failed ? (
+            <p className="text-meta text-danger">{labels.memoryHistoryError}</p>
+          ) : history.rows === null ? (
+            <p className="text-meta text-ink-3">{labels.memoryHistoryLoading}</p>
+          ) : history.rows.length ? (
+            <ul className="flex flex-col gap-2">
+              {history.rows.map((row) => (
+                <li key={`${row.fact_id}-${row.version}`} className="flex flex-col gap-0.5">
+                  <span className="text-meta text-ink-3">
+                    {{ create: labels.historyCreate, update: labels.historyUpdate, delete: labels.historyDelete }[row.action]} · {who(row.changed_by)} · {when(row.changed_at)}
+                  </span>
+                  {row.redacted || row.purged ? (
+                    <span className="text-meta italic text-ink-3">{row.purged ? labels.historyPurged : labels.historyHidden}</span>
+                  ) : (
+                    <span className="whitespace-pre-wrap text-secondary text-ink-2 text-pretty">{row.fact}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-meta text-ink-3">{labels.memoryHistoryEmpty}</p>
+          )}
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="px-4 pb-3 text-meta text-danger">
+          {{ add: labels.factAddError, delete: labels.factDeleteError, edit: labels.factEditError, conflictDelete: labels.factConflictDeleted, gone: labels.factGone }[error]}
+        </p>
+      )}
     </Card>
   );
 }

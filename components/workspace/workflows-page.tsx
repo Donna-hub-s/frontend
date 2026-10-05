@@ -5,12 +5,15 @@ import { History, Pause, Play, Trash2, Workflow as WorkflowGlyph } from "lucide-
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import type { Locale } from "@/i18n/config";
+import { agentRefsOf } from "@/lib/workflow-agents";
 import { briefingRequest, formatToolArguments, isFinished, isValidTime, needsApproval, tally, type BriefingChannel } from "@/lib/workflows";
 import { parseBackendDate, type WorkflowOut, type WorkflowRunOut } from "@/lib/workspace-types";
 import { Dialog, DialogHeader } from "./dialog";
 import { ChevronIcon, PlusIcon } from "./icons";
+import { WorkflowAgents } from "./workflow-agents";
 
 type Labels = Dictionary["workspace"]["workflows"];
+type AgentLabels = Dictionary["workspace"]["workflowAgents"];
 
 const POLL_MS = 1200;
 const POLL_MAX = 75; // ~90 s : au-delà, le run continue côté serveur, on cesse simplement de l'attendre
@@ -28,7 +31,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<{ ok: boolean;
 const post = (path: string) => call<WorkflowOut>(path, { method: "POST" });
 
 /** Page Automatisations : liste, approbation, pause, essai, historique et création depuis le modèle « briefing du matin ». */
-export function WorkflowsPage({ lang, labels }: { lang: Locale; labels: Labels }) {
+export function WorkflowsPage({ lang, labels, agentLabels }: { lang: Locale; labels: Labels; agentLabels: AgentLabels }) {
   const [items, setItems] = useState<WorkflowOut[] | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -94,7 +97,7 @@ export function WorkflowsPage({ lang, labels }: { lang: Locale; labels: Labels }
           <ul className="flex flex-col gap-4">
             {items.map((workflow) => (
               <li key={workflow.id}>
-                <WorkflowCard lang={lang} labels={labels} workflow={workflow} onChange={replace} onRemove={remove} />
+                <WorkflowCard lang={lang} labels={labels} agentLabels={agentLabels} workflow={workflow} onChange={replace} onRemove={remove} />
               </li>
             ))}
           </ul>
@@ -126,12 +129,14 @@ const BADGE: Record<string, string> = {
 function WorkflowCard({
   lang,
   labels,
+  agentLabels,
   workflow,
   onChange,
   onRemove,
 }: {
   lang: Locale;
   labels: Labels;
+  agentLabels: AgentLabels;
   workflow: WorkflowOut;
   onChange: (workflow: WorkflowOut) => void;
   onRemove: (id: string) => void;
@@ -250,6 +255,8 @@ function WorkflowCard({
           ))}
         </ol>
       )}
+
+      {detailsOpen && <WorkflowAgents refs={agentRefsOf(workflow.definition)} labels={agentLabels} />}
 
       {failed && (
         <p role="alert" className="mt-3 text-secondary text-danger">

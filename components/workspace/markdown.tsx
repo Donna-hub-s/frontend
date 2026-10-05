@@ -14,8 +14,15 @@ import { codeLanguage, nodeText } from "@/lib/markdown-text";
 import { isBareUrlLink, LinkCard, linkCardData } from "./link-card";
 
 /** Textes des boutons du rendu (fournis une fois par l'espace de travail ; anglais par défaut). */
-export type MarkdownLabels = { copy: string; copied: string };
-const MarkdownLabelsContext = createContext<MarkdownLabels>({ copy: "Copy", copied: "Copied" });
+export type MarkdownLabels = { copy: string; copied: string; linkOpen: string; linkCancel: string; linkConfirmHint: string; linkPreviewError: string };
+const MarkdownLabelsContext = createContext<MarkdownLabels>({
+  copy: "Copy",
+  copied: "Copied",
+  linkOpen: "Open",
+  linkCancel: "Cancel",
+  linkConfirmHint: "You're about to leave DONNA for an external site.",
+  linkPreviewError: "Preview unavailable.",
+});
 export const MarkdownLabelsProvider = MarkdownLabelsContext.Provider;
 
 /** Copie dans le presse-papiers ; repli sur une zone de texte cachée (contexte non sécurisé, ancien navigateur). */
@@ -89,13 +96,8 @@ function bareUrlHref(node: unknown): string | undefined {
 
 // Rendu des réponses de DONNA. Pas de HTML brut (react-markdown l'ignore par défaut) :
 // le contenu vient d'un modèle et peut refléter des données externes (emails, pages web).
+
 const components: Components = {
-  p: ({ children, node }) => {
-    const href = bareUrlHref(node);
-    const card = linkCardData(href);
-    if (card) return <LinkCard data={card} />;
-    return <p className="my-3 first:mt-0 last:mb-0">{children}</p>;
-  },
   ul: ({ children }) => <ul className="my-3 list-disc space-y-1.5 pl-5 marker:text-rose-300">{children}</ul>,
   ol: ({ children }) => <ol className="my-3 list-decimal space-y-1.5 pl-5 marker:text-ink-3">{children}</ol>,
   li: ({ children }) => <li className="pl-1">{children}</li>,
@@ -156,12 +158,17 @@ export function Markdown({
   files = [],
   renderFile,
   streaming = false,
+  conversationId,
 }: {
   children: string;
   files?: readonly MarkdownFile[];
   renderFile?: (file: MarkdownFile, label: ReactNode, variant: "link" | "image") => ReactNode;
   streaming?: boolean;
+  /** Pour l'aperçu d'un lien cité (voir LinkCard) : sans conversation, pas d'aperçu possible
+   * (le backend vérifie que le lien est déjà visible dans CETTE conversation). */
+  conversationId?: string | null;
 }) {
+  const labels = useContext(MarkdownLabelsContext);
   const withMath = !streaming && hasMath(children);
   const withCode = !streaming && /^ {0,3}(```|~~~)/m.test(children);
   const text = useMemo(() => (withMath ? normalizeMath(children) : children), [children, withMath]);
@@ -170,6 +177,12 @@ export function Markdown({
   const merged = useMemo<Components>(
     () => ({
       ...components,
+      p: ({ children: label, node }) => {
+        const href = bareUrlHref(node);
+        const card = linkCardData(href);
+        if (card) return <LinkCard data={card} confirm preview={Boolean(conversationId)} conversationId={conversationId ?? undefined} labels={labels} />;
+        return <p className="my-3 first:mt-0 last:mb-0">{label}</p>;
+      },
       a: ({ href, children: label }) => {
         const target = linkTarget(href, textOf(label), renderFile ? files : []);
         if (target.kind === "file" && renderFile) return <>{renderFile(target.file, label, "link")}</>;
@@ -200,7 +213,7 @@ export function Markdown({
         return <span>{label}</span>;
       },
     }),
-    [files, renderFile],
+    [files, renderFile, conversationId, labels],
   );
   return (
     <div className="text-message text-ink [overflow-wrap:anywhere]">
