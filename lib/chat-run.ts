@@ -105,6 +105,8 @@ export type RunInput = {  message: string;
   /** Régénère la réponse de DONNA visée (nouvelle version sœur) ; `message` est alors
    * ignoré par le serveur (le texte original est rejoué) — voir branches.py. */
   regenerateMessageId?: string;
+  /** Mode vocal : la réponse sera lue à voix haute (le serveur ajoute une consigne de style à ce tour seulement). */
+  voice?: boolean;
   signal: AbortSignal;
   callbacks: RunCallbacks;
 };
@@ -116,7 +118,7 @@ export type RunInput = {  message: string;
  * action a été proposée — le backend y ajoute alors la confirmation à valider.
  */
 export async function startChatRun(input: RunInput): Promise<RunOutcome> {
-  const { message, files, webSearch, mentions, projectId, agentId, editMessageId, regenerateMessageId, signal, callbacks } = input;
+  const { message, files, webSearch, mentions, projectId, agentId, editMessageId, regenerateMessageId, voice, signal, callbacks } = input;
   let conversationId = input.conversationId;
   const bind = (id: string) => {
     if (!id || conversationId) return;
@@ -203,6 +205,7 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
           edit_message_id: editMessageId,
           regenerate_message_id: regenerateMessageId,
           web_search: webSearch,
+          voice: voice || undefined,
           mentioned_project_id: mentions.projectId,
           mentioned_document_ids: mentions.documentIds,
         }),

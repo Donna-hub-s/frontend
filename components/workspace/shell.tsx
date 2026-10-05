@@ -52,7 +52,16 @@ export function WorkspaceShell({
       initialProjects={projects}
       wsBaseUrl={wsBaseUrl}
     >
-      <MarkdownLabelsProvider value={{ copy: dict.chat.copyCode, copied: dict.chat.codeCopied }}>
+      <MarkdownLabelsProvider
+        value={{
+          copy: dict.chat.copyCode,
+          copied: dict.chat.codeCopied,
+          linkOpen: dict.chat.linkOpen,
+          linkCancel: dict.chat.linkCancel,
+          linkConfirmHint: dict.chat.linkConfirmHint,
+          linkPreviewError: dict.chat.linkPreviewError,
+        }}
+      >
       {/* `relative` : repère des éléments `absolute` sans ancêtre positionné, notamment les `sr-only` du fil de discussion.
           Sans lui, leur repère est la FENÊTRE : `overflow-hidden` ne les rogne pas et, dans une longue conversation, ils
           allongent la page (constaté : 5 444 px pour 903 de fenêtre) — la fenêtre défile, l'espace de travail glisse

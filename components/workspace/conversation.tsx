@@ -22,10 +22,15 @@ import {
   type SourceOut,
   type ToolCall,
 } from "@/lib/workspace-types";
-import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, PencilIcon, SendIcon, SpeakerIcon, StopIcon } from "./icons";
+import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, PencilIcon, PlusIcon, SendIcon, SpeakerIcon, StopIcon } from "./icons";
 import { Markdown, type MarkdownFile } from "./markdown";
 import { FeedbackBar } from "./feedback-bar";
 import { RegenerateButton, VersionNav } from "./version-nav";
+import { LinkCard, linkCardData } from "./link-card";
+import { CanvasHost } from "./canvas-panel";
+import { VoiceBar, VoiceStartButton } from "./voice-bar";
+import { useVoiceMode } from "@/lib/use-voice-mode";
+import { splitLinks } from "@/lib/linkify";
 import { ResearchProgress } from "./research-progress";
 import { estimateText, formatUsd, type ResearchRun } from "@/lib/research";
 import { downloadDriveFiles, type DriveFileOut } from "@/lib/drive";
@@ -33,7 +38,7 @@ import { EmailAttachmentList } from "./email-attachments";
 import { AgentMenu, AgentReviewDialog } from "./agent-menu";
 import { markSeen, needsReview, readSeen, type AgentOut } from "@/lib/agents";
 import { useProjectAgents } from "@/lib/use-project-agents";
-import { Bot } from "lucide-react";
+import { Bot, Image as ImageIcon, Sparkles } from "lucide-react";
 import { WorkflowDraft } from "./workflow-draft";
 import { useConversationContext } from "@/lib/use-conversation-context";
 import { GoogleDriveIcon } from "./brand-icons";
@@ -134,7 +139,7 @@ export function Conversation({
   }, [threadKey, conversationId, setActiveKey, markRead, releaseThread, registerThread]);
 
   const send = useCallback(
-    async (text: string, files: File[], webSearch = false, mentions: MentionSelection = EMPTY_MENTIONS, agentOverride?: string | null) => {
+    async (text: string, files: File[], webSearch = false, mentions: MentionSelection = EMPTY_MENTIONS, agentOverride?: string | null, voice = false) => {
       const message = text.trim();
       if ((!message && !files.length) || busy) return;
       stick();
@@ -145,6 +150,7 @@ export function Conversation({
         files,
         webSearch,
         mentions,
+        voice,
         // Le fil connaît déjà l'id si le backend l'a créé lors d'un envoi précédent.
         conversationId: thread?.conversationId ?? conversationId,
         projectId,
@@ -226,9 +232,27 @@ export function Conversation({
     return selectBranch(threadKey, convId, messageId);
   };
 
+  // Mode vocal : ce que la personne dit part comme un message écrit (mêmes outils, mêmes droits) ; la réponse est lue phrase par phrase.
+  // Le repère rendu est le nombre de messages avant l'envoi : la réponse à lire est la première de DONNA qui le suit.
+  const voice = useVoiceMode({
+    lang,
+    messages,
+    onUtterance: (spoken) => {
+      if (busy) return null;
+      const before = messages.length;
+      void send(spoken, [], false, EMPTY_MENTIONS, undefined, true);
+      return before;
+    },
+    onInterrupt: () => stop(threadKey),
+  });
+  const voiceOn = voice.state.phase !== "off";
+
   const empty = messages.length === 0;
+  // Accueil générique (hors projet) : bandeau resserré + raccourcis plutôt que la liste de suggestions des agents de projet.
+  const homeScreen = empty && !agentProjectId;
 
   return (
+    <CanvasHost lang={lang} labels={dict.canvas} conversationId={liveConversationId} messages={messages}>
     <div className="flex min-h-0 flex-1 flex-col">
       {((projectId && projectName) || selectedAgent) && (
         <div className="mx-auto mt-3 flex w-fit flex-wrap items-center justify-center gap-2">
@@ -265,6 +289,26 @@ export function Conversation({
                 {dict.chat.backHome}
               </Link>
             </div>
+          ) : homeScreen ? (
+            <div className="mt-[10vh] flex flex-col items-center">
+              <h1 className="msg-enter max-w-[34rem] text-center font-brand text-greeting font-light text-bordeaux-900 text-pretty">
+                {firstName ? dict.chat.homeTitleName.replace("{name}", firstName) : dict.chat.homeTitle}
+              </h1>
+              <div className="mt-6 w-full" hidden={voiceOn}>
+                <Composer
+                  lang={lang}
+                  dict={dict}
+                  busy={busy || editingId !== null}
+                  conversationId={thread?.conversationId ?? conversationId}
+                  onSend={send}
+                  onStop={() => stop(threadKey)}
+                  onComposingChange={setComposing}
+                  autoFocus
+                  onStartVoice={() => void voice.start()}
+                  variant="home"
+                />
+              </div>
+            </div>
           ) : empty ? (
             <EmptyState
               dict={dict}
@@ -283,6 +327,7 @@ export function Conversation({
                   initials={initials}
                   label={dict.chat.you}
                   chat={dict.chat}
+                  conversationId={liveConversationId}
                   editing={editingId === m.id}
                   canEdit={Boolean(m.serverId) && !m.attachments.length && !m.localFiles?.length && !busy && editingId === null}
                   onStartEdit={() => setEditingId(m.id)}
@@ -298,6 +343,7 @@ export function Conversation({
                   message={m}
                   last={index === messages.length - 1}
                   busy={busy}
+                  conversationId={liveConversationId}
                   onAnswer={(text) => void send(text, [])}
                   onRetry={() => retry(index)}
                   onFeedback={(feedback) => patchMessage(threadKey, m.id, { feedback })}
@@ -325,20 +371,27 @@ export function Conversation({
         </div>
       )}
 
-      {!loadError && (
-        <Composer
-          lang={lang}
-          dict={dict}
-          busy={busy || editingId !== null}
-          conversationId={thread?.conversationId ?? conversationId}
-          onSend={send}
-          onStop={() => stop(threadKey)}
-          onComposingChange={setComposing}
-          autoFocus={empty}
-          agent={agentProjectId ? { projectId: agentProjectId, value: selectedAgentId, onChange: setPickedAgent } : undefined}
-        />
+      {!loadError && voiceOn && <VoiceBar labels={dict.voice} voice={voice} />}
+      {/* Le composer reste monté (masqué) pendant le mode vocal : un brouillon en cours n'est pas perdu.
+          Sur l'accueil générique, c'est la variante "home" ci-dessus (dans le fil) qui tient ce rôle. */}
+      {!loadError && !homeScreen && (
+        <div hidden={voiceOn}>
+          <Composer
+            lang={lang}
+            dict={dict}
+            busy={busy || editingId !== null}
+            conversationId={thread?.conversationId ?? conversationId}
+            onSend={send}
+            onStop={() => stop(threadKey)}
+            onComposingChange={setComposing}
+            autoFocus={empty}
+            agent={agentProjectId ? { projectId: agentProjectId, value: selectedAgentId, onChange: setPickedAgent } : undefined}
+            onStartVoice={() => void voice.start()}
+          />
+        </div>
       )}
     </div>
+    </CanvasHost>
   );
 }
 
@@ -399,6 +452,7 @@ function UserMessage({
   initials,
   label,
   chat,
+  conversationId,
   editing,
   canEdit,
   onStartEdit,
@@ -411,6 +465,9 @@ function UserMessage({
   initials: string;
   label: string;
   chat: WorkspaceDict["chat"];
+  /** Pour l'aperçu d'un lien tapé par l'utilisateur (voir LinkCard) ; null tant que le backend
+   * n'a pas encore créé la conversation (tout premier message) — l'aperçu reste alors désactivé. */
+  conversationId: string | null;
   /** Ce message est celui en cours d'édition (formulaire affiché à la place du texte). */
   editing: boolean;
   /** Crayon affiché : persisté, sans pièce jointe, rien d'autre en cours d'édition ou d'envoi. */
@@ -423,8 +480,11 @@ function UserMessage({
   const chip = "inline-flex items-center gap-1.5 rounded-badge bg-white px-2 py-1 text-meta text-ink-2";
   const hasFiles = Boolean(message.localFiles?.length || message.attachments.length);
   const draftRef = useRef<HTMLTextAreaElement>(null);
+  // Le message entier n'est qu'une URL (le cas « je colle un lien ») : une carte plutôt qu'un
+  // texte brut non cliquable — même carte que celle de DONNA (link-card.tsx), avec aperçu.
+  const bareUrl = !hasFiles ? linkCardData(message.content.trim()) : null;
   return (
-    <div className="flex justify-end gap-3">
+    <div className="msg-enter flex justify-end gap-3">
       <div className="flex max-w-[85%] flex-col items-end gap-1.5">
         {editing ? (
           <form
@@ -453,7 +513,35 @@ function UserMessage({
         ) : (
           <div className="rounded-panel rounded-tr-badge bg-active px-4 py-3">
             <p className="sr-only">{label} :</p>
-            {message.content && <p className="text-message whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">{message.content}</p>}
+            {bareUrl ? (
+              <LinkCard
+                data={bareUrl}
+                className="my-0"
+                preview={Boolean(conversationId)}
+                conversationId={conversationId ?? undefined}
+                labels={chat}
+              />
+            ) : (
+              message.content && (
+                <p className="text-message whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
+                  {splitLinks(message.content).map((segment, index) =>
+                    segment.type === "link" ? (
+                      <a
+                        key={index}
+                        href={segment.href}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="underline decoration-rose-300 underline-offset-2"
+                      >
+                        {segment.href}
+                      </a>
+                    ) : (
+                      <span key={index}>{segment.value}</span>
+                    ),
+                  )}
+                </p>
+              )
+            )}
             {hasFiles && (
               <ul className={`flex flex-wrap gap-1.5 ${message.content ? "mt-2" : ""}`}>
                 {message.localFiles?.map((name) => (
@@ -512,6 +600,7 @@ function AssistantMessage({
   message,
   last,
   busy,
+  conversationId,
   onAnswer,
   onRetry,
   onFeedback,
@@ -523,6 +612,8 @@ function AssistantMessage({
   message: ChatMessage;
   last: boolean;
   busy: boolean;
+  /** Pour l'aperçu d'un lien cité par DONNA (voir Markdown/LinkCard). */
+  conversationId: string | null;
   onAnswer: (text: string) => void;
   onRetry: () => void;
   onFeedback: (feedback: "up" | "down" | null) => void;
@@ -543,7 +634,7 @@ function AssistantMessage({
   }, [files, message.attachments, message.content]);
 
   return (
-    <div className="flex gap-3">
+    <div className="msg-enter flex gap-3">
       <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center">
         {streaming ? (
           <DonnaOrb state={liveOrbState(message)} size={32} label="DONNA" />
@@ -556,7 +647,7 @@ function AssistantMessage({
 
         {message.content ? (
           <div aria-live={streaming ? "polite" : undefined}>
-            <Markdown files={files} renderFile={renderFile} streaming={streaming}>
+            <Markdown files={files} renderFile={renderFile} streaming={streaming} conversationId={conversationId}>
               {message.content}
             </Markdown>
             {streaming && <span aria-hidden className="demo-caret ml-0.5 inline-block h-4 w-px translate-y-0.5 bg-bordeaux-700" />}
@@ -742,10 +833,17 @@ function ListenButton({ text, chat }: { text: string; chat: WorkspaceDict["chat"
 }
 
 /** État de l'orbe pendant une réponse : elle réfléchit, agit (outil en cours), puis répond. */
+// Fenêtre où l'orbe fraîchement créée montre encore "listening" (comme l'accueil pendant la
+// frappe) avant de basculer sur "thinking" — sans ça, le passage accueil → première réponse
+// saute d'un coup d'un orbe à l'autre, sans continuité visible entre les deux (voir fondations/
+// États : idle → listening → thinking → working → answering est une suite, pas un saut).
+const LISTENING_GRACE_MS = 450;
+
 function liveOrbState(message: ChatMessage): OrbState {
   const running = (message.steps ?? []).find((step) => step.status === "running");
   if (running && running.key !== "read" && running.key !== "answer") return "working";
   if (message.content) return "answering";
+  if (running?.key === "read" && message.createdAt && Date.now() - message.createdAt < LISTENING_GRACE_MS) return "listening";
   return "thinking";
 }
 
@@ -905,7 +1003,7 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
           {draft && <EmailAttachmentList actionId={id} attachments={draft.attachments} openable={awaiting} labels={dict.chat} />}
         </>
       ) : isWorkflow ? (
-        <WorkflowDraft draft={workflow ?? { name: text(args.name), lines: [] }} labels={dict.chat} />
+        <WorkflowDraft draft={workflow ?? { name: text(args.name), lines: [] }} labels={dict.chat} agentLabels={dict.workflowAgents} />
       ) : isResearch ? (
         <>
           <p className="mt-3 text-label font-medium text-ink">{research?.question ?? text(args.question)}</p>
@@ -1009,53 +1107,36 @@ function QuestionCard({
   );
 }
 
+/** Une carte par extrait réellement injecté (même document plusieurs fois = plusieurs
+ * extraits = plusieurs cartes) ; un document sans extrait (fichier généré) n'apparaît
+ * qu'une fois. Rangée défilante plutôt qu'un dépliant : le nom ET l'extrait se voient
+ * d'un coup d'œil, sans clic supplémentaire. */
 function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] }) {
-  // Un document peut apparaître plusieurs fois (plusieurs extraits) : une puce par document.
-  const unique = sources.filter((s, i) => sources.findIndex((o) => o.doc_id === s.doc_id) === i);
-  // Extraits réellement injectés dans le contexte du modèle (les fichiers générés n'en ont pas).
-  const excerpts = sources.filter((s) => s.excerpt.trim());
-  const [showExcerpts, setShowExcerpts] = useState(false);
+  const cards = sources.filter(
+    (s, i) => sources.findIndex((o) => o.doc_id === s.doc_id && o.excerpt === s.excerpt) === i,
+  );
   return (
     <div>
       <p className="text-meta text-ink-3">{dict.chat.sources}</p>
-      <ul className="mt-1.5 flex flex-wrap gap-2">
-        {unique.map((source) => (
-          <li key={source.doc_id}>
+      <ul className="scrollbar-none mt-1.5 flex gap-2 overflow-x-auto pb-1">
+        {cards.map((source, index) => (
+          <li key={`${source.doc_id}-${index}`} className="shrink-0">
             <FileLink
               url={fileHref(source.file_url)}
               name={source.original_name}
-              title={source.excerpt}
-              className="inline-flex max-w-[16rem] items-center gap-1.5 rounded-full border border-border bg-white px-2.5 py-1 text-meta text-ink-2 no-underline hover:border-bordeaux-700/30 hover:text-ink"
+              className="flex h-full w-56 flex-col gap-1 rounded-card border border-border bg-white p-3 no-underline transition-colors hover:border-bordeaux-700/30 hover:bg-active/40"
             >
-              <FileIcon size={14} className="shrink-0 text-bordeaux-700" />
-              <span className="truncate">{source.original_name}</span>
+              <span className="flex items-center gap-1.5 text-label font-medium text-ink">
+                <FileIcon size={14} className="shrink-0 text-bordeaux-700" />
+                <span className="truncate">{source.original_name}</span>
+              </span>
+              {source.excerpt.trim() && (
+                <span className="line-clamp-3 text-meta whitespace-pre-line text-ink-3">{source.excerpt}</span>
+              )}
             </FileLink>
           </li>
         ))}
       </ul>
-      {excerpts.length > 0 && (
-        <>
-          <button
-            type="button"
-            onClick={() => setShowExcerpts((v) => !v)}
-            aria-expanded={showExcerpts}
-            className="mt-2 inline-flex items-center gap-1 text-meta text-ink-2 hover:text-ink"
-          >
-            {showExcerpts ? dict.chat.sourcesHideExcerpts : `${dict.chat.sourcesExcerpts} (${excerpts.length})`}
-            <ChevronIcon size={14} className={`transition-transform ${showExcerpts ? "rotate-180" : ""}`} />
-          </button>
-          {showExcerpts && (
-            <ol className="mt-1.5 flex flex-col gap-2">
-              {excerpts.map((source, index) => (
-                <li key={`${source.doc_id}-${index}`} className="rounded-card border border-border bg-white px-3 py-2">
-                  <p className="truncate text-meta font-medium text-ink-2">{source.original_name}</p>
-                  <p className="mt-0.5 line-clamp-4 text-meta whitespace-pre-line text-ink-3">{source.excerpt}</p>
-                </li>
-              ))}
-            </ol>
-          )}
-        </>
-      )}
     </div>
   );
 }
@@ -1098,6 +1179,8 @@ export function Composer({
   onComposingChange,
   autoFocus,
   agent,
+  onStartVoice,
+  variant = "default",
 }: {
   lang: Locale;
   dict: WorkspaceDict;
@@ -1110,7 +1193,12 @@ export function Composer({
   autoFocus: boolean;
   /** Agents du projet : présent seulement dans un projet. `value` : l'agent choisi (null = DONNA seule). */
   agent?: { projectId: string; value: string | null; onChange: (id: string | null) => void };
+  /** Lance le mode vocal (absent : pas de bouton, p. ex. le composer de la page projet). */
+  onStartVoice?: () => void;
+  /** "home" : bandeau resserré + raccourcis de l'accueil générique, à la place de la barre complète. */
+  variant?: "default" | "home";
 }) {
+  const home = variant === "home";
   const { projects } = useWorkspace();
   const { agents: projectAgents } = useProjectAgents(agent?.projectId);
   // Relecture des consignes avant le premier emploi d'un agent (ou d'une nouvelle version de celui-ci).
@@ -1195,6 +1283,17 @@ export function Composer({
       el.setSelectionRange(pos, pos);
     });
   }, []);
+
+  // Raccourcis de l'accueil générique (variant "home") : amorcent une vraie saisie plutôt que
+  // de l'envoyer à la place de l'utilisateur, qui relit et complète avant d'envoyer lui-même.
+  const prefill = useCallback(
+    (text: string) => {
+      setValue(text);
+      onComposingChange?.(true);
+      focusAt(text.length);
+    },
+    [focusAt, onComposingChange],
+  );
 
   const insertToken = useCallback(
     (token: string) => {
@@ -1333,21 +1432,32 @@ export function Composer({
   const handleRecordingStop = useCallback(async () => {
     const blob = new Blob(audioChunksRef.current, { type: mediaRecorderRef.current?.mimeType || "audio/webm" });
     audioChunksRef.current = [];
-    if (!blob.size) return;
+    if (!blob.size) {
+      onComposingChange?.(value.trim().length > 0);
+      return;
+    }
     setTranscribing(true);
+    let gotText = false;
     try {
       const form = new FormData();
       form.append("audio", blob, "recording.webm");
       const response = await fetch("/api/donna/chat/transcribe", { method: "POST", body: form });
       if (!response.ok) throw new Error();
       const { text } = (await response.json()) as { text: string };
-      if (text) setValue((current) => (current.trim() ? `${current.trim()} ${text}` : text));
+      if (text) {
+        gotText = true;
+        setValue((current) => (current.trim() ? `${current.trim()} ${text}` : text));
+      }
     } catch {
       setMicError("transcribe");
     } finally {
       setTranscribing(false);
+      // `value` est celui d'AVANT cet enregistrement (fermeture figée au clic sur le micro) :
+      // combiné à `gotText`, ça couvre les trois cas (texte déjà présent, texte transcrit,
+      // ni l'un ni l'autre) sans relire le DOM (React n'a pas encore ré-affiché `value`).
+      onComposingChange?.(gotText || value.trim().length > 0);
     }
-  }, []);
+  }, [onComposingChange, value]);
 
   const toggleRecording = async () => {
     if (transcribing) return;
@@ -1374,6 +1484,9 @@ export function Composer({
       mediaRecorderRef.current = recorder;
       recorder.start();
       setRecording(true);
+      // DONNA « écoute » pendant l'enregistrement, pas seulement pendant la frappe — même
+      // orbe "listening" que pour du texte (voir EmptyState, conversation.tsx::composing).
+      onComposingChange?.(true);
     } catch {
       setMicError("permission");
     }
@@ -1435,8 +1548,87 @@ export function Composer({
 
   const canSend = !busy && !driveFetch && (value.trim().length > 0 || files.length > 0);
 
+  // Un agent jamais relu : ses consignes passent d'abord sous les yeux (la voix n'a pas d'écran pour le faire) ; puis on relance.
+  const startVoice = () => {
+    const chosen = projectAgents?.find((a) => a.id === agent?.value);
+    if (chosen && askReview(chosen)) return;
+    onStartVoice?.();
+  };
+
+  // Rechercher sur le Web, à l'accueil : contrairement aux deux autres raccourcis, c'est un vrai bascule
+  // existant (même état que le globe de la barre complète), pas une amorce de texte.
+  const activateWebSearch = useCallback(() => {
+    setWebSearch(true);
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, []);
+
+  const driveButton = (
+    <button
+      type="button"
+      disabled={busy || Boolean(driveFetch) || files.length >= MAX_FILES}
+      onClick={() => setDriveOpen(true)}
+      aria-label={dict.chat.attachDrive}
+      title={dict.chat.attachDrive}
+      className="flex size-9 items-center justify-center rounded-button text-ink-2 hover:bg-active hover:text-ink disabled:opacity-50"
+    >
+      <GoogleDriveIcon size={18} />
+    </button>
+  );
+  const micButton = (
+    <button
+      type="button"
+      disabled={busy || transcribing}
+      onClick={() => void toggleRecording()}
+      aria-pressed={recording}
+      aria-label={recording ? dict.chat.micStop : dict.chat.micStart}
+      title={recording ? dict.chat.micStop : dict.chat.micStart}
+      className={`flex size-9 items-center justify-center rounded-button transition-colors disabled:opacity-50 ${
+        recording ? "animate-pulse bg-danger/10 text-danger" : "text-ink-2 hover:bg-active hover:text-ink"
+      }`}
+    >
+      <MicIcon size={18} />
+    </button>
+  );
+  // Sur l'accueil, le bouton de mode vocal reprend l'orbe de marque (même composant que le fil et la barre vocale)
+  // plutôt que l'icône plate de la barre complète — c'est la place exacte de l'avatar rond de la maquette.
+  const voiceButton = !onStartVoice ? null : home ? (
+    <button
+      type="button"
+      onClick={startVoice}
+      disabled={busy || recording || transcribing}
+      aria-label={dict.voice.start}
+      title={`${dict.voice.start} — ${dict.voice.startHint}`}
+      className="flex size-10 items-center justify-center rounded-full transition-transform duration-(--duration-fast) hover:scale-105 disabled:opacity-50"
+    >
+      <DonnaOrb state="idle" size={36} />
+    </button>
+  ) : (
+    <VoiceStartButton labels={dict.voice} onStart={startVoice} disabled={busy || recording || transcribing} />
+  );
+  const sendButton = busy ? (
+    <button
+      type="button"
+      onClick={onStop}
+      aria-label={dict.chat.stop}
+      title={dict.chat.stop}
+      className="flex size-9 items-center justify-center rounded-button bg-ink text-white hover:bg-bordeaux-900"
+    >
+      <StopIcon size={16} />
+    </button>
+  ) : (
+    <button
+      type="submit"
+      disabled={!canSend}
+      aria-label={dict.chat.send}
+      title={dict.chat.send}
+      className="flex size-9 items-center justify-center rounded-button bg-bordeaux-700 text-white transition-colors hover:bg-bordeaux-900 disabled:bg-pending disabled:text-ink-3"
+    >
+      <SendIcon size={18} />
+    </button>
+  );
+
   return (
-    <div className="px-4 pb-4 md:px-8">
+    <div className={home ? "" : "px-4 pb-4 md:px-8"}>
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -1456,7 +1648,7 @@ export function Composer({
           setDragging(false);
           addFiles(Array.from(event.dataTransfer.files));
         }}
-        className={`relative mx-auto w-full max-w-[46rem] rounded-panel border bg-white shadow-float focus-within:border-bordeaux-700/40 ${dragging ? "border-bordeaux-700 shadow-focus" : "border-border"}`}
+        className={`relative mx-auto w-full rounded-panel border bg-white shadow-float focus-within:border-bordeaux-700/40 ${home ? "msg-enter max-w-[34rem]" : "max-w-[46rem]"} ${dragging ? "border-bordeaux-700 shadow-focus" : "border-border"}`}
       >
         {dragging && (
           <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-panel bg-white/85 text-label font-medium text-bordeaux-700">
@@ -1522,7 +1714,7 @@ export function Composer({
           </ul>
         )}
         <label htmlFor="composer" className="sr-only">
-          {dict.chat.placeholder}
+          {home ? dict.chat.homePlaceholder : dict.chat.placeholder}
         </label>
         <textarea
           id="composer"
@@ -1533,7 +1725,7 @@ export function Composer({
           onChange={(event) => {
             setValue(event.target.value);
             syncMenu(event.target.value, event.target.selectionStart ?? event.target.value.length);
-            onComposingChange?.(event.target.value.trim().length > 0);
+            onComposingChange?.(event.target.value.trim().length > 0 || recording || transcribing);
           }}
           onKeyDown={(event) => {
             if (menu && menuItems.length) {
@@ -1565,7 +1757,7 @@ export function Composer({
             }
           }}
           onBlur={() => setMenu(null)}
-          placeholder={dict.chat.placeholder}
+          placeholder={home ? dict.chat.homePlaceholder : dict.chat.placeholder}
           className="scrollbar-none block max-h-[220px] w-full resize-none bg-transparent px-4 pt-3.5 pb-2 text-message text-ink outline-none placeholder:text-ink-3 focus-visible:shadow-none"
         />
         <div className="flex items-center justify-between px-2.5 pb-2.5">
@@ -1588,85 +1780,105 @@ export function Composer({
               title={dict.chat.attach}
               className="flex size-9 items-center justify-center rounded-button text-ink-2 hover:bg-active hover:text-ink disabled:opacity-50"
             >
-              <PaperclipIcon size={19} />
+              {home ? <PlusIcon size={19} /> : <PaperclipIcon size={19} />}
             </button>
-            <button
-              type="button"
-              disabled={busy || Boolean(driveFetch) || files.length >= MAX_FILES}
-              onClick={() => setDriveOpen(true)}
-              aria-label={dict.chat.attachDrive}
-              title={dict.chat.attachDrive}
-              className="flex size-9 items-center justify-center rounded-button text-ink-2 hover:bg-active hover:text-ink disabled:opacity-50"
-            >
-              <GoogleDriveIcon size={18} />
-            </button>
-            <button
-              type="button"
-              disabled={busy || transcribing}
-              onClick={() => void toggleRecording()}
-              aria-pressed={recording}
-              aria-label={recording ? dict.chat.micStop : dict.chat.micStart}
-              title={recording ? dict.chat.micStop : dict.chat.micStart}
-              className={`flex size-9 items-center justify-center rounded-button transition-colors disabled:opacity-50 ${
-                recording ? "animate-pulse bg-danger/10 text-danger" : "text-ink-2 hover:bg-active hover:text-ink"
-              }`}
-            >
-              <MicIcon size={18} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setWebSearch((v) => !v)}
-              aria-pressed={webSearch}
-              title={webSearch ? dict.chat.webSearchOn : dict.chat.webSearchOff}
-              className={`inline-flex h-9 items-center gap-1.5 rounded-button px-2.5 text-label transition-colors ${
-                webSearch ? "bg-bordeaux-700/10 font-medium text-bordeaux-700" : "text-ink-2 hover:bg-active hover:text-ink"
-              }`}
-            >
-              <GlobeIcon size={18} />
-              <span className={webSearch ? "" : "sr-only"}>{dict.chat.webSearch}</span>
-            </button>
-            <ModelMenu lang={lang} labels={dict.chat.models} />
-            <SkillsMenu lang={lang} labels={dict.chat} />
-            {agent && (Boolean(agent.value) || (projectAgents?.length ?? 0) > 0) && (
-              <AgentMenu
-                lang={lang}
-                labels={dict.agents}
-                projectId={agent.projectId}
-                agents={projectAgents ?? []}
-                value={agent.value}
-                onPick={(picked) => {
-                  if (picked && askReview(picked)) return;
-                  agent.onChange(picked?.id ?? null);
-                }}
-              />
-            )}
-            {conversationId && (
-              <ContextMenu labels={dict.chat} status={context.status} compacting={context.compacting} busy={busy} onCompact={runCompact} />
+            {home ? (
+              // Analyser : amorce la même saisie qu'un raccourci, vers la skill "Tableaux, images et PDF scannés".
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => prefill(dict.chat.homeAnalyzePrefill)}
+                aria-label={dict.chat.homeAnalyze}
+                title={dict.chat.homeAnalyze}
+                className="inline-flex h-9 items-center gap-1.5 rounded-button px-2.5 text-label text-ink-2 transition-colors hover:bg-active hover:text-ink disabled:opacity-50"
+              >
+                <Sparkles size={18} aria-hidden />
+                {dict.chat.homeAnalyze}
+              </button>
+            ) : (
+              <>
+                {driveButton}
+                {micButton}
+                {voiceButton}
+                <button
+                  type="button"
+                  onClick={() => setWebSearch((v) => !v)}
+                  aria-pressed={webSearch}
+                  title={webSearch ? dict.chat.webSearchOn : dict.chat.webSearchOff}
+                  className={`inline-flex h-9 items-center gap-1.5 rounded-button px-2.5 text-label transition-colors ${
+                    webSearch ? "bg-bordeaux-700/10 font-medium text-bordeaux-700" : "text-ink-2 hover:bg-active hover:text-ink"
+                  }`}
+                >
+                  <GlobeIcon size={18} />
+                  <span className={webSearch ? "" : "sr-only"}>{dict.chat.webSearch}</span>
+                </button>
+                <ModelMenu lang={lang} labels={dict.chat.models} />
+                <SkillsMenu lang={lang} labels={dict.chat} />
+                {agent && (Boolean(agent.value) || (projectAgents?.length ?? 0) > 0) && (
+                  <AgentMenu
+                    lang={lang}
+                    labels={dict.agents}
+                    projectId={agent.projectId}
+                    agents={projectAgents ?? []}
+                    value={agent.value}
+                    onPick={(picked) => {
+                      if (picked && askReview(picked)) return;
+                      agent.onChange(picked?.id ?? null);
+                    }}
+                  />
+                )}
+                {conversationId && (
+                  <ContextMenu labels={dict.chat} status={context.status} compacting={context.compacting} busy={busy} onCompact={runCompact} />
+                )}
+              </>
             )}
           </div>
-          {busy ? (
-            <button
-              type="button"
-              onClick={onStop}
-              aria-label={dict.chat.stop}
-              title={dict.chat.stop}
-              className="flex size-9 items-center justify-center rounded-button bg-ink text-white hover:bg-bordeaux-900"
-            >
-              <StopIcon size={16} />
-            </button>
+          {home ? (
+            <div className="flex items-center gap-1">
+              {driveButton}
+              {micButton}
+              {voiceButton}
+              {sendButton}
+            </div>
           ) : (
-            <button
-              type="submit"
-              disabled={!canSend}
-              aria-label={dict.chat.send}
-              title={dict.chat.send}
-              className="flex size-9 items-center justify-center rounded-button bg-bordeaux-700 text-white transition-colors hover:bg-bordeaux-900 disabled:bg-pending disabled:text-ink-3"
-            >
-              <SendIcon size={18} />
-            </button>
+            sendButton
           )}
         </div>
       </form>
+      {home && (
+        <ul className="msg-enter mx-auto mt-3 flex w-full max-w-[34rem] flex-col gap-1" style={{ animationDelay: "90ms" }}>
+          <li>
+            <button
+              type="button"
+              onClick={() => prefill(dict.chat.homeImagePrefill)}
+              className="flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-left text-label text-ink-2 transition-colors hover:bg-active hover:text-ink"
+            >
+              <ImageIcon size={18} aria-hidden className="text-bordeaux-700" />
+              {dict.chat.homeImage}
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              onClick={() => prefill(dict.chat.homeWritePrefill)}
+              className="flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-left text-label text-ink-2 transition-colors hover:bg-active hover:text-ink"
+            >
+              <PencilIcon size={18} className="text-bordeaux-700" />
+              {dict.chat.homeWrite}
+            </button>
+          </li>
+          <li>
+            <button
+              type="button"
+              onClick={activateWebSearch}
+              className="flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-left text-label text-ink-2 transition-colors hover:bg-active hover:text-ink"
+            >
+              <GlobeIcon size={18} className="text-bordeaux-700" />
+              {dict.chat.homeWebSearch}
+            </button>
+          </li>
+        </ul>
+      )}
       {/* Hors du <form> : Entrée dans la recherche du sélecteur ne doit jamais envoyer le message. */}
       <DrivePicker
         lang={lang}

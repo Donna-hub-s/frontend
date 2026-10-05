@@ -51,6 +51,8 @@ export type SendInput = {
   projectId?: string;
   /** Agent du projet pour ce message : « » = aucun (à retirer de la conversation), undefined = conversation hors projet. */
   agentId?: string;
+  /** Message dit en mode vocal : sa réponse sera lue à voix haute. */
+  voice?: boolean;
   /** Message UTILISATEUR remplacé (nouvelle version sœur) — voir conversation.tsx::editAndResend.
    * `siblingIds` : ses versions déjà connues (vide si c'est la première édition). */
   editing?: { messageId: string; siblingIds: string[] };
@@ -496,7 +498,7 @@ export function WorkspaceProvider({
 
   const send = useCallback(
     async (input: SendInput) => {
-      const { key, message, files, webSearch, mentions, projectId, agentId, editing, fallbackTitle } = input;
+      const { key, message, files, webSearch, mentions, projectId, agentId, editing, fallbackTitle, voice } = input;
       if (runs.current.has(key)) return;
       const trimmed = message.trim();
       if (!trimmed && !files.length) return;
@@ -529,6 +531,7 @@ export function WorkspaceProvider({
         mentions,
         projectId,
         agentId,
+        voice,
         editMessageId: editing?.messageId,
         conversationId: input.conversationId,
         signal: controller.signal,

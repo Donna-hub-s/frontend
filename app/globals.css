@@ -4,7 +4,7 @@
  * DONNA — tokens de fondation.
  * Source : planche d'identité (icone.png) + maquette d'écran (donaex.png),
  * valeurs mesurées ; contrastes calculés sur --color-page (#FAF9F9).
- * Référence visuelle : design/fondations/Main.dc.html.
+ * Référence visuelle : fondations/Main.dc.html.
  *
  * Convention : un token = un rôle. Pas de token d'espacement nommé
  * (--spacing-*) : l'échelle Tailwind par défaut (4 px) couvre 4…72.
@@ -205,6 +205,12 @@
   animation: rise-in var(--duration-enter) var(--ease-enter) both;
 }
 
+/* Entrée d'un message du fil (espace de travail, pas la landing) — surtout visible au tout
+ * premier échange, quand l'accueil (orbe, suggestions) disparaît d'un coup pour laisser la place. */
+.msg-enter {
+  animation: rise-in var(--duration-enter) var(--ease-enter) both;
+}
+
 .demo-dot {
   animation: dot-bounce 1.1s ease-in-out infinite;
 }
@@ -290,7 +296,7 @@
 
 /* ── Orbe de DONNA (components/brand/donna-orb.tsx) ──────────────────────
    Repère SVG 0..100 : toutes les rotations et échelles autour du centre (50,50). */
-.donna-orb :is(.orb-enter, .orb-breathe, .orb-ripple, .orb-think, .orb-work, .orb-answer, .orb-halo) {
+.donna-orb :is(.orb-enter, .orb-breathe, .orb-ring, .orb-think, .orb-work, .orb-answer, .orb-halo) {
   transform-box: view-box;
   transform-origin: 50px 50px;
 }
@@ -320,21 +326,23 @@
   }
 }
 
-/* listening : ondes émises depuis le point */
-.orb-ripple {
-  animation: orb-ripple 2.4s cubic-bezier(0.2, 0.6, 0.3, 1) infinite;
+/* listening : deux ondes partent du point. Elles passent EXACTEMENT par le dessin de la référence (fondations/etats : anneaux aux
+   rayons 22,5 et 34,9, translucides) à 45 % du cycle ; au repos (mouvement réduit) c'est ce dessin-là qui reste, tel quel. */
+.orb-ring {
+  animation: orb-ring 2.4s linear infinite;
 }
-.orb-ripple-late {
-  animation-delay: 1.2s;
-}
-@keyframes orb-ripple {
-  from {
-    opacity: 0.6;
+@keyframes orb-ring {
+  0% {
+    opacity: 0;
     transform: scale(0.45);
   }
-  to {
+  45% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
     opacity: 0;
-    transform: scale(1.7);
+    transform: scale(1.3);
   }
 }
 

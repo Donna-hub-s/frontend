@@ -3,6 +3,7 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { locales, localeNames, type Locale } from "@/i18n/config";
+import type { VoiceOut } from "@/lib/api";
 import type { ConnectorsOut, ProfileOut, ReminderOut, SkillOut } from "@/lib/workspace-types";
 import { parseBackendDate } from "@/lib/workspace-types";
 import { connectorName, setSkill, skillChanges, skillDescription, skillEnabled, skillLabel, type SkillSettings } from "@/lib/skills";
@@ -25,6 +26,8 @@ type Draft = {
   timezone: string;
   language: string;
   preferred_tts_voice: string;
+  preferred_tts_speaker: string;
+  preferred_tts_english_voice: string;
   default_force_web_search: boolean;
   notify_reminders_email: boolean;
   notify_reminders_whatsapp: boolean;
@@ -39,12 +42,32 @@ const toDraft = (p: ProfileOut): Draft => ({
   timezone: p.timezone || "UTC",
   language: p.language ?? "",
   preferred_tts_voice: p.preferred_tts_voice ?? "",
+  preferred_tts_speaker: p.preferred_tts_speaker == null ? "" : String(p.preferred_tts_speaker),
+  preferred_tts_english_voice: p.preferred_tts_english_voice ?? "",
   default_force_web_search: p.default_force_web_search,
   notify_reminders_email: p.notify_reminders_email,
   notify_reminders_whatsapp: p.notify_reminders_whatsapp,
   whatsapp_notify_number: p.whatsapp_notify_number ?? "",
   skills: { ...p.skills },
 });
+
+/** Regroupe les voix d'une langue : celles de la machine d'abord, puis celles à télécharger. */
+function groupesVoix(voices: VoiceOut[], langue: string, labels: Labels): { titre: string; voix: VoiceOut[] }[] {
+  return [
+    { titre: labels.ttsVoicesInstalled, voix: voices.filter((voix) => voix.language === langue && voix.installed) },
+    { titre: labels.ttsVoicesToDownload, voix: voices.filter((voix) => voix.language === langue && !voix.installed) },
+  ].filter((groupe) => groupe.voix.length > 0);
+}
+
+/** `fr_FR-upmc-medium · homme et femme · 22 kHz · 2 voix` — le genre est une INDICATION
+ * (Piper n'en publie pas), la fréquence et le nombre de voix viennent du modèle installé. */
+function etiquetteVoix(voix: VoiceOut, labels: Labels): string {
+  const genres = { f: labels.ttsGenderF, m: labels.ttsGenderM, mf: labels.ttsGenderBoth, "?": labels.ttsGenderUnknown } as const;
+  const details = [genres[voix.gender] ?? labels.ttsGenderUnknown];
+  if (voix.sample_rate) details.push(`${Math.round(voix.sample_rate / 1000)} kHz`);
+  if (voix.speakers > 1) details.push(labels.ttsSpeakerCount.replace("{n}", String(voix.speakers)));
+  return `${voix.name} · ${details.join(" · ")}`;
+}
 
 const fieldClass =
   "h-10 w-full rounded-button border border-border bg-white px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none";
@@ -104,7 +127,6 @@ function SettingsBody({
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<"idle" | "saved" | "error" | "invalidTimezone">("idle");
-
   useEffect(() => {
     let cancelled = false;
     fetch("/api/donna/profile/me", { cache: "no-store" })
@@ -136,6 +158,8 @@ function SettingsBody({
       timezone: draft.timezone.trim() || "UTC",
       language: draft.language || null,
       preferred_tts_voice: draft.preferred_tts_voice.trim() || null,
+      preferred_tts_speaker: draft.preferred_tts_speaker.trim() === "" ? null : Number(draft.preferred_tts_speaker),
+      preferred_tts_english_voice: draft.preferred_tts_english_voice.trim() || null,
       default_force_web_search: draft.default_force_web_search,
       notify_reminders_email: draft.notify_reminders_email,
       notify_reminders_whatsapp: draft.notify_reminders_whatsapp,
@@ -397,6 +421,22 @@ function ProfilePane({ lang, labels, account, draft, update }: PaneProps & { lan
 }
 
 function PreferencesPane({ labels, draft, update }: PaneProps) {
+  const [voices, setVoices] = useState<VoiceOut[]>([]);
+
+  // Catalogue des voix (aucun modèle n'est chargé pour le lister). En cas d'échec, la saisie
+  // libre reste disponible : un réglage inaccessible serait pire qu'un réglage moins joli.
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/donna/chat/voices", { cache: "no-store" })
+      .then((response) => (response.ok ? (response.json() as Promise<VoiceOut[]>) : Promise.reject()))
+      .then((list) => {
+        if (!cancelled) setVoices(list);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   return (
     <Pane title={labels.navPreferences} hint={labels.preferencesHint}>
       <Toggle
@@ -407,9 +447,94 @@ function PreferencesPane({ labels, draft, update }: PaneProps) {
       />
       <div className="border-t border-border" />
       <Field label={labels.ttsVoiceLabel} hint={labels.ttsVoiceHint}>
-        {(id) => (
-          <input id={id} value={draft.preferred_tts_voice} onChange={(e) => update("preferred_tts_voice", e.target.value)} placeholder="fr_FR-siwis-medium" className={fieldClass} />
-        )}
+        {(id) =>
+          voices.length === 0 ? (
+            <input
+              id={id}
+              value={draft.preferred_tts_voice}
+              onChange={(e) => update("preferred_tts_voice", e.target.value)}
+              placeholder="fr_FR-siwis-medium"
+              className={fieldClass}
+            />
+          ) : (
+            <select
+              id={id}
+              value={draft.preferred_tts_voice}
+              onChange={(e) => {
+                update("preferred_tts_voice", e.target.value);
+                update("preferred_tts_speaker", "");
+              }}
+              className={fieldClass}
+            >
+              <option value="">{labels.ttsVoiceServerDefault}</option>
+              {groupesVoix(voices, "fr", labels).map((groupe) => (
+                <optgroup key={groupe.titre} label={groupe.titre}>
+                  {groupe.voix.map((voix) => (
+                    <option key={voix.name} value={voix.name}>
+                      {etiquetteVoix(voix, labels)}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          )
+        }
+      </Field>
+      <Field label={labels.ttsSpeakerLabel} hint={labels.ttsSpeakerHint}>
+        {(id) => {
+          const choisie = voices.find((voix) => voix.name === draft.preferred_tts_voice);
+          const nb = choisie?.speakers ?? 1;
+          return nb > 1 ? (
+            <select
+              id={id}
+              value={draft.preferred_tts_speaker}
+              onChange={(e) => update("preferred_tts_speaker", e.target.value)}
+              className={fieldClass}
+            >
+              <option value="">{labels.ttsSpeakerDefault}</option>
+              {Array.from({ length: nb }, (_, index) => (
+                <option key={index} value={index}>
+                  {`${index + 1} / ${nb}`}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <p id={id} className="text-xs text-muted-foreground">
+              {labels.ttsSpeakerNone}
+            </p>
+          );
+        }}
+      </Field>
+      <Field label={labels.ttsEnglishLabel} hint={labels.ttsEnglishHint}>
+        {(id) =>
+          voices.length === 0 ? (
+            <input
+              id={id}
+              value={draft.preferred_tts_english_voice}
+              onChange={(e) => update("preferred_tts_english_voice", e.target.value)}
+              placeholder="en_US-hfc_female-medium"
+              className={fieldClass}
+            />
+          ) : (
+            <select
+              id={id}
+              value={draft.preferred_tts_english_voice}
+              onChange={(e) => update("preferred_tts_english_voice", e.target.value)}
+              className={fieldClass}
+            >
+              <option value="">{labels.ttsEnglishServerDefault}</option>
+              {groupesVoix(voices, "en", labels).map((groupe) => (
+                <optgroup key={groupe.titre} label={groupe.titre}>
+                  {groupe.voix.map((voix) => (
+                    <option key={voix.name} value={voix.name}>
+                      {etiquetteVoix(voix, labels)}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          )
+        }
       </Field>
       <div className="border-t border-border" />
       <InstallApp labels={labels} />

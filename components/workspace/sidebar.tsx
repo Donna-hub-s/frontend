@@ -13,7 +13,7 @@ import { groupByDate, groupByProject } from "@/lib/sidebar-grouping";
 import type { ConversationOut } from "@/lib/workspace-types";
 import { ChatIcon, ChevronIcon, CloseIcon, ComposeIcon, FolderIcon, LogoutIcon, MoreIcon, SearchIcon, SettingsIcon } from "./icons";
 import { ConversationHoverPreview, type PreviewAnchor, useHoverPreview } from "./conversation-hover-preview";
-import { BarChart3, Workflow as WorkflowGlyph } from "lucide-react";
+import { BarChart3, FolderOpen, Workflow as WorkflowGlyph } from "lucide-react";
 import { ProjectSidebarSection } from "./project-list";
 import { useWorkspace } from "./workspace-provider";
 
@@ -63,6 +63,7 @@ export function Sidebar({
   const activeProjectId = pathname.match(/\/app\/projects\/([^/]+)/)?.[1];
   const workflowsActive = pathname.includes("/app/workflows");
   const usageActive = pathname.includes("/app/usage");
+  const deliverablesActive = pathname.includes("/app/deliverables");
 
   return (
     <>
@@ -132,6 +133,17 @@ export function Sidebar({
           >
             <WorkflowGlyph size={16} className="text-ink-3" />
             {labels.workflows}
+          </Link>
+          <Link
+            href={`/${lang}/app/deliverables`}
+            onClick={onClose}
+            aria-current={deliverablesActive ? "page" : undefined}
+            className={`mb-3 flex h-9 items-center gap-2.5 rounded-nav px-2.5 text-label no-underline transition-colors duration-(--duration-fast) ${
+              deliverablesActive ? "bg-active font-medium text-ink" : "text-ink-2 hover:bg-active/70 hover:text-ink"
+            }`}
+          >
+            <FolderOpen size={16} className="text-ink-3" />
+            {labels.deliverables}
           </Link>
           <Link
             href={`/${lang}/app/usage`}
