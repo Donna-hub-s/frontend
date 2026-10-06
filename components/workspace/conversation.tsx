@@ -30,7 +30,6 @@ import { LinkCard, linkCardData } from "./link-card";
 import { CanvasHost } from "./canvas-panel";
 import { VoiceBar, VoiceStartButton } from "./voice-bar";
 import { useVoiceMode } from "@/lib/use-voice-mode";
-import { splitLinks } from "@/lib/linkify";
 import { ResearchProgress } from "./research-progress";
 import { estimateText, formatUsd, type ResearchRun } from "@/lib/research";
 import { downloadDriveFiles, type DriveFileOut } from "@/lib/drive";
@@ -53,6 +52,18 @@ type WorkspaceDict = Dictionary["workspace"];
 
 // Même plafond que DONNA_MAX_FILES_PER_REQUEST côté backend (10 par défaut).
 const MAX_FILES = 10;
+
+/** Image affichable en attente d'envoi : MIME image (SVG exclu, comme partout ailleurs), sinon extension. */
+const PENDING_IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp", "image/bmp", "image/avif"]);
+const pendingIsImage = (file: File): boolean => PENDING_IMAGE_MIMES.has(file.type.toLowerCase()) || isImageName(file.name);
+
+/** Vignette d'un fichier en attente : l'URL objet n'existe que tant que la vignette est montée. */
+function PendingThumb({ file }: { file: File }) {
+  const url = useMemo(() => URL.createObjectURL(file), [file]);
+  useEffect(() => () => URL.revokeObjectURL(url), [url]);
+  // eslint-disable-next-line @next/next/no-img-element -- fichier local choisi par l'utilisateur, dimensions inconnues
+  return <img src={url} alt={file.name} loading="lazy" className="aspect-square w-full bg-white object-cover" />;
+}
 
 export function Conversation({
   lang,
@@ -479,6 +490,13 @@ function UserMessage({
 }) {
   const chip = "inline-flex items-center gap-1.5 rounded-badge bg-white px-2 py-1 text-meta text-ink-2";
   const hasFiles = Boolean(message.localFiles?.length || message.attachments.length);
+  const files = useMemo(() => message.attachments.map((file) => ({ name: file.original_name, url: fileHref(file.file_url) })), [message.attachments]);
+  // Pièces jointes image : aperçu dans la bulle (un clic ouvre le visualiseur), sauf si le texte les
+  // affiche déjà — même règle et même composant que dans la réponse de DONNA.
+  const images = useMemo(() => {
+    const inline = inlineImageNames(message.content, files);
+    return message.attachments.filter((file) => file.mime_type.startsWith("image/") && isImageName(file.original_name) && !inline.has(file.original_name.normalize("NFC").toLowerCase().trim()));
+  }, [files, message.attachments, message.content]);
   const draftRef = useRef<HTMLTextAreaElement>(null);
   // Le message entier n'est qu'une URL (le cas « je colle un lien ») : une carte plutôt qu'un
   // texte brut non cliquable — même carte que celle de DONNA (link-card.tsx), avec aperçu.
@@ -523,27 +541,25 @@ function UserMessage({
               />
             ) : (
               message.content && (
-                <p className="text-message whitespace-pre-wrap text-ink [overflow-wrap:anywhere]">
-                  {splitLinks(message.content).map((segment, index) =>
-                    segment.type === "link" ? (
-                      <a
-                        key={index}
-                        href={segment.href}
-                        target="_blank"
-                        rel="noopener noreferrer nofollow"
-                        className="underline decoration-rose-300 underline-offset-2"
-                      >
-                        {segment.href}
-                      </a>
-                    ) : (
-                      <span key={index}>{segment.value}</span>
-                    ),
-                  )}
-                </p>
+                <Markdown files={files} renderFile={renderFile} conversationId={conversationId} breaks>
+                  {message.content}
+                </Markdown>
               )
             )}
-            {hasFiles && (
+            {images.length > 0 && (
               <ul className={`flex flex-wrap gap-1.5 ${message.content ? "mt-2" : ""}`}>
+                {images.map((file) => (
+                  <li key={file.id}>
+                    <FileLink url={fileHref(file.file_url)} name={file.original_name} className="block no-underline">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- fichier du message servi par la passerelle, taille inconnue */}
+                      <img src={fileHref(file.file_url)} alt={file.original_name} loading="lazy" className="max-h-64 max-w-full rounded-card border border-border" />
+                    </FileLink>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {hasFiles && (
+              <ul className={`flex flex-wrap gap-1.5 ${message.content || images.length ? "mt-2" : ""}`}>
                 {message.localFiles?.map((name) => (
                   <li key={`local-${name}`} className={chip}>
                     <FileIcon size={14} />
@@ -1697,10 +1713,8 @@ export function Composer({
         )}
         {files.length > 0 && (
           <ul className="flex flex-wrap gap-2 px-4 pt-3">
-            {files.map((file, index) => (
-              <li key={`${file.name}-${index}`} className="inline-flex items-center gap-1.5 rounded-badge bg-active py-1 pr-1 pl-2 text-meta text-ink-2">
-                <FileIcon size={14} />
-                <span className="max-w-[12rem] truncate">{file.name}</span>
+            {files.map((file, index) => {
+              const remove = (
                 <button
                   type="button"
                   aria-label={`${dict.chat.removeFile} ${file.name}`}
@@ -1709,8 +1723,21 @@ export function Composer({
                 >
                   <CloseIcon size={12} />
                 </button>
-              </li>
-            ))}
+              );
+              return pendingIsImage(file) ? (
+                <li key={`${file.name}-${index}`} className="relative w-24 overflow-hidden rounded-card border border-border bg-active">
+                  <PendingThumb file={file} />
+                  <span className="block truncate px-1.5 pb-0.5 pt-1 text-meta text-ink-2">{file.name}</span>
+                  <span className="absolute right-1 top-1 bg-white/90">{remove}</span>
+                </li>
+              ) : (
+                <li key={`${file.name}-${index}`} className="inline-flex items-center gap-1.5 rounded-badge bg-active py-1 pr-1 pl-2 text-meta text-ink-2">
+                  <FileIcon size={14} />
+                  <span className="max-w-[12rem] truncate">{file.name}</span>
+                  {remove}
+                </li>
+              );
+            })}
           </ul>
         )}
         <label htmlFor="composer" className="sr-only">

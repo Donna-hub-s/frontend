@@ -1,13 +1,13 @@
 "use client";
 
-import { Check, Clock, Download, Eye, FileText, PencilLine, Plus, Trash2, X } from "lucide-react";
+import { Check, Clock, Download, Eye, FileText, PencilLine, Plus, Printer, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { canvasActivity, canvasUrls, EXPORT_FORMATS, type CanvasMeta, type CanvasVersionMeta, type CanvasExportFormat, type SaveStatus } from "@/lib/canvas";
 import { diffLines, diffStats, foldUnchanged } from "@/lib/diff";
 import { useCanvas, type CanvasController } from "@/lib/use-canvas";
 import type { ChatMessage } from "@/lib/workspace-types";
-import { Markdown } from "./markdown";
+import { CanvasEditor } from "./canvas-editor";
 
 type Labels = Dictionary["workspace"]["canvas"];
 
@@ -225,24 +225,63 @@ function CanvasPanel({
           </div>
           <div className="relative flex min-h-0 flex-1 flex-col">
             {mode === "write" ? (
-              <textarea
+              <CanvasEditor
                 value={editor.content}
-                onChange={(event) => canvas.edit({ content: event.target.value })}
-                aria-label={editor.title || labels.untitled}
+                onChange={(content) => canvas.edit({ content })}
                 placeholder={labels.placeholder}
-                spellCheck
-                className="min-h-0 flex-1 resize-none bg-white px-5 py-4 text-message leading-7 text-ink outline-none placeholder:text-ink-3"
+                ariaLabel={editor.title || labels.untitled}
+              />
+            ) : editor.content.trim() ? (
+              <DocumentPreview
+                canvasId={editor.doc.id}
+                version={editor.doc.version}
+                title={editor.title || labels.panelLabel}
+                printLabel={labels.printPdf}
               />
             ) : (
-              <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-5 py-4">
-                {editor.content.trim() ? <Markdown>{editor.content}</Markdown> : <p className="text-secondary text-ink-3">{labels.previewEmpty}</p>}
-              </div>
+              <p className="px-5 py-4 text-secondary text-ink-3">{labels.previewEmpty}</p>
             )}
             {historyOpen && <HistoryView labels={labels} canvas={canvas} lang={lang} active={active} onClose={() => setHistoryOpen(false)} />}
           </div>
         </>
       )}
     </aside>
+  );
+}
+
+/**
+ * Aperçu d'un document partagé : le HTML rendu par le serveur, dans un cadre isolé.
+ *
+ * Un seul rendu pour l'écran, le PDF et le Word — sinon un export finit toujours par diverger de ce qu'on voit. Le
+ * cadre autorise `allow-same-origin` SANS `allow-scripts` : c'est ce qui permet à la page de déclencher l'impression
+ * (un PDF au rendu exact), sans jamais donner au document le moindre droit dans l'application. Le CSP du document
+ * (`default-src 'none'`) refuse de son côté tout script, toute image et toute police distante.
+ */
+function DocumentPreview({ canvasId, version, title, printLabel }: { canvasId: string; version: number; title: string; printLabel: string }) {
+  const frame = useRef<HTMLIFrameElement | null>(null);
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="flex items-center justify-end border-b border-border px-3 py-1">
+        <button
+          type="button"
+          onClick={() => frame.current?.contentWindow?.print()}
+          className="inline-flex items-center gap-1.5 rounded-button px-2.5 py-1 text-label text-ink-2 hover:bg-active hover:text-ink"
+        >
+          <Printer size={14} aria-hidden />
+          {printLabel}
+        </button>
+      </div>
+      {/* La version est la clé : le cadre se recharge quand le document est enregistré (DONNA peut l'écrire aussi). */}
+      <iframe
+        key={`${canvasId}:${version}`}
+        ref={frame}
+        title={title}
+        sandbox="allow-same-origin allow-popups-to-escape-sandbox"
+        src={canvasUrls.render(canvasId)}
+        data-testid="canvas-preview-frame"
+        className="min-h-0 flex-1 border-0"
+      />
+    </div>
   );
 }
 

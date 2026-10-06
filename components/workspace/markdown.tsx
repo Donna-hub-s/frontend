@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import ReactMarkdown, { defaultUrlTransform, type Components } from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import rehypeKatex from "rehype-katex";
+import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import type { Pluggable, PluggableList } from "unified";
@@ -145,6 +146,7 @@ const MATH_REHYPE: Pluggable = [rehypeKatex, { throwOnError: false, strict: "ign
 const CODE_REHYPE: Pluggable = [rehypeHighlight, { detect: false, ignoreMissing: true }];
 // Le dollar seul n'ouvre PAS une formule (« $5 et $10 ») : voir lib/markdown-math.ts.
 const MATH_REMARK: Pluggable = [remarkMath, { singleDollarTextMath: false }];
+const BREAKS_REMARK: Pluggable = remarkBreaks;
 
 /**
  * `files` : les pièces jointes du message. Un lien ou une image qui vise l'un d'eux (par son nom) s'ouvre via
@@ -159,6 +161,7 @@ export function Markdown({
   renderFile,
   streaming = false,
   conversationId,
+  breaks = false,
 }: {
   children: string;
   files?: readonly MarkdownFile[];
@@ -167,12 +170,18 @@ export function Markdown({
   /** Pour l'aperçu d'un lien cité (voir LinkCard) : sans conversation, pas d'aperçu possible
    * (le backend vérifie que le lien est déjà visible dans CETTE conversation). */
   conversationId?: string | null;
+  /** Saut de ligne saisi = saut de ligne affiché (« remark-breaks ») : le message d'un utilisateur est tapé
+   * dans un champ multiligne, et un retour à la ligne perdu change ce qu'il a voulu écrire. */
+  breaks?: boolean;
 }) {
   const labels = useContext(MarkdownLabelsContext);
   const withMath = !streaming && hasMath(children);
   const withCode = !streaming && /^ {0,3}(```|~~~)/m.test(children);
   const text = useMemo(() => (withMath ? normalizeMath(children) : children), [children, withMath]);
-  const remarkPlugins = useMemo<PluggableList>(() => [remarkGfm, ...(withMath ? [MATH_REMARK] : [])], [withMath]);
+  const remarkPlugins = useMemo<PluggableList>(
+    () => [remarkGfm, ...(breaks ? [BREAKS_REMARK] : []), ...(withMath ? [MATH_REMARK] : [])],
+    [breaks, withMath],
+  );
   const rehypePlugins = useMemo<PluggableList>(() => [...(withCode ? [CODE_REHYPE] : []), ...(withMath ? [MATH_REHYPE] : [])], [withCode, withMath]);
   const merged = useMemo<Components>(
     () => ({

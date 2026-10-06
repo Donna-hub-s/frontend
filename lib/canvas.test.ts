@@ -12,6 +12,7 @@ describe("adresses", () => {
     expect(canvasUrls.one("a/b")).toBe("/api/donna/chat/canvas/a%2Fb");
     expect(canvasUrls.list("c 1")).toBe("/api/donna/chat/canvas/by-conversation/c%201");
     expect(canvasUrls.export("x", "docx")).toBe("/api/donna/chat/canvas/x/export?format=docx");
+    expect(canvasUrls.render("x")).toBe("/api/donna/chat/canvas/x/render");
     expect(canvasUrls.version("x", 3)).toBe("/api/donna/chat/canvas/x/versions/3");
   });
 });

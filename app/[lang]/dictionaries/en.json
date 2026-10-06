@@ -1406,6 +1406,7 @@
       "exportMd": "Markdown (.md)",
       "exportDocx": "Word (.docx)",
       "exportPdf": "PDF (.pdf)",
+      "printPdf": "Print / PDF",
       "delete": "Delete the document",
       "deleteConfirm": "Delete this document and its whole history? This cannot be undone.",
       "deleteYes": "Delete",
