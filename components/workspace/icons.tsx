@@ -251,3 +251,9 @@ export const RegenerateIcon = (p: IconProps) => (
     <path d="M16.6 3v3.3h-3.3" />
   </Icon>
 );
+export const CopyIcon = (p: IconProps) => (
+  <Icon {...p}>
+    <rect x="7" y="7" width="9.5" height="9.5" rx="1.5" />
+    <path d="M4 13V4.5A1.5 1.5 0 0 1 5.5 3H13" />
+  </Icon>
+);
