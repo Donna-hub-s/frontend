@@ -12,6 +12,7 @@ import "katex/dist/katex.min.css";
 import { imageTarget, linkTarget } from "@/lib/file-links";
 import { hasMath, normalizeMath } from "@/lib/markdown-math";
 import { codeLanguage, nodeText } from "@/lib/markdown-text";
+import { CheckIcon, CopyIcon } from "./icons";
 import { isBareUrlLink, LinkCard, linkCardData } from "./link-card";
 
 /** Textes des boutons du rendu (fournis une fois par l'espace de travail ; anglais par défaut). */
@@ -61,14 +62,16 @@ function CodeBlock({ node, children }: { node?: unknown; children?: ReactNode })
         <span className="font-mono">{language ?? ""}</span>
         <button
           type="button"
+          aria-label={copied ? labels.copied : labels.copy}
           onClick={async () => {
             if (!(await copyToClipboard(nodeText(node).replace(/\n$/, "")))) return;
             setCopied(true);
             clearTimeout(timer.current);
             timer.current = setTimeout(() => setCopied(false), 1800);
           }}
-          className="rounded-badge px-2 py-0.5 text-ink-2 hover:bg-fill hover:text-ink"
+          className="inline-flex items-center gap-1 rounded-badge px-2 py-0.5 text-ink-2 hover:bg-fill hover:text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bordeaux-700"
         >
+          {copied ? <CheckIcon size={14} className="text-success" /> : <CopyIcon size={14} />}
           <span aria-live="polite">{copied ? labels.copied : labels.copy}</span>
         </button>
       </div>
