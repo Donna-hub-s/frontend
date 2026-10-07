@@ -33,6 +33,10 @@ const ALLOWED = [
 // En-têtes de réponse relayés (le reste — cookies backend, CORS — reste côté serveur).
 const RESPONSE_HEADERS = ["content-type", "content-disposition", "content-length", "cache-control"];
 
+interface RouteParams {
+  params: Promise<{ path: string[] }>;
+}
+
 async function refreshTokens(refreshToken: string) {
   try {
     const response = await fetch(`${BACKEND_URL}/app/auth/refresh`, {
@@ -50,7 +54,7 @@ async function refreshTokens(refreshToken: string) {
   }
 }
 
-async function forward(request: NextRequest, { params }: RouteContext<"/api/donna/[...path]">) {
+async function forward(request: NextRequest, { params }: RouteParams) {
   const { path } = await params;
   const joined = path.map(encodeURIComponent).join("/");
   if (!ALLOWED.some((rule) => rule.test(path.join("/")))) {
