@@ -10,6 +10,7 @@ import { FileLink } from "./file-viewer";
 import { actionIdFrom } from "@/lib/chat-stream";
 import { EMPTY_MENTIONS, PROPOSALS, uid, visibleSteps } from "@/lib/chat-run";
 import { inlineImageNames, isImageName } from "@/lib/file-links";
+import { readableExcerpt } from "@/lib/source-excerpt";
 import { useStickToBottom } from "@/lib/use-stick-to-bottom";
 import {
   fileHref,
@@ -1126,33 +1127,76 @@ function QuestionCard({
 /** Une carte par extrait réellement injecté (même document plusieurs fois = plusieurs
  * extraits = plusieurs cartes) ; un document sans extrait (fichier généré) n'apparaît
  * qu'une fois. Rangée défilante plutôt qu'un dépliant : le nom ET l'extrait se voient
- * d'un coup d'œil, sans clic supplémentaire. */
+ * d'un coup d'œil, sans clic supplémentaire. La barre de défilement étant masquée, deux
+ * boutons apparaissent là où il reste des cartes hors de vue (sinon une carte coupée au
+ * bord ne dit pas qu'on peut aller plus loin). */
 function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] }) {
   const cards = sources.filter(
     (s, i) => sources.findIndex((o) => o.doc_id === s.doc_id && o.excerpt === s.excerpt) === i,
   );
+  const listRef = useRef<HTMLUListElement>(null);
+  const [hidden, setHidden] = useState({ before: false, after: false });
+
+  // Mesuré à chaque défilement et à chaque changement de taille — jamais directement dans l'effet : le premier appel vient
+  // du ResizeObserver, qui notifie dès qu'il observe l'élément.
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const measure = () =>
+      setHidden({
+        before: list.scrollLeft > 4,
+        after: list.scrollLeft + list.clientWidth < list.scrollWidth - 4,
+      });
+    const observer = new ResizeObserver(measure);
+    observer.observe(list);
+    list.addEventListener("scroll", measure, { passive: true });
+    return () => {
+      observer.disconnect();
+      list.removeEventListener("scroll", measure);
+    };
+  }, [cards.length]);
+
+  const scroll = (direction: 1 | -1) => {
+    const list = listRef.current;
+    list?.scrollBy({ left: direction * list.clientWidth * 0.8, behavior: "smooth" });
+  };
+  const arrow = "absolute top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-white text-ink-2 shadow-float hover:bg-active";
+
   return (
     <div>
       <p className="text-meta text-ink-3">{dict.chat.sources}</p>
-      <ul className="scrollbar-none mt-1.5 flex gap-2 overflow-x-auto pb-1">
-        {cards.map((source, index) => (
-          <li key={`${source.doc_id}-${index}`} className="shrink-0">
-            <FileLink
-              url={fileHref(source.file_url)}
-              name={source.original_name}
-              className="flex h-full w-56 flex-col gap-1 rounded-card border border-border bg-white p-3 no-underline transition-colors hover:border-bordeaux-700/30 hover:bg-active/40"
-            >
-              <span className="flex items-center gap-1.5 text-label font-medium text-ink">
-                <FileIcon size={14} className="shrink-0 text-bordeaux-700" />
-                <span className="truncate">{source.original_name}</span>
-              </span>
-              {source.excerpt.trim() && (
-                <span className="line-clamp-3 text-meta whitespace-pre-line text-ink-3">{source.excerpt}</span>
-              )}
-            </FileLink>
-          </li>
-        ))}
-      </ul>
+      <div className="relative mt-1.5">
+        {hidden.before && (
+          <button type="button" aria-label={dict.chat.sourcesPrev} onClick={() => scroll(-1)} className={`${arrow} left-1`}>
+            <ChevronIcon size={14} className="rotate-90" />
+          </button>
+        )}
+        <ul ref={listRef} className="scrollbar-none flex snap-x snap-mandatory gap-2 overflow-x-auto pb-1">
+          {cards.map((source, index) => {
+            const excerpt = readableExcerpt(source.excerpt);
+            return (
+              <li key={`${source.doc_id}-${index}`} className="shrink-0 snap-start">
+                <FileLink
+                  url={fileHref(source.file_url)}
+                  name={source.original_name}
+                  className="flex h-full w-60 flex-col gap-1.5 rounded-card border border-border bg-white p-3 no-underline transition-colors hover:border-bordeaux-700/30 hover:bg-active/40"
+                >
+                  <span className="flex items-start gap-1.5 text-label font-medium text-ink" title={source.original_name}>
+                    <FileIcon size={14} className="mt-0.5 shrink-0 text-bordeaux-700" />
+                    <span className="line-clamp-2 [overflow-wrap:anywhere]">{source.original_name}</span>
+                  </span>
+                  {excerpt && <span className="line-clamp-3 text-meta text-ink-3 [overflow-wrap:anywhere]">{excerpt}</span>}
+                </FileLink>
+              </li>
+            );
+          })}
+        </ul>
+        {hidden.after && (
+          <button type="button" aria-label={dict.chat.sourcesNext} onClick={() => scroll(1)} className={`${arrow} right-1`}>
+            <ChevronIcon size={14} className="-rotate-90" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

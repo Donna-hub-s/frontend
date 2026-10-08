@@ -465,6 +465,8 @@
       "working": "She's on it",
       "done": "Done",
       "sources": "Sources",
+      "sourcesPrev": "Previous sources",
+      "sourcesNext": "Next sources",
       "files": "Files",
       "memory": "Remembered for later",
       "stopped": "Reply stopped.",

@@ -465,6 +465,8 @@
       "working": "Elle s'en occupe",
       "done": "Terminé",
       "sources": "Sources",
+      "sourcesPrev": "Sources précédentes",
+      "sourcesNext": "Sources suivantes",
       "files": "Fichiers",
       "memory": "Retenu pour la suite",
       "stopped": "Réponse interrompue.",
