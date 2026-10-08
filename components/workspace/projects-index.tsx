@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { parseBackendDate, type ProjectOut } from "@/lib/workspace-types";
@@ -26,6 +26,7 @@ export function ProjectsIndex({ lang, labels }: { lang: Locale; labels: Labels }
   const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const searchId = useId();
 
   const counts = useMemo(
     () => ({
@@ -72,8 +73,13 @@ export function ProjectsIndex({ lang, labels }: { lang: Locale; labels: Labels }
             )}
           </div>
           <div className="relative">
+            <label htmlFor={searchId} className="sr-only">
+              {labels.searchPlaceholder}
+            </label>
             <SearchIcon size={16} className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-3" />
             <input
+              id={searchId}
+              type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={labels.searchPlaceholder}
