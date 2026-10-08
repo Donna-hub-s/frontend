@@ -189,7 +189,7 @@ function TotpQr({ uri }: { uri: string }) {
   const size = modules.length;
   return (
     <svg viewBox={`0 0 ${size} ${size}`} width={160} height={160} className="shrink-0 rounded-card border border-border bg-white p-2" role="img" aria-label="QR code">
-      {modules.map((row, r) => row.map((dark, c) => dark && <rect key={`${r}-${c}`} x={c} y={r} width={1} height={1} fill="#2c2c2c" />))}
+      {modules.map((row, r) => row.map((dark, c) => dark && <rect key={`${r}-${c}`} x={c} y={r} width={1} height={1} fill="var(--color-ink)" />))}
     </svg>
   );
 }

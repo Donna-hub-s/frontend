@@ -20,9 +20,11 @@ import { parseBackendDate, PROJECT_INSTRUCTIONS_MAX } from "@/lib/workspace-type
 import { Composer } from "./conversation";
 import { Dialog, DialogHeader } from "./dialog";
 import { FileLink } from "./file-viewer";
-import { ChatIcon, ChevronIcon, FileIcon, LockIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon, UsersIcon } from "./icons";
+import { ChatIcon, ChevronIcon, FileIcon, FolderIcon, LockIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon, UsersIcon } from "./icons";
 import { GoogleDriveIcon } from "./brand-icons";
-import { DrivePicker } from "./drive-picker";
+import { DrivePicker, type ExistingDocument } from "./drive-picker";
+import { DriveFolderImportProgress } from "./drive-folder-import-progress";
+import { startDriveFolderImport, type DriveFolderImportRun } from "@/lib/drive-folder-import";
 import { AgentsCard } from "./agents-manager";
 import { ProjectIcon, ProjectIconPicker } from "./project-icon";
 import type { DriveErrorCode, DriveFileOut } from "@/lib/drive";
@@ -77,8 +79,9 @@ async function uploadDocuments(
   }
 }
 
-// Même plafond que DONNA_MAX_FILES_PER_REQUEST côté backend (10 par défaut) :
-// une sélection plus grande part en plusieurs envois successifs.
+// Même plafond que DONNA_PROJECT_MAX_FILES_PER_UPLOAD côté backend (10 par défaut) :
+// une sélection plus grande part en plusieurs envois successifs. Ne s'applique
+// pas à l'import d'un dossier Drive entier (voir DriveFolderImportProgress).
 const UPLOAD_BATCH_SIZE = 10;
 
 /**
@@ -557,7 +560,10 @@ function FilesCard({
   const [driveCode, setDriveCode] = useState<DriveErrorCode>("unavailable");
   // Noms des fichiers refusés lors du dernier dépôt (affichés dans le message d'erreur).
   const [rejected, setRejected] = useState<string[]>([]);
+  const [folderImports, setFolderImports] = useState<DriveFolderImportRun[]>([]);
+  const [fileQuery, setFileQuery] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const folderRef = useRef<HTMLInputElement>(null);
 
   // Statut d'ingestion en direct (websocket, voir workspace-provider.tsx) —
   // sans ça, un document reste affiché "en attente" indéfiniment même une
@@ -573,6 +579,18 @@ function FilesCard({
         return { ...doc, status: update.status, chunk_count: update.chunkCount, error: update.error };
       }),
     [documents, documentStatuses],
+  );
+  // Onglet « Dans ce projet » du sélecteur Drive (évite de réimporter un doublon) : même statut en direct
+  // que la liste principale, label traduit ici (DrivePicker n'a pas les libellés docStatus du projet).
+  const existingDocuments = useMemo<ExistingDocument[]>(
+    () =>
+      displayDocuments.map((doc) => ({
+        id: doc.id,
+        name: doc.original_name,
+        statusLabel: doc.status in labels.docStatus ? labels.docStatus[doc.status as keyof Labels["docStatus"]] : null,
+        url: `/api/donna/chat/projects/${encodeURIComponent(projectId)}/documents/${encodeURIComponent(doc.id)}/file`,
+      })),
+    [displayDocuments, labels.docStatus, projectId],
   );
   // Le blocage réel est appliqué côté serveur (400) — ce garde-fou évite juste
   // une requête vouée à l'échec quand la limite est visiblement atteinte.
@@ -633,6 +651,27 @@ function FilesCard({
       setRejected(picked.map((file) => file.name));
     }
   };
+
+  // Import RÉCURSIF d'un dossier Drive entier : tourne en tâche de fond côté serveur (potentiellement des
+  // centaines de fichiers) — on garde juste le run renvoyé par le démarrage, DriveFolderImportProgress suit
+  // sa progression lui-même. Plusieurs dossiers peuvent s'importer en parallèle (pas de fermeture du
+  // sélecteur, voir DrivePicker). Jamais bloqué par `atCapacity` : la tâche de fond vérifie la capacité en
+  // continu et s'arrête proprement (capacity_reached) plutôt que de refuser de démarrer.
+  const importFolder = async (file: DriveFileOut) => {
+    const run = await startDriveFolderImport(projectId, file.id, file.name);
+    if (run) setFolderImports((runs) => [run, ...runs]);
+    else {
+      setError("drive");
+      setDriveCode("unavailable");
+    }
+  };
+
+  const refreshDocuments = async () => {
+    const { ok, data } = await api<ProjectDocumentOut[]>(`/${projectId}/documents`);
+    if (ok && data) setDocuments(data);
+  };
+
+  const dismissFolderImport = (runId: string) => setFolderImports((runs) => runs.filter((r) => r.id !== runId));
 
   const retry = async (id: string) => {
     setError(null);
@@ -696,6 +735,16 @@ function FilesCard({
               >
                 <PlusIcon size={16} />
               </button>
+              <button
+                type="button"
+                disabled={atCapacity}
+                onClick={() => folderRef.current?.click()}
+                aria-label={labels.addFromFolder}
+                title={labels.addFromFolder}
+                className="flex size-7 items-center justify-center rounded-badge text-ink-2 hover:bg-active hover:text-bordeaux-700 disabled:opacity-40"
+              >
+                <FolderIcon size={15} />
+              </button>
             </span>
           )
         }
@@ -705,6 +754,23 @@ function FilesCard({
           type="file"
           multiple
           hidden
+          onChange={(event) => {
+            if (event.target.files) void uploadFiles(event.target.files);
+            event.target.value = "";
+          }}
+        />
+        {/* Sélection d'un dossier LOCAL entier (hors Drive) : le navigateur résout lui-même tous les fichiers,
+         * sous-dossiers compris, en une FileList à plat — réutilise uploadFiles() tel quel (déjà envoyé par lots
+         * de UPLOAD_BATCH_SIZE), aucun changement côté serveur. webkitdirectory n'est pas dans les types React
+         * mais est supporté par tous les navigateurs de bureau modernes. */}
+        <input
+          ref={folderRef}
+          type="file"
+          multiple
+          hidden
+          // @ts-expect-error -- webkitdirectory/directory : attributs DOM réels, absents des types React
+          webkitdirectory=""
+          directory=""
           onChange={(event) => {
             if (event.target.files) void uploadFiles(event.target.files);
             event.target.value = "";
@@ -723,46 +789,89 @@ function FilesCard({
         )}
 
         {displayDocuments.length > 0 && (
-          <ul className="flex flex-col border-t border-border py-1">
-            {displayDocuments.map((doc) => (
-              <li key={doc.id} className="group flex items-center gap-2 px-2">
-                <FileLink
-                  url={`/api/donna/chat/projects/${encodeURIComponent(projectId)}/documents/${encodeURIComponent(doc.id)}/file`}
-                  name={doc.original_name}
-                  className="flex min-w-0 flex-1 items-center gap-2.5 rounded-badge px-2 py-2 text-label text-ink no-underline hover:bg-active"
-                >
-                  <FileIcon size={16} className="shrink-0 text-bordeaux-700" />
-                  <span className="truncate">{doc.original_name}</span>
-                  <DocStatus labels={labels} doc={doc} />
-                </FileLink>
-                {canEdit && (doc.status === "failed" || doc.status === "pending") && (
-                  <button
-                    type="button"
-                    onClick={() => void retry(doc.id)}
-                    aria-label={`${labels.retryIndexing} ${doc.original_name}`}
-                    title={doc.error ? `${labels.retryIndexing} — ${doc.error}` : labels.retryIndexing}
-                    className="shrink-0 rounded-badge px-2 py-1 text-meta text-bordeaux-700 hover:bg-active"
-                  >
-                    {labels.retryIndexing}
-                  </button>
-                )}
-                {canEdit && (
-                  <button
-                    type="button"
-                    onClick={() => void remove(doc.id)}
-                    aria-label={`${labels.deleteDocument} ${doc.original_name}`}
-                    title={labels.deleteDocument}
-                    className="shrink-0 rounded-badge p-1.5 text-ink-3 opacity-0 group-hover:opacity-100 hover:bg-danger/[0.06] hover:text-danger focus:opacity-100"
-                  >
-                    <TrashIcon size={15} />
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+          <>
+            {/* Au-delà d'une poignée de fichiers, beaucoup de noms se ressemblent une fois tronqués (ex.
+             * plusieurs CV/lettres de motivation quasi identiques) — un filtre texte local règle ça sans
+             * requête serveur, la liste étant déjà chargée en entier. */}
+            {displayDocuments.length > 8 && (
+              <div className="border-t border-border px-3 pt-2">
+                <input
+                  type="search"
+                  value={fileQuery}
+                  onChange={(event) => setFileQuery(event.target.value)}
+                  placeholder={labels.filesSearchPlaceholder}
+                  aria-label={labels.filesSearchPlaceholder}
+                  className="h-8 w-full rounded-button border border-border bg-white px-3 text-meta text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
+                />
+              </div>
+            )}
+            {(() => {
+              const q = fileQuery.trim().toLowerCase();
+              const filteredDocuments = q ? displayDocuments.filter((doc) => doc.original_name.toLowerCase().includes(q)) : displayDocuments;
+              return filteredDocuments.length === 0 ? (
+                <p className="px-4 py-3 text-meta text-ink-3">{labels.filesSearchEmpty}</p>
+              ) : (
+                // Hauteur bornée + défilement propre à la liste : un projet avec des dizaines de fichiers ne
+                // doit pas pousser le reste de la page (instructions, mémoire, agents...) hors de vue.
+                <ul className="scrollbar-none flex max-h-[24rem] flex-col overflow-y-auto border-t border-border py-1">
+                  {filteredDocuments.map((doc) => (
+                    <li key={doc.id} className="group flex items-center gap-2 px-2">
+                      <FileLink
+                        url={`/api/donna/chat/projects/${encodeURIComponent(projectId)}/documents/${encodeURIComponent(doc.id)}/file`}
+                        name={doc.original_name}
+                        title={doc.original_name}
+                        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-badge px-2 py-2 text-label text-ink no-underline hover:bg-active"
+                      >
+                        <FileIcon size={16} className="shrink-0 text-bordeaux-700" />
+                        <span className="truncate">{doc.original_name}</span>
+                        <DocStatus labels={labels} doc={doc} />
+                      </FileLink>
+                      {canEdit && (doc.status === "failed" || doc.status === "pending") && (
+                        <button
+                          type="button"
+                          onClick={() => void retry(doc.id)}
+                          aria-label={`${labels.retryIndexing} ${doc.original_name}`}
+                          title={doc.error ? `${labels.retryIndexing} — ${doc.error}` : labels.retryIndexing}
+                          className="shrink-0 rounded-badge px-2 py-1 text-meta text-bordeaux-700 hover:bg-active"
+                        >
+                          {labels.retryIndexing}
+                        </button>
+                      )}
+                      {canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => void remove(doc.id)}
+                          aria-label={`${labels.deleteDocument} ${doc.original_name}`}
+                          title={labels.deleteDocument}
+                          className="shrink-0 rounded-badge p-1.5 text-ink-3 opacity-0 group-hover:opacity-100 hover:bg-danger/[0.06] hover:text-danger focus:opacity-100"
+                        >
+                          <TrashIcon size={15} />
+                        </button>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              );
+            })()}
+          </>
         )}
 
         {uploading > 0 && <p className="border-t border-border px-4 py-2.5 text-meta text-ink-2">{labels.uploading.replace("{n}", String(uploading))}</p>}
+
+        {folderImports.length > 0 && (
+          <div className="flex flex-col gap-2 border-t border-border px-2 py-2">
+            {folderImports.map((run) => (
+              <DriveFolderImportProgress
+                key={run.id}
+                projectId={projectId}
+                run={run}
+                labels={labels.driveFolderImport}
+                onFinished={() => void refreshDocuments()}
+                onDismiss={() => dismissFolderImport(run.id)}
+              />
+            ))}
+          </div>
+        )}
 
         <DrivePicker
           lang={lang}
@@ -772,6 +881,8 @@ function FilesCard({
           max={UPLOAD_BATCH_SIZE}
           confirmLabel="import"
           onConfirm={importFromDrive}
+          onImportFolder={(file) => void importFolder(file)}
+          existingDocuments={existingDocuments}
         />
 
         {!documents.length && !uploading && (

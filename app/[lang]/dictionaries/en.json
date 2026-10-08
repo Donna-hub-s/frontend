@@ -825,6 +825,7 @@
       "uploadErrorFiles": "Couldn't add: {files}.",
       "addFromDrive": "From Google Drive",
       "addFromComputer": "From this computer",
+      "addFromFolder": "From a folder on this computer (subfolders included)",
       "importFromDriveBusy": "Importing from Drive…",
       "retryIndexing": "Retry",
       "retryIndexingError": "Couldn't restart indexing for this document.",
@@ -857,6 +858,8 @@
       "instructionsEmptyHint": "Tell DONNA about the project's context, the expected tone or the rules to follow. She will use them in every conversation.",
       "filesTitle": "Files",
       "addFiles": "Add files",
+      "filesSearchPlaceholder": "Filter files…",
+      "filesSearchEmpty": "No files match.",
       "capacityLabel": "Context used",
       "capacityPercent": "{n}% of the project context used",
       "uploading": "Uploading {n} file(s)…",
@@ -870,7 +873,19 @@
       "invite": "Invite",
       "invitesPending": "Pending invitations",
       "memberUnknown": "Member",
-      "deleteTitle": "Delete “{name}”?"
+      "deleteTitle": "Delete “{name}”?",
+      "driveFolderImport": {
+        "unnamedFolder": "this folder",
+        "running": "Importing \"{name}\"…",
+        "counts": "{found} found · {imported} imported · {failed} failed · {skipped} skipped",
+        "cancel": "Cancel import",
+        "done": "\"{name}\" imported.",
+        "capacityReached": "Import of \"{name}\" stopped: project capacity reached.",
+        "cancelled": "Import cancelled.",
+        "interrupted": "Import interrupted (server restart).",
+        "failed": "The import failed.",
+        "dismiss": "Dismiss"
+      }
     },
     "settings": {
       "title": "Settings",
@@ -1001,8 +1016,11 @@
     "drive": {
       "title": "Google Drive",
       "search": "Search my Drive…",
+      "searchProject": "Filter project documents…",
       "myDrive": "My Drive",
       "shared": "Shared with me",
+      "inProject": "In this project",
+      "inProjectEmpty": "No documents in this project yet.",
       "searchResults": "Search results",
       "loading": "Loading…",
       "empty": "No files in this folder.",
@@ -1017,6 +1035,7 @@
       "working": "Working…",
       "confirmAttach": "Attach {n} file(s)",
       "confirmImport": "Add {n} file(s) to the project",
+      "importFolder": "Import \"{name}\" (and its subfolders)",
       "nativeHint": "Google documents are converted to Word, Excel or PowerPoint.",
       "connect": "Connect Google Drive",
       "authorize": "Allow access to Drive",

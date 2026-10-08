@@ -825,6 +825,7 @@
       "uploadErrorFiles": "Impossible d'ajouter : {files}.",
       "addFromDrive": "Depuis Google Drive",
       "addFromComputer": "Depuis cet ordinateur",
+      "addFromFolder": "Depuis un dossier de cet ordinateur (sous-dossiers compris)",
       "importFromDriveBusy": "Import depuis Drive…",
       "retryIndexing": "Relancer",
       "retryIndexingError": "Impossible de relancer l'indexation de ce document.",
@@ -857,6 +858,8 @@
       "instructionsEmptyHint": "Expliquez à DONNA le contexte du projet, le ton attendu ou les règles à suivre. Elle en tiendra compte dans chaque conversation.",
       "filesTitle": "Fichiers",
       "addFiles": "Ajouter des fichiers",
+      "filesSearchPlaceholder": "Filtrer les fichiers…",
+      "filesSearchEmpty": "Aucun fichier ne correspond.",
       "capacityLabel": "Contexte utilisé",
       "capacityPercent": "{n} % du contexte du projet utilisé",
       "uploading": "Envoi de {n} fichier(s)…",
@@ -870,7 +873,19 @@
       "invite": "Inviter",
       "invitesPending": "Invitations en attente",
       "memberUnknown": "Membre",
-      "deleteTitle": "Supprimer « {name} » ?"
+      "deleteTitle": "Supprimer « {name} » ?",
+      "driveFolderImport": {
+        "unnamedFolder": "ce dossier",
+        "running": "Import de « {name} » en cours…",
+        "counts": "{found} trouvé(s) · {imported} importé(s) · {failed} échoué(s) · {skipped} ignoré(s)",
+        "cancel": "Annuler l'import",
+        "done": "« {name} » importé.",
+        "capacityReached": "Import de « {name} » arrêté : capacité du projet atteinte.",
+        "cancelled": "Import annulé.",
+        "interrupted": "Import interrompu (redémarrage du serveur).",
+        "failed": "L'import a échoué.",
+        "dismiss": "Masquer"
+      }
     },
     "settings": {
       "title": "Paramètres",
@@ -1001,8 +1016,11 @@
     "drive": {
       "title": "Google Drive",
       "search": "Rechercher dans mon Drive…",
+      "searchProject": "Filtrer les documents du projet…",
       "myDrive": "Mon Drive",
       "shared": "Partagés avec moi",
+      "inProject": "Dans ce projet",
+      "inProjectEmpty": "Aucun document dans ce projet pour l'instant.",
       "searchResults": "Résultats de la recherche",
       "loading": "Chargement…",
       "empty": "Aucun fichier dans ce dossier.",
@@ -1017,6 +1035,7 @@
       "working": "Traitement…",
       "confirmAttach": "Joindre {n} fichier(s)",
       "confirmImport": "Ajouter {n} fichier(s) au projet",
+      "importFolder": "Importer « {name} » (et ses sous-dossiers)",
       "nativeHint": "Les documents Google sont convertis en Word, Excel ou PowerPoint.",
       "connect": "Connecter Google Drive",
       "authorize": "Autoriser l'accès à Drive",
