@@ -8,9 +8,13 @@
 // sûre que l'outil fetch_page du modèle (backend/app/chat/src/webfetch.py) — résolution
 // d'adresse publique, tailles/types/redirections bornés. Jamais déclenché par DONNA : un clic
 // humain sur un lien déjà affiché, jamais renvoyé au modèle.
+//
+// Même fenêtre d'aperçu pour un lien DANS une phrase ou une liste (InlineLink) : un clic simple ouvre l'aperçu (titre,
+// extrait) avec un bouton « Ouvrir » ; un clic avec Ctrl/Cmd/Maj ou du milieu ouvre la page comme un lien normal.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { fetchLinkPreview, type LinkPreview } from "@/lib/link-preview";
+import { isPlainClick } from "@/lib/link-click";
 import { GlobeIcon } from "./icons";
 
 export type LinkCardData = { href: string; host: string; path: string };
@@ -75,6 +79,105 @@ type PreviewState =
   | { status: "loaded"; data: LinkPreview }
   | { status: "error"; message: string | null };
 
+/** État de la fenêtre d'un lien : ouverture/fermeture (clic extérieur, Échap) et aperçu chargé AU CLIC seulement. */
+function useLinkPopover(containerRef: RefObject<HTMLElement | null>, data: LinkCardData, preview: boolean, conversationId?: string) {
+  const [open, setOpen] = useState(false);
+  const [previewState, setPreviewState] = useState<PreviewState>({ status: "idle" });
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointer = (event: PointerEvent) => !containerRef.current?.contains(event.target as Node) && setOpen(false);
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setOpen(false);
+    document.addEventListener("pointerdown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open, containerRef]);
+
+  // Un seul aperçu par montant du lien : rouvrir la fenêtre après l'avoir fermée ne relance
+  // pas la requête (previewState ne repasse jamais à "idle" tant que le composant vit).
+  const openPopover = () => {
+    setOpen(true);
+    if (!preview || previewState.status !== "idle" || !conversationId) return;
+    setPreviewState({ status: "loading" });
+    void fetchLinkPreview(conversationId, data.href).then((result) => {
+      setPreviewState(result.ok ? { status: "loaded", data: result.data } : { status: "error", message: result.message });
+    });
+  };
+
+  return { open, setOpen, previewState, openPopover, toggle: () => (open ? setOpen(false) : openPopover()) };
+}
+
+/** La fenêtre elle-même. Uniquement des <span> : elle peut se trouver DANS un paragraphe (lien d'une phrase), où un <div> ou
+ * un <p> serait un HTML invalide. */
+function PopoverPanel({
+  data,
+  preview,
+  confirm,
+  previewState,
+  labels,
+  onClose,
+  position,
+}: {
+  data: LinkCardData;
+  preview: boolean;
+  confirm: boolean;
+  previewState: PreviewState;
+  labels?: LinkCardLabels;
+  onClose: () => void;
+  position: string;
+}) {
+  return (
+    <span
+      role="dialog"
+      aria-label={data.host}
+      className={`absolute z-30 block w-80 max-w-[min(20rem,calc(100vw-2rem))] rounded-panel border border-border bg-white p-3 text-left font-normal shadow-float ${position}`}
+    >
+      {preview && (
+        <span className="mb-2.5 block border-b border-border pb-2.5">
+          {previewState.status === "loading" && <span className="block text-meta text-ink-3">…</span>}
+          {previewState.status === "error" && (
+            <span className="block text-meta text-danger">{previewState.message ?? labels?.linkPreviewError}</span>
+          )}
+          {previewState.status === "loaded" && (
+            <>
+              {previewState.data.title && <span className="block text-label font-medium text-ink">{previewState.data.title}</span>}
+              {previewState.data.excerpt && (
+                <span className="mt-1 line-clamp-4 block text-pretty text-meta text-ink-3">{previewState.data.excerpt}</span>
+              )}
+            </>
+          )}
+        </span>
+      )}
+      <span className="block truncate text-label font-medium text-ink">{data.host}</span>
+      <span className="block truncate text-meta text-ink-3">{data.path || "/"}</span>
+      {confirm && labels && <span className="mt-2 block text-meta text-ink-3">{labels.linkConfirmHint}</span>}
+      <span className="mt-3 flex justify-end gap-2">
+        {confirm && (
+          <button type="button" onClick={onClose} className="rounded-button px-3 py-1.5 text-label text-ink-2 hover:bg-active">
+            {labels?.linkCancel}
+          </button>
+        )}
+        <a
+          href={data.href}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          onClick={onClose}
+          className={
+            confirm
+              ? "rounded-button bg-bordeaux-700 px-3 py-1.5 text-label font-medium text-white no-underline hover:bg-bordeaux-900"
+              : "rounded-button px-3 py-1.5 text-label font-medium text-bordeaux-700 no-underline hover:bg-active"
+          }
+        >
+          {labels?.linkOpen}
+        </a>
+      </span>
+    </span>
+  );
+}
+
 export function LinkCard({
   data,
   className = "my-3",
@@ -94,36 +197,10 @@ export function LinkCard({
   conversationId?: string;
   labels?: LinkCardLabels;
 }) {
-  const [open, setOpen] = useState(false);
-  const [previewState, setPreviewState] = useState<PreviewState>({ status: "idle" });
   const ref = useRef<HTMLDivElement>(null);
+  const popover = useLinkPopover(ref, data, preview, conversationId);
 
-  useEffect(() => {
-    if (!open) return;
-    const onPointer = (event: PointerEvent) => !ref.current?.contains(event.target as Node) && setOpen(false);
-    const onKey = (event: KeyboardEvent) => event.key === "Escape" && setOpen(false);
-    document.addEventListener("pointerdown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  const showPopover = confirm || preview;
-
-  // Un seul aperçu par montant de la carte : rouvrir la popup après l'avoir fermée ne relance
-  // pas la requête (previewState ne repasse jamais à "idle" tant que le composant vit).
-  const openPopover = () => {
-    setOpen(true);
-    if (!preview || previewState.status !== "idle" || !conversationId) return;
-    setPreviewState({ status: "loading" });
-    void fetchLinkPreview(conversationId, data.href).then((result) => {
-      setPreviewState(result.ok ? { status: "loaded", data: result.data } : { status: "error", message: result.message });
-    });
-  };
-
-  if (!showPopover) {
+  if (!(confirm || preview)) {
     return (
       <a href={data.href} target="_blank" rel="noopener noreferrer nofollow" className={`${cardClass} ${className}`}>
         <CardBody data={data} />
@@ -136,53 +213,72 @@ export function LinkCard({
       <button
         type="button"
         aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={() => (open ? setOpen(false) : openPopover())}
+        aria-expanded={popover.open}
+        onClick={popover.toggle}
         className={`${cardClass} text-left`}
       >
         <CardBody data={data} />
       </button>
-      {open && (
-        <div role="dialog" aria-label={data.host} className="absolute z-30 mt-1.5 w-80 rounded-panel border border-border bg-white p-3 shadow-float">
-          {preview && (
-            <div className="mb-2.5 border-b border-border pb-2.5">
-              {previewState.status === "loading" && <p className="text-meta text-ink-3">…</p>}
-              {previewState.status === "error" && (
-                <p className="text-meta text-danger">{previewState.message ?? labels?.linkPreviewError}</p>
-              )}
-              {previewState.status === "loaded" && (
-                <>
-                  {previewState.data.title && <p className="text-label font-medium text-ink">{previewState.data.title}</p>}
-                  {previewState.data.excerpt && <p className="mt-1 line-clamp-4 text-pretty text-meta text-ink-3">{previewState.data.excerpt}</p>}
-                </>
-              )}
-            </div>
-          )}
-          <p className="truncate text-label font-medium text-ink">{data.host}</p>
-          <p className="truncate text-meta text-ink-3">{data.path || "/"}</p>
-          {confirm && labels && <p className="mt-2 text-meta text-ink-3">{labels.linkConfirmHint}</p>}
-          <div className="mt-3 flex justify-end gap-2">
-            {confirm && (
-              <button type="button" onClick={() => setOpen(false)} className="rounded-button px-3 py-1.5 text-label text-ink-2 hover:bg-active">
-                {labels?.linkCancel}
-              </button>
-            )}
-            <a
-              href={data.href}
-              target="_blank"
-              rel="noopener noreferrer nofollow"
-              onClick={() => setOpen(false)}
-              className={
-                confirm
-                  ? "rounded-button bg-bordeaux-700 px-3 py-1.5 text-label font-medium text-white no-underline hover:bg-bordeaux-900"
-                  : "rounded-button px-3 py-1.5 text-label font-medium text-bordeaux-700 no-underline hover:bg-active"
-              }
-            >
-              {labels?.linkOpen}
-            </a>
-          </div>
-        </div>
+      {popover.open && (
+        <PopoverPanel
+          data={data}
+          preview={preview}
+          confirm={confirm}
+          previewState={popover.previewState}
+          labels={labels}
+          onClose={() => popover.setOpen(false)}
+          position="mt-1.5"
+        />
       )}
     </div>
+  );
+}
+
+/** Un lien d'une phrase ou d'une liste : le texte reste dans la ligne, un clic simple ouvre l'aperçu (chargé à ce moment-là,
+ * jamais avant), un clic avec Ctrl/Cmd/Maj/Alt ou du milieu ouvre la page comme un lien ordinaire. */
+export function InlineLink({
+  data,
+  label,
+  className,
+  conversationId,
+  labels,
+}: {
+  data: LinkCardData;
+  label: ReactNode;
+  className?: string;
+  conversationId: string;
+  labels?: LinkCardLabels;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const popover = useLinkPopover(ref, data, true, conversationId);
+  return (
+    <span ref={ref} className="relative">
+      <a
+        href={data.href}
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+        className={className}
+        aria-haspopup="dialog"
+        aria-expanded={popover.open}
+        onClick={(event) => {
+          if (!isPlainClick(event)) return;
+          event.preventDefault();
+          popover.toggle();
+        }}
+      >
+        {label}
+      </a>
+      {popover.open && (
+        <PopoverPanel
+          data={data}
+          preview
+          confirm
+          previewState={popover.previewState}
+          labels={labels}
+          onClose={() => popover.setOpen(false)}
+          position="left-0 top-full mt-1"
+        />
+      )}
+    </span>
   );
 }

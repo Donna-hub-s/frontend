@@ -13,7 +13,7 @@ import { imageTarget, linkTarget } from "@/lib/file-links";
 import { hasMath, normalizeMath } from "@/lib/markdown-math";
 import { codeLanguage, nodeText } from "@/lib/markdown-text";
 import { CheckIcon, CopyIcon } from "./icons";
-import { isBareUrlLink, LinkCard, linkCardData } from "./link-card";
+import { InlineLink, isBareUrlLink, LinkCard, linkCardData } from "./link-card";
 
 /** Textes des boutons du rendu (fournis une fois par l'espace de travail ; anglais par défaut). */
 export type MarkdownLabels = { copy: string; copied: string; linkOpen: string; linkCancel: string; linkConfirmHint: string; linkPreviewError: string };
@@ -199,6 +199,10 @@ export function Markdown({
         const target = linkTarget(href, textOf(label), renderFile ? files : []);
         if (target.kind === "file" && renderFile) return <>{renderFile(target.file, label, "link")}</>;
         if (target.kind === "external") {
+          // Un clic simple ouvre l'aperçu (titre, extrait), chargé à ce moment-là : voir InlineLink. Sans conversation
+          // (le backend vérifie que le lien est visible dans CETTE conversation), lien ordinaire.
+          const card = conversationId ? linkCardData(target.href) : null;
+          if (card && conversationId) return <InlineLink data={card} label={label} className={linkClass} conversationId={conversationId} labels={labels} />;
           return (
             <a href={target.href} target="_blank" rel="noopener noreferrer nofollow" className={linkClass}>
               {label}
