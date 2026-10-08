@@ -11,6 +11,7 @@ import { actionIdFrom } from "@/lib/chat-stream";
 import { EMPTY_MENTIONS, PROPOSALS, uid, visibleSteps } from "@/lib/chat-run";
 import { inlineImageNames, isImageName } from "@/lib/file-links";
 import { readableExcerpt } from "@/lib/source-excerpt";
+import { visibleSources } from "@/lib/sources";
 import { useStickToBottom } from "@/lib/use-stick-to-bottom";
 import {
   fileHref,
@@ -712,7 +713,7 @@ function AssistantMessage({
           </div>
         )}
 
-        {message.sources && message.sources.length > 0 && <Sources dict={dict} sources={message.sources} />}
+        <Sources dict={dict} sources={message.sources} />
 
         {message.memory && message.memory.length > 0 && (
           <p className="inline-flex items-start gap-1.5 text-secondary text-ink-2">
@@ -1125,15 +1126,13 @@ function QuestionCard({
 }
 
 /** Une carte par extrait réellement injecté (même document plusieurs fois = plusieurs
- * extraits = plusieurs cartes) ; un document sans extrait (fichier généré) n'apparaît
- * qu'une fois. Rangée défilante plutôt qu'un dépliant : le nom ET l'extrait se voient
+ * extraits = plusieurs cartes, voir lib/sources.ts) ; un fichier PRODUIT par DONNA n'est pas
+ * une source, il est dans « Fichiers ». Rangée défilante plutôt qu'un dépliant : le nom ET l'extrait se voient
  * d'un coup d'œil, sans clic supplémentaire. La barre de défilement étant masquée, deux
  * boutons apparaissent là où il reste des cartes hors de vue (sinon une carte coupée au
  * bord ne dit pas qu'on peut aller plus loin). */
-function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] }) {
-  const cards = sources.filter(
-    (s, i) => sources.findIndex((o) => o.doc_id === s.doc_id && o.excerpt === s.excerpt) === i,
-  );
+function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] | undefined }) {
+  const cards = visibleSources(sources);
   const listRef = useRef<HTMLUListElement>(null);
   const [hidden, setHidden] = useState({ before: false, after: false });
 
@@ -1160,6 +1159,7 @@ function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] 
     const list = listRef.current;
     list?.scrollBy({ left: direction * list.clientWidth * 0.8, behavior: "smooth" });
   };
+  if (cards.length === 0) return null;
   const arrow = "absolute top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-white text-ink-2 shadow-float hover:bg-active";
 
   return (
