@@ -4,6 +4,7 @@ import { useEffect, useId, useState, type FormEvent, type ReactNode } from "reac
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { ProviderIcon, type Provider } from "@/components/auth/oauth-buttons";
 import type { Locale } from "@/i18n/config";
+import { PROVIDER_NAMES } from "@/lib/oauth-feedback";
 import { CheckIcon, KeyIcon, LaptopIcon, ShieldIcon } from "./icons";
 
 type Labels = Dictionary["workspace"]["settings"];
@@ -29,7 +30,6 @@ type SessionOut = {
 
 type LinkedAccount = { provider: string; provider_email: string; provider_name: string | null; provider_avatar: string | null; linked_at: string };
 
-const PROVIDER_NAMES: Record<string, string> = { google: "Google", microsoft: "Microsoft", github: "GitHub", discord: "Discord" };
 const isKnownProvider = (value: string): value is Provider => Object.hasOwn(PROVIDER_NAMES, value);
 
 async function api<T>(path: string, init?: RequestInit): Promise<{ ok: boolean; data: T | null; status: number }> {

@@ -11,6 +11,7 @@ import { ConnectorRows, SidePanel } from "./side-panel";
 import { Sidebar, type Account } from "./sidebar";
 import { FileViewer } from "./file-viewer";
 import { MarkdownLabelsProvider } from "./markdown";
+import { OAuthLinkNotice } from "./oauth-link-notice";
 import { OfflineBanner } from "./offline-banner";
 import { ReminderToasts } from "./reminder-toasts";
 import { SettingsDialog } from "./settings-dialog";
@@ -102,6 +103,7 @@ export function WorkspaceShell({
       <SettingsDialog lang={lang} dict={dict} account={account} connectors={connectors} oauthProviders={oauthProviders} />
       <FileViewer lang={lang} labels={dict.viewer} />
       <ReminderToasts lang={lang} labels={dict.reminders} />
+      <OAuthLinkNotice labels={dict.oauthLink} />
       </MarkdownLabelsProvider>
     </WorkspaceProvider>
   );

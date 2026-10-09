@@ -351,6 +351,7 @@
       "unavailable": "Le service de connexion ne répond pas. Réessayez dans un instant.",
       "generic": "La demande n'a pas abouti. Réessayez.",
       "oauth": "La connexion avec ce fournisseur n'a pas abouti. Réessayez, ou utilisez votre email.",
+      "oauthExpired": "La connexion a expiré avant de se terminer. Recommencez.",
       "resetInvalid": "Ce lien a expiré ou a déjà servi. Demandez-en un nouveau.",
       "sessionExpired": "Votre session a expiré. Reconnectez-vous."
     },
@@ -707,6 +708,18 @@
       "driveDetail": "Chercher et lire des fichiers",
       "whatsappRow": "WhatsApp",
       "authorize": "Autoriser"
+    },
+    "oauthLink": {
+      "region": "Liaison de compte",
+      "dismiss": "Fermer",
+      "linked": "{provider} est relié à votre compte.",
+      "errors": {
+        "already_linked": "Ce compte est déjà relié à un autre utilisateur de DONNA. Utilisez un autre compte.",
+        "state_invalid": "La demande a expiré. Relancez la liaison depuis les connecteurs.",
+        "provider_error": "Le fournisseur n'a pas pu finaliser la liaison. Réessayez.",
+        "account_disabled": "Ce compte est désactivé. Contactez le responsable de votre espace.",
+        "generic": "La liaison n'a pas abouti. Réessayez."
+      }
     },
     "reminders": {
       "region": "Rappels",

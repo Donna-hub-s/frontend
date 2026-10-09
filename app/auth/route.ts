@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
 import { LOCALE_COOKIE, isLocale, negotiateLocale } from "@/i18n/config";
 import { applyTokens } from "@/lib/auth-flow";
+import { loginErrorKey } from "@/lib/oauth-feedback";
 import { COOKIES, MAX_AGE, cookieOptions } from "@/lib/session-cookies";
 import type { TenantInfo } from "@/lib/backend";
 
@@ -10,7 +11,7 @@ import type { TenantInfo } from "@/lib/backend";
  * Retour du flux OAuth. xauth (routes/oauth.py::callback) redirige ici avec, selon le cas :
  * mfa_token (code de vérification en deux étapes attendu), access_token + refresh_token
  * (espace résolu), refresh_token + tenants (choix d'espace), refresh_token + onboarding
- * (espace à créer), ou error.
+ * (espace à créer), ou error (code d'une liste fermée, voir lib/oauth-feedback.ts).
  * Les jetons passent aussitôt en cookies httpOnly, et l'URL qui les portait est remplacée.
  */
 export async function GET(request: NextRequest) {
@@ -19,7 +20,9 @@ export async function GET(request: NextRequest) {
   const saved = store.get(LOCALE_COOKIE)?.value;
   const lang = isLocale(saved) ? saved : negotiateLocale(request.headers.get("accept-language"));
 
-  if (params.get("error")) redirect(`/${lang}/login?error=oauth`);
+  // `error` est un code du backend (compte désactivé, demande expirée…) ; la page de connexion le traduit.
+  const failure = params.get("error");
+  if (failure) redirect(`/${lang}/login?error=${loginErrorKey(failure)}`);
 
   // Compte protégé : aucun jeton tant que le code n'est pas vérifié.
   const mfaToken = params.get("mfa_token");

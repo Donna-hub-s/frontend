@@ -351,6 +351,7 @@
       "unavailable": "The sign-in service isn't responding. Try again in a moment.",
       "generic": "The request didn't go through. Try again.",
       "oauth": "Signing in with this provider didn't work. Try again, or use your email.",
+      "oauthExpired": "The sign-in expired before it finished. Please start again.",
       "resetInvalid": "This link has expired or was already used. Request a new one.",
       "sessionExpired": "Your session expired. Sign in again."
     },
@@ -707,6 +708,18 @@
       "driveDetail": "Search and read files",
       "whatsappRow": "WhatsApp",
       "authorize": "Authorize"
+    },
+    "oauthLink": {
+      "region": "Account linking",
+      "dismiss": "Dismiss",
+      "linked": "{provider} is now linked to your account.",
+      "errors": {
+        "already_linked": "This account is already linked to another DONNA user. Use a different account.",
+        "state_invalid": "The request expired. Start the linking again from the connectors.",
+        "provider_error": "The provider could not complete the linking. Try again.",
+        "account_disabled": "This account is disabled. Contact your workspace administrator.",
+        "generic": "The linking didn't work. Try again."
+      }
     },
     "reminders": {
       "region": "Reminders",
