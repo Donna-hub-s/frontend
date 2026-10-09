@@ -15,8 +15,9 @@ type Labels = Dictionary["workspace"]["chat"]["models"];
  * Sélecteur de modèle du composer : trois niveaux (économique, équilibré, premium) et des essais gratuits, avec le
  * coût estimé d'un message et, pour les modèles qui raisonnent, l'effort. Le choix est mémorisé dans le navigateur
  * et envoyé avec chaque message ; le serveur n'accepte que les identifiants de son catalogue.
+ * `below` : la barre est au milieu de la page (accueil), sans la place d'ouvrir ce menu vers le haut — il s'ouvre dessous, et sa hauteur est bornée par ce qui reste de l'écran.
  */
-export function ModelMenu({ lang, labels }: { lang: Locale; labels: Labels }) {
+export function ModelMenu({ lang, labels, below = false }: { lang: Locale; labels: Labels; below?: boolean }) {
   const data = useModels();
   const choice = useModelChoice();
   const [open, setOpen] = useState(false);
@@ -66,7 +67,7 @@ export function ModelMenu({ lang, labels }: { lang: Locale; labels: Labels }) {
       </button>
 
       {open && (
-        <div role="dialog" aria-label={labels.title} className="absolute bottom-full inset-x-0 z-30 mb-2 sm:inset-x-auto sm:left-0 flex max-h-[min(34rem,70dvh)] sm:w-[24rem] flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-float">
+        <div role="dialog" aria-label={labels.title} className={`absolute ${below ? "top-full mt-2 max-h-[min(34rem,calc(100dvh_-_24rem))]" : "bottom-full mb-2 max-h-[min(34rem,70dvh)]"} inset-x-0 z-30 sm:inset-x-auto sm:left-0 flex sm:w-[24rem] flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-float`}>
           <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto p-2">
             <p className="px-2 pt-1 pb-1.5 text-meta text-ink-3">{labels.hint}</p>
             <Row selected={!active} onSelect={() => writeModelChoice(null)} title={labels.defaultModel} detail={data?.default_provider} />

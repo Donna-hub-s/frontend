@@ -12,8 +12,9 @@ import { useWorkspace } from "./workspace-provider";
  * Chaque interrupteur s'enregistre tout de suite (pas de bouton « Enregistrer ») et vaut dès le
  * prochain message. Une pastille signale qu'au moins une compétence est coupée : c'est ce qui
  * explique pourquoi DONNA refuserait de faire quelque chose.
+ * `below` : la barre est au milieu de la page (accueil), sans la place d'ouvrir ce menu vers le haut — il s'ouvre dessous.
  */
-export function SkillsMenu({ lang, labels }: { lang: Locale; labels: Dictionary["workspace"]["chat"] }) {
+export function SkillsMenu({ lang, labels, below = false }: { lang: Locale; labels: Dictionary["workspace"]["chat"]; below?: boolean }) {
   const { skills, skillSettings, setSkillEnabled, refreshSkills, setSettingsOpen } = useWorkspace();
   const [open, setOpen] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
@@ -64,7 +65,7 @@ export function SkillsMenu({ lang, labels }: { lang: Locale; labels: Dictionary[
       </button>
 
       {open && (
-        <div role="group" aria-label={labels.skillsMenu} className="absolute bottom-full inset-x-0 z-30 mb-2 sm:inset-x-auto sm:left-0 sm:w-[20rem] rounded-panel border border-border bg-surface p-2 shadow-float">
+        <div role="group" aria-label={labels.skillsMenu} className={`absolute ${below ? "top-full mt-2" : "bottom-full mb-2"} inset-x-0 z-30 sm:inset-x-auto sm:left-0 sm:w-[20rem] rounded-panel border border-border bg-surface p-2 shadow-float`}>
           <p className="px-2 pt-1 pb-2 text-meta text-ink-3">{labels.skillsMenuHint}</p>
           {!skills ? (
             <p className="px-2 py-3 text-secondary text-ink-3">…</p>

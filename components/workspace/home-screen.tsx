@@ -6,11 +6,11 @@ import type { Dictionary } from "@/app/[lang]/dictionaries";
 import type { Locale } from "@/i18n/config";
 import { isBareHome, recentConversations } from "@/lib/home";
 import { parseBackendDate } from "@/lib/workspace-types";
-import { ChevronIcon, GlobeIcon, PencilIcon } from "./icons";
+import { ChevronIcon, GlobeIcon, PaperclipIcon } from "./icons";
 import { ProjectIcon } from "./project-icon";
 import { PendingItem } from "./side-panel";
 import { useWorkspace } from "./workspace-provider";
-import { Image as ImageIcon } from "lucide-react";
+import { AudioLines } from "lucide-react";
 
 type WorkspaceDict = Dictionary["workspace"];
 
@@ -155,31 +155,34 @@ export function HomeScreen({
   );
 }
 
-/** Raccourcis de découverte, montrés seulement tant qu'il n'y a rien à reprendre. */
+/**
+ * Gestes de découverte, montrés seulement tant qu'il n'y a rien à reprendre.
+ *
+ * Chacun FAIT quelque chose — ouvre le sélecteur de fichiers, active la recherche Web, lance le mode vocal — au lieu
+ * de pré-remplir la saisie d'un début de phrase (« Crée une image de… ») : ces amorces apprenaient que DONNA est une
+ * boîte à prompts, et un utilisateur qui les complétait écrivait exactement ce qu'il aurait écrit sans elles. Ce sont
+ * les mêmes gestes que les boutons de la barre, mais nommés. Le mode vocal est absent quand la barre n'a pas de voix.
+ */
 export function HomeShortcuts({
   labels,
-  onImage,
-  onWrite,
+  voiceLabel,
+  onAttach,
   onWebSearch,
+  onVoice,
 }: {
   labels: WorkspaceDict["chat"];
-  onImage: () => void;
-  onWrite: () => void;
+  voiceLabel: string;
+  onAttach: () => void;
   onWebSearch: () => void;
+  onVoice?: () => void;
 }) {
   const row = "flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-left text-label text-ink-2 transition-colors hover:bg-active hover:text-ink";
   return (
     <ul className="msg-enter mx-auto mt-3 flex w-full max-w-[34rem] flex-col gap-1" style={{ animationDelay: "90ms" }}>
       <li>
-        <button type="button" onClick={onImage} className={row}>
-          <ImageIcon size={18} aria-hidden className="text-brand" />
-          {labels.homeImage}
-        </button>
-      </li>
-      <li>
-        <button type="button" onClick={onWrite} className={row}>
-          <PencilIcon size={18} className="text-brand" />
-          {labels.homeWrite}
+        <button type="button" onClick={onAttach} className={row}>
+          <PaperclipIcon size={18} className="text-brand" />
+          {labels.homeAttach}
         </button>
       </li>
       <li>
@@ -188,6 +191,14 @@ export function HomeShortcuts({
           {labels.homeWebSearch}
         </button>
       </li>
+      {onVoice && (
+        <li>
+          <button type="button" onClick={onVoice} className={row}>
+            <AudioLines size={18} aria-hidden className="text-brand" />
+            {voiceLabel}
+          </button>
+        </li>
+      )}
     </ul>
   );
 }

@@ -24,7 +24,7 @@ import {
   type SourceOut,
   type ToolCall,
 } from "@/lib/workspace-types";
-import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, PencilIcon, PlusIcon, SendIcon, SpeakerIcon, StopIcon } from "./icons";
+import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, PencilIcon, SendIcon, SpeakerIcon, StopIcon } from "./icons";
 import { Markdown, type MarkdownFile } from "./markdown";
 import { FeedbackBar } from "./feedback-bar";
 import { RegenerateButton, VersionNav } from "./version-nav";
@@ -40,7 +40,7 @@ import { EmailAttachmentList } from "./email-attachments";
 import { AgentMenu, AgentReviewDialog } from "./agent-menu";
 import { markSeen, needsReview, readSeen, type AgentOut } from "@/lib/agents";
 import { useProjectAgents } from "@/lib/use-project-agents";
-import { Bot, Sparkles } from "lucide-react";
+import { Bot } from "lucide-react";
 import { WorkflowDraft } from "./workflow-draft";
 import { useConversationContext } from "@/lib/use-conversation-context";
 import { GoogleDriveIcon } from "./brand-icons";
@@ -1267,11 +1267,11 @@ export function Composer({
   agent?: { projectId: string; value: string | null; onChange: (id: string | null) => void };
   /** Lance le mode vocal (absent : pas de bouton, p. ex. le composer de la page projet). */
   onStartVoice?: () => void;
-  /** "home" : bandeau resserré de l'accueil générique, à la place de la barre complète. */
+  /** "home" : présentation de l'accueil générique (carte centrée, autre texte d'invite, menus qui s'ouvrent sous la
+   * barre). Les COMMANDES sont les mêmes que dans la barre ordinaire : un seul inventaire. */
   variant?: "default" | "home";
-  /** Raccourcis de découverte sous la barre (accueil seulement) : réservés au compte
-   * encore vide — dès qu'il y a quelque chose à reprendre, c'est l'accueil qui occupe
-   * la place, et trois amorces de texte n'y seraient que du bruit. */
+  /** Gestes de découverte sous la barre (accueil seulement) : réservés au compte encore vide — dès qu'il
+   * y a quelque chose à reprendre, c'est l'accueil qui occupe la place (voir HomeShortcuts). */
   shortcuts?: boolean;
 }) {
   const home = variant === "home";
@@ -1359,17 +1359,6 @@ export function Composer({
       el.setSelectionRange(pos, pos);
     });
   }, []);
-
-  // Raccourcis de l'accueil générique (variant "home") : amorcent une vraie saisie plutôt que
-  // de l'envoyer à la place de l'utilisateur, qui relit et complète avant d'envoyer lui-même.
-  const prefill = useCallback(
-    (text: string) => {
-      setValue(text);
-      onComposingChange?.(true);
-      focusAt(text.length);
-    },
-    [focusAt, onComposingChange],
-  );
 
   const insertToken = useCallback(
     (token: string) => {
@@ -1631,8 +1620,9 @@ export function Composer({
     onStartVoice?.();
   };
 
-  // Rechercher sur le Web, à l'accueil : contrairement aux deux autres raccourcis, c'est un vrai bascule
-  // existant (même état que le globe de la barre complète), pas une amorce de texte.
+  // Gestes de l'accueil (voir HomeShortcuts) : chacun fait ce que fait le bouton correspondant de la barre — joindre
+  // un fichier, activer la recherche Web (même état que le globe), parler — jamais une amorce de texte à compléter.
+  const attachFile = () => fileRef.current?.click();
   const activateWebSearch = useCallback(() => {
     setWebSearch(true);
     requestAnimationFrame(() => textareaRef.current?.focus());
@@ -1674,9 +1664,9 @@ export function Composer({
       disabled={busy || recording || transcribing}
       aria-label={dict.voice.start}
       title={`${dict.voice.start} — ${dict.voice.startHint}`}
-      className="flex size-10 items-center justify-center rounded-full transition-transform duration-(--duration-fast) hover:scale-105 disabled:opacity-50"
+      className="flex size-9 items-center justify-center rounded-full transition-transform duration-(--duration-fast) hover:scale-105 disabled:opacity-50"
     >
-      <DonnaOrb state="idle" size={36} />
+      <DonnaOrb state="idle" size={34} />
     </button>
   ) : (
     <VoiceStartButton labels={dict.voice} onStart={startVoice} disabled={busy || recording || transcribing} />
@@ -1687,7 +1677,7 @@ export function Composer({
       onClick={onStop}
       aria-label={dict.chat.stop}
       title={dict.chat.stop}
-      className="flex size-9 items-center justify-center rounded-button bg-ink text-white hover:bg-brand-fill-strong"
+      className="flex size-9 shrink-0 items-center justify-center rounded-button bg-ink text-white hover:bg-brand-fill-strong"
     >
       <StopIcon size={16} />
     </button>
@@ -1697,7 +1687,7 @@ export function Composer({
       disabled={!canSend}
       aria-label={dict.chat.send}
       title={dict.chat.send}
-      className="flex size-9 items-center justify-center rounded-button bg-brand-fill text-white transition-colors hover:bg-brand-fill-strong disabled:bg-pending disabled:text-ink-3"
+      className="flex size-9 shrink-0 items-center justify-center rounded-button bg-brand-fill text-white transition-colors hover:bg-brand-fill-strong disabled:bg-pending disabled:text-ink-3"
     >
       <SendIcon size={18} />
     </button>
@@ -1736,7 +1726,7 @@ export function Composer({
             role="listbox"
             onMouseDown={(event) => event.preventDefault()}
             onClick={handleMenuListClick}
-            className="scrollbar-none absolute bottom-full left-0 right-0 z-10 mb-2 max-h-64 overflow-y-auto rounded-panel border border-border bg-surface p-1.5 shadow-float"
+            className={`scrollbar-none absolute left-0 right-0 z-10 max-h-64 overflow-y-auto rounded-panel border border-border bg-surface p-1.5 shadow-float ${home ? "top-full mt-2" : "bottom-full mb-2"}`}
           >
             {menuItems.length ? (
               menuItems.map((item, index) => (
@@ -1847,8 +1837,12 @@ export function Composer({
           placeholder={home ? dict.chat.homePlaceholder : dict.chat.placeholder}
           className="scrollbar-none block max-h-[220px] w-full resize-none bg-transparent px-4 pt-3.5 pb-2 text-message text-ink outline-none placeholder:text-ink-3 focus-visible:shadow-none"
         />
-        <div className="flex items-center justify-between px-2.5 pb-2.5">
-          <div className="flex items-center gap-1">
+        {/* Un seul inventaire de commandes, accueil compris : l'accueil n'en montrait que quatre, la barre complète neuf,
+            et l'on ne pouvait ni choisir le modèle ni activer le Web avant le premier message. Elles passent à la ligne
+            quand la carte est trop étroite (téléphone) : sur une seule ligne elles totalisent ~400 px, et l'envoi sortait
+            de la carte puis de l'écran. `shrink-0` sur l'envoi ; en bas (`items-end`) il reste sur la dernière ligne. */}
+        <div className="flex items-end justify-between gap-2 px-2.5 pb-2.5">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
             <input
               ref={fileRef}
               type="file"
@@ -1862,82 +1856,57 @@ export function Composer({
             <button
               type="button"
               disabled={busy}
-              onClick={() => fileRef.current?.click()}
+              onClick={attachFile}
               aria-label={dict.chat.attach}
               title={dict.chat.attach}
               className="flex size-9 items-center justify-center rounded-button text-ink-2 hover:bg-active hover:text-ink disabled:opacity-50"
             >
-              {home ? <PlusIcon size={19} /> : <PaperclipIcon size={19} />}
+              <PaperclipIcon size={19} />
             </button>
-            {home ? (
-              // Analyser : amorce la même saisie qu'un raccourci, vers la skill "Tableaux, images et PDF scannés".
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => prefill(dict.chat.homeAnalyzePrefill)}
-                aria-label={dict.chat.homeAnalyze}
-                title={dict.chat.homeAnalyze}
-                className="inline-flex h-9 items-center gap-1.5 rounded-button px-2.5 text-label text-ink-2 transition-colors hover:bg-active hover:text-ink disabled:opacity-50"
-              >
-                <Sparkles size={18} aria-hidden />
-                {dict.chat.homeAnalyze}
-              </button>
-            ) : (
-              <>
-                {driveButton}
-                {micButton}
-                {voiceButton}
-                <button
-                  type="button"
-                  onClick={() => setWebSearch((v) => !v)}
-                  aria-pressed={webSearch}
-                  title={webSearch ? dict.chat.webSearchOn : dict.chat.webSearchOff}
-                  className={`inline-flex h-9 items-center gap-1.5 rounded-button px-2.5 text-label transition-colors ${
-                    webSearch ? "bg-brand/10 font-medium text-brand" : "text-ink-2 hover:bg-active hover:text-ink"
-                  }`}
-                >
-                  <GlobeIcon size={18} />
-                  <span className={webSearch ? "" : "sr-only"}>{dict.chat.webSearch}</span>
-                </button>
-                <ModelMenu lang={lang} labels={dict.chat.models} />
-                <SkillsMenu lang={lang} labels={dict.chat} />
-                {agent && (Boolean(agent.value) || (projectAgents?.length ?? 0) > 0) && (
-                  <AgentMenu
-                    lang={lang}
-                    labels={dict.agents}
-                    projectId={agent.projectId}
-                    agents={projectAgents ?? []}
-                    value={agent.value}
-                    onPick={(picked) => {
-                      if (picked && askReview(picked)) return;
-                      agent.onChange(picked?.id ?? null);
-                    }}
-                  />
-                )}
-                {conversationId && (
-                  <ContextMenu labels={dict.chat} status={context.status} compacting={context.compacting} busy={busy} onCompact={runCompact} />
-                )}
-              </>
+            {driveButton}
+            {micButton}
+            {voiceButton}
+            <button
+              type="button"
+              onClick={() => setWebSearch((v) => !v)}
+              aria-pressed={webSearch}
+              title={webSearch ? dict.chat.webSearchOn : dict.chat.webSearchOff}
+              className={`inline-flex h-9 items-center gap-1.5 rounded-button px-2.5 text-label transition-colors ${
+                webSearch ? "bg-brand/10 font-medium text-brand" : "text-ink-2 hover:bg-active hover:text-ink"
+              }`}
+            >
+              <GlobeIcon size={18} />
+              <span className={webSearch ? "" : "sr-only"}>{dict.chat.webSearch}</span>
+            </button>
+            <ModelMenu lang={lang} labels={dict.chat.models} below={home} />
+            <SkillsMenu lang={lang} labels={dict.chat} below={home} />
+            {agent && (Boolean(agent.value) || (projectAgents?.length ?? 0) > 0) && (
+              <AgentMenu
+                lang={lang}
+                labels={dict.agents}
+                projectId={agent.projectId}
+                agents={projectAgents ?? []}
+                value={agent.value}
+                onPick={(picked) => {
+                  if (picked && askReview(picked)) return;
+                  agent.onChange(picked?.id ?? null);
+                }}
+              />
+            )}
+            {conversationId && (
+              <ContextMenu labels={dict.chat} status={context.status} compacting={context.compacting} busy={busy} onCompact={runCompact} />
             )}
           </div>
-          {home ? (
-            <div className="flex items-center gap-1">
-              {driveButton}
-              {micButton}
-              {voiceButton}
-              {sendButton}
-            </div>
-          ) : (
-            sendButton
-          )}
+          {sendButton}
         </div>
       </form>
       {home && shortcuts && (
         <HomeShortcuts
           labels={dict.chat}
-          onImage={() => prefill(dict.chat.homeImagePrefill)}
-          onWrite={() => prefill(dict.chat.homeWritePrefill)}
+          voiceLabel={dict.voice.start}
+          onAttach={attachFile}
           onWebSearch={activateWebSearch}
+          onVoice={onStartVoice ? startVoice : undefined}
         />
       )}
       {/* Hors du <form> : Entrée dans la recherche du sélecteur ne doit jamais envoyer le message. */}
