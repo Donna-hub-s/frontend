@@ -7,6 +7,7 @@ import type { Locale } from "@/i18n/config";
 import { isBareHome, recentConversations } from "@/lib/home";
 import { parseBackendDate } from "@/lib/workspace-types";
 import { ChevronIcon, GlobeIcon, PaperclipIcon } from "./icons";
+import { HomeActivity } from "./home-activity";
 import { ProjectIcon } from "./project-icon";
 import { PendingItem } from "./side-panel";
 import { useWorkspace } from "./workspace-provider";
@@ -83,6 +84,9 @@ export function HomeScreen({
               )}
             </section>
           )}
+
+          {/* Ce que DONNA a fait entre-temps — après ce qui attend une décision, avant ce qu'on peut reprendre. */}
+          <HomeActivity lang={lang} dict={dict} />
 
           {recent.length > 0 && (
             <section aria-labelledby="home-recent">

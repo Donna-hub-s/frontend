@@ -446,6 +446,16 @@
       "homeAttach": "Attach a document",
       "homeWebSearch": "Search the Web",
       "homeResume": "Pick up where you left off",
+      "homeActivity": "Recent activity",
+      "homeActivityKind": { "workflow": "Automation", "research": "Research" },
+      "homeActivityState": {
+        "running": "Running",
+        "done": "Done",
+        "failed": "Failed",
+        "skipped": "Not run",
+        "cancelled": "Cancelled",
+        "interrupted": "Interrupted"
+      },
       "homeProjects": "Projects",
       "homeProjectsAll": "All projects",
       "homeApprovalsAll": "See all {n} waiting",

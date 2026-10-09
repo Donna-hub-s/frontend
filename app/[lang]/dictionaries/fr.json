@@ -446,6 +446,16 @@
       "homeAttach": "Joindre un document",
       "homeWebSearch": "Rechercher sur le Web",
       "homeResume": "Reprendre",
+      "homeActivity": "Activité récente",
+      "homeActivityKind": { "workflow": "Automatisation", "research": "Recherche" },
+      "homeActivityState": {
+        "running": "En cours",
+        "done": "Terminée",
+        "failed": "Échec",
+        "skipped": "Non lancée",
+        "cancelled": "Annulée",
+        "interrupted": "Interrompue"
+      },
       "homeProjects": "Projets",
       "homeProjectsAll": "Tous les projets",
       "homeApprovalsAll": "Voir les {n} en attente",
