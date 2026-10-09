@@ -927,6 +927,13 @@
       "ttsEnglishLabel": "Voix des mots anglais",
       "ttsEnglishHint": "Les mots réellement anglais (meeting, deadline, une citation en anglais) sont lus avec cette voix ; les noms de produits (Docker, Kubernetes) restent lus en français. Vide : la voix choisie par le serveur.",
       "ttsEnglishServerDefault": "Voix du serveur",
+      "themeLabel": "Thème",
+      "themeHint": "Suit votre compte d'un appareil à l'autre. « Système » reprend le réglage de votre ordinateur.",
+      "themes": {
+        "system": "Système",
+        "light": "Clair",
+        "dark": "Sombre"
+      },
       "defaultWebSearchLabel": "Recherche web à chaque question",
       "notifyEmailLabel": "Rappels par email",
       "notifyWhatsappLabel": "Rappels par WhatsApp",

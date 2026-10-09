@@ -1498,7 +1498,7 @@ function DeleteDialog({ labels, open, projectId, name, onClose, onDeleted }: { l
           <button type="button" onClick={onClose} className={ghostButton}>
             {labels.cancel}
           </button>
-          <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-button bg-danger px-3.5 py-2 text-label font-medium text-white disabled:opacity-60">
+          <button type="button" disabled={busy} onClick={() => void remove()} className="rounded-button bg-danger-fill px-3.5 py-2 text-label font-medium text-white disabled:opacity-60">
             {labels.deleteProject}
           </button>
         </div>

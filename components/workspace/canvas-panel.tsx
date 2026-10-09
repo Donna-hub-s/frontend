@@ -167,7 +167,7 @@ function CanvasPanel({
               setConfirmDelete(false);
               void canvas.remove();
             }}
-            className="rounded-button bg-danger px-3 py-1.5 text-label font-medium text-white"
+            className="rounded-button bg-danger-fill px-3 py-1.5 text-label font-medium text-white"
           >
             {labels.deleteYes}
           </button>

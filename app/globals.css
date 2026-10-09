@@ -56,6 +56,13 @@
      (3,6:1) ne pouvait pas tenir ce rôle : il ne passe ni en texte ni sous du blanc. */
   --color-attention: #c2410c; /* 4,9:1 sur la page ; blanc dessus : 5,2:1 */
   --color-attention-soft: #fcefe9; /* fond d'une carte qui attend une décision — l'étiquette « En attente » posée dessus garde 4,6:1 (à #fbece4 elle tombait à 4,49) */
+  /* Même scission que l'accent, et pour la même raison : ces trois-là servent AUSSI
+     d'aplat sous du blanc (bouton destructeur, pastille d'étape, compteur d'attente).
+     En clair les valeurs sont identiques ; en sombre le texte s'éclaircit et l'aplat
+     reste foncé pour continuer à porter le blanc. */
+  --color-danger-fill: #c81424;
+  --color-success-fill: #2f874e;
+  --color-attention-fill: #c2410c;
   --color-notification: #ef4522; /* pastille de nouveauté uniquement (3,6:1) */
   --color-pending: #eceae9; /* étapes à venir, pistes vides */
 
@@ -115,6 +122,60 @@
   --duration-orb-loop: 2400ms; /* boucle de l'orbe — figée si mouvement réduit */
 }
 
+/*
+ * Thème sombre. Les tokens étant sémantiques (un token = un rôle) et Tailwind 4
+ * émettant `var(--color-…)` dans chaque utilitaire, il suffit de redéfinir les
+ * valeurs : AUCUNE classe `dark:` dans les composants.
+ *
+ * Un seul bloc, pas de duplication avec `prefers-color-scheme` : le script
+ * anti-flash (lib/theme.ts) résout « system » en valeur CONCRÈTE avant le premier
+ * rendu et suit ensuite les changements de réglage système. Le CSS n'a donc jamais
+ * à connaître « system », et « light » n'a rien à réécrire.
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  /* Accent : le texte s'éclaircit, l'aplat reste assez foncé pour porter du blanc. */
+  --color-brand: #e8a0aa;
+  --color-brand-strong: #f4c8cd;
+  --color-brand-fill: #8e3a4a;
+  --color-brand-fill-strong: #a74859;
+
+  /* Plans : mêmes rapports qu'en clair — panneau en retrait, surfaces posées dessus. */
+  --color-page: #171311;
+  --color-sidebar: #110e0c;
+  --color-surface: #211c19;
+  --color-border: #362e29;
+  --color-active: #2e2723;
+  --color-fill: #342c28;
+  --color-ink: #f2ebe7;
+  --color-ink-2: #bcb1ab;
+  --color-ink-3: #978b85;
+
+  /* Marque décorative (halos, puces, tuiles d'icône). */
+  --color-rose-300: #b87c80;
+  --color-peche-100: #3b2c26;
+  --color-ivoire-50: #211c19;
+
+  /* États : texte clair, aplat foncé — voir la scission plus haut. */
+  --color-success: #6ccf8d;
+  --color-success-ink: #8edda7;
+  --color-success-soft: #16281d;
+  --color-success-fill: #2f874e;
+  --color-danger: #ff8d8d;
+  --color-danger-fill: #b3222f;
+  --color-attention: #ff9d62;
+  --color-attention-soft: #2d1b12;
+  --color-attention-fill: #b8450f;
+  --color-notification: #ff6a45;
+  --color-pending: #2b2420;
+
+  /* Une ombre ne se voit pas sur du sombre : c'est le liseré qui porte le relief. */
+  --shadow-card: 0 0 0 1px var(--color-border), 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-float: 0 0 0 1px var(--color-border), 0 16px 40px -12px rgb(0 0 0 / 0.65);
+  --shadow-focus: 0 0 0 1px var(--color-brand), 0 0 0 4px rgb(232 160 170 / 0.25);
+}
+
 @layer base {
   html {
     color-scheme: light;
@@ -129,11 +190,11 @@
   }
 
   a {
-    color: var(--color-bordeaux-700);
+    color: var(--color-brand);
   }
 
   a:hover {
-    color: var(--color-bordeaux-900);
+    color: var(--color-brand-strong);
   }
 
   :focus-visible {
@@ -141,9 +202,10 @@
     box-shadow: var(--shadow-focus);
   }
 
+  /* Suit le thème : en sombre, un fond rose opaque sur du texte clair devenait illisible. */
   ::selection {
-    background-color: rgb(227 173 170 / 0.45);
-    color: var(--color-bordeaux-900);
+    background-color: color-mix(in srgb, var(--color-rose-300) 45%, transparent);
+    color: var(--color-brand-strong);
   }
 }
 
@@ -514,7 +576,7 @@ dialog:not([open]) {
   vertical-align: top;
 }
 .doc-preview a {
-  color: var(--color-bordeaux-700);
+  color: var(--color-brand);
   text-decoration: underline;
 }
 .doc-preview img {
@@ -539,7 +601,7 @@ dialog:not([open]) {
 .donna-code .hljs-selector-tag,
 .donna-code .hljs-meta .hljs-keyword,
 .donna-code .hljs-doctag {
-  color: var(--color-bordeaux-700);
+  color: var(--color-brand);
   font-weight: 600;
 }
 .donna-code .hljs-string,
@@ -574,6 +636,44 @@ dialog:not([open]) {
 .donna-code .hljs-deletion {
   color: var(--color-danger);
 }
+/* En sombre, les teintes ci-dessus (calées sur un fond clair) tombent sous 2:1 :
+   on les remonte, en gardant les mêmes familles pour ne pas réapprendre à lire. */
+:root[data-theme="dark"] {
+  .donna-code .hljs-comment,
+  .donna-code .hljs-quote {
+    color: #a0958f;
+  }
+  .donna-code .hljs-string,
+  .donna-code .hljs-regexp,
+  .donna-code .hljs-addition,
+  .donna-code .hljs-meta .hljs-string {
+    color: #8ad3a4;
+  }
+  .donna-code .hljs-number,
+  .donna-code .hljs-literal,
+  .donna-code .hljs-symbol,
+  .donna-code .hljs-bullet {
+    color: #e3ad73;
+  }
+  .donna-code .hljs-title,
+  .donna-code .hljs-title.function_,
+  .donna-code .hljs-section {
+    color: #90bbf0;
+  }
+  .donna-code .hljs-built_in,
+  .donna-code .hljs-type,
+  .donna-code .hljs-title.class_ {
+    color: #c8a6e8;
+  }
+  .donna-code .hljs-attr,
+  .donna-code .hljs-attribute,
+  .donna-code .hljs-variable,
+  .donna-code .hljs-template-variable,
+  .donna-code .hljs-property {
+    color: #7fcbd8;
+  }
+}
+
 .donna-code .hljs-emphasis {
   font-style: italic;
 }

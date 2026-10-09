@@ -551,7 +551,7 @@ function ConversationItem({
               type="button"
               disabled={busy}
               onClick={() => void remove()}
-              className="rounded-button bg-danger px-2.5 py-1.5 text-secondary font-medium text-white disabled:opacity-60"
+              className="rounded-button bg-danger-fill px-2.5 py-1.5 text-secondary font-medium text-white disabled:opacity-60"
             >
               {labels.delete}
             </button>

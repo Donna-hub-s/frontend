@@ -7,6 +7,7 @@ import type { VoiceOut } from "@/lib/api";
 import type { ConnectorsOut, ProfileOut, ReminderOut, SkillOut } from "@/lib/workspace-types";
 import { parseBackendDate } from "@/lib/workspace-types";
 import { connectorName, setSkill, skillChanges, skillDescription, skillEnabled, skillLabel, type SkillSettings } from "@/lib/skills";
+import { applyTheme, isTheme, storeTheme, THEMES, type Theme } from "@/lib/theme";
 import { Dialog } from "./dialog";
 import { BellIcon, ClockIcon, CloseIcon, PlugIcon, ShieldIcon, SlidersIcon, UserIcon } from "./icons";
 import { InstallApp } from "./install-app";
@@ -28,6 +29,7 @@ type Draft = {
   preferred_tts_voice: string;
   preferred_tts_speaker: string;
   preferred_tts_english_voice: string;
+  theme: Theme;
   default_force_web_search: boolean;
   notify_reminders_email: boolean;
   notify_reminders_whatsapp: boolean;
@@ -44,6 +46,7 @@ const toDraft = (p: ProfileOut): Draft => ({
   preferred_tts_voice: p.preferred_tts_voice ?? "",
   preferred_tts_speaker: p.preferred_tts_speaker == null ? "" : String(p.preferred_tts_speaker),
   preferred_tts_english_voice: p.preferred_tts_english_voice ?? "",
+  theme: isTheme(p.theme) ? p.theme : "system",
   default_force_web_search: p.default_force_web_search,
   notify_reminders_email: p.notify_reminders_email,
   notify_reminders_whatsapp: p.notify_reminders_whatsapp,
@@ -439,6 +442,34 @@ function PreferencesPane({ labels, draft, update }: PaneProps) {
   }, []);
   return (
     <Pane title={labels.navPreferences} hint={labels.preferencesHint}>
+      {/* Appliqué tout de suite, pas à l'enregistrement : on choisit un thème en le
+          voyant. Le miroir local est écrit dans la foulée pour qu'il survive au
+          rechargement même si la sauvegarde du profil échoue ensuite. */}
+      <Field label={labels.themeLabel} hint={labels.themeHint}>
+        {(id) => (
+          <div id={id} role="radiogroup" aria-label={labels.themeLabel} className="flex gap-1 rounded-button bg-active p-0.5">
+            {THEMES.map((option) => (
+              <button
+                key={option}
+                type="button"
+                role="radio"
+                aria-checked={draft.theme === option}
+                onClick={() => {
+                  update("theme", option);
+                  storeTheme(option);
+                  applyTheme(option);
+                }}
+                className={`flex-1 rounded-badge px-2 py-1 text-meta font-medium transition-colors ${
+                  draft.theme === option ? "bg-surface text-ink shadow-sm" : "text-ink-3 hover:text-ink-2"
+                }`}
+              >
+                {labels.themes[option]}
+              </button>
+            ))}
+          </div>
+        )}
+      </Field>
+      <div className="border-t border-border" />
       <Toggle
         label={labels.defaultWebSearchLabel}
         hint={labels.defaultWebSearchHint}

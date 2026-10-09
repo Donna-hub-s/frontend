@@ -89,13 +89,13 @@ const timeFormat = (lang: Locale) => new Intl.DateTimeFormat(lang, { hour: "2-di
 export function StepDot({ status, warn = false }: { status: Step["status"]; warn?: boolean }) {
   if (warn) {
     return (
-      <span aria-hidden className="flex size-4 shrink-0 items-center justify-center rounded-full bg-danger text-[10px] leading-none font-bold text-white">
+      <span aria-hidden className="flex size-4 shrink-0 items-center justify-center rounded-full bg-danger-fill text-[10px] leading-none font-bold text-white">
         !
       </span>
     );
   }
   return status === "done" ? (
-    <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-success">
+    <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-success-fill">
       <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden>
         <path d="M3 6.2l1.9 1.9L9 4" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
@@ -153,7 +153,7 @@ export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: Work
         <header className="flex items-center justify-between border-b border-border px-4 py-3.5">
           <h2 className="text-panel-title font-medium text-ink">{panel.pending}</h2>
           {pending.length > 0 && (
-            <span className="rounded-full bg-attention px-2 text-meta font-medium text-white tabular-nums">{pending.length}</span>
+            <span className="rounded-full bg-attention-fill px-2 text-meta font-medium text-white tabular-nums">{pending.length}</span>
           )}
         </header>
         {pending.length ? (

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { isLocale, locales } from "@/i18n/config";
 import { getDictionary } from "./dictionaries";
 import { PwaRegister } from "@/components/pwa-register";
+import { THEME_SCRIPT } from "@/lib/theme";
 import "../globals.css";
 
 // Polices auto-hébergées (fichiers variables @fontsource-variable 5.3.0, licence OFL 1.1) :
@@ -50,7 +51,13 @@ export default async function RootLayout({ children, params }: LayoutProps<"/[la
   if (!isLocale(lang)) notFound();
 
   return (
-    <html lang={lang} className={`${figtree.variable} ${jost.variable} h-full`}>
+    <html lang={lang} className={`${figtree.variable} ${jost.variable} h-full`} suppressHydrationWarning>
+      <head>
+        {/* Pose le thème AVANT la première peinture : lu du serveur, il arriverait
+            après, et chaque chargement flasherait en blanc. `suppressHydrationWarning`
+            sur <html> parce que ce script modifie l'élément avant que React n'arrive. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col">
         {children}
         <PwaRegister />

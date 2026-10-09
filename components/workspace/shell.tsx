@@ -10,6 +10,7 @@ import { SearchPalette } from "./search-palette";
 import { ConnectorRows, SidePanel } from "./side-panel";
 import { Sidebar, type Account } from "./sidebar";
 import { FileViewer } from "./file-viewer";
+import { ThemeSync } from "@/components/theme-sync";
 import { MarkdownLabelsProvider } from "./markdown";
 import { OAuthLinkNotice } from "./oauth-link-notice";
 import { OfflineBanner } from "./offline-banner";
@@ -104,6 +105,7 @@ export function WorkspaceShell({
       <FileViewer lang={lang} labels={dict.viewer} />
       <ReminderToasts lang={lang} labels={dict.reminders} />
       <OAuthLinkNotice labels={dict.oauthLink} />
+      <ThemeSync />
       </MarkdownLabelsProvider>
     </WorkspaceProvider>
   );

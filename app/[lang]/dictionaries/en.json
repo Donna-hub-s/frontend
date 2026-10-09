@@ -927,6 +927,13 @@
       "ttsEnglishLabel": "Voice for English words",
       "ttsEnglishHint": "Real English words (meeting, deadline, an English quote) are read with this voice; product names (Docker, Kubernetes) stay French. Empty: the server's choice.",
       "ttsEnglishServerDefault": "Server voice",
+      "themeLabel": "Theme",
+      "themeHint": "Follows your account across devices. “System” matches your computer's setting.",
+      "themes": {
+        "system": "System",
+        "light": "Light",
+        "dark": "Dark"
+      },
       "defaultWebSearchLabel": "Search the web for every question",
       "notifyEmailLabel": "Email reminders",
       "notifyWhatsappLabel": "WhatsApp reminders",
