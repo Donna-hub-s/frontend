@@ -108,14 +108,14 @@ export default function FondationsPage() {
           <div className="grid grid-cols-[220px_minmax(0,1fr)] items-center gap-6 border-b border-border px-6 py-5">
             <div className="flex flex-col gap-0.5">
               <span className="text-secondary font-semibold">text-wordmark</span>
-              <span className="font-mono text-meta text-ink-2">Jost 300 · 40/48 · +0,22em</span>
+              <span className="font-mono text-meta text-ink-2">Jost 300 · 40/48 · +0,1em</span>
             </div>
             <span className="font-brand text-wordmark font-light text-brand-strong">DONNA</span>
           </div>
           <div className="grid grid-cols-[220px_minmax(0,1fr)] items-center gap-6 border-b border-border px-6 py-5">
             <div className="flex flex-col gap-0.5">
               <span className="text-secondary font-semibold">text-signature</span>
-              <span className="font-mono text-meta text-ink-2">Jost 400 · 11/16 · +0,32em</span>
+              <span className="font-mono text-meta text-ink-2">Jost 400 · 11/16 · +0,18em</span>
             </div>
             <span className="font-brand text-signature uppercase text-ink-2">powered by xcore</span>
           </div>

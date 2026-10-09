@@ -84,7 +84,8 @@ export function Sidebar({
       >
         <div className="flex items-center justify-between gap-2 px-4 pt-5 pb-4">
           <Link href={`/${lang}/app`} className="no-underline" onClick={onClose}>
-            <DonnaLockup size={30} />
+            {/* Sans « powered by xcore » : dans l'application, c'est SON assistante — l'attribution reste sur les pages d'entrée. */}
+            <DonnaLockup size={30} signature={false} />
           </Link>
           <div className="flex items-center gap-1">
             <Link

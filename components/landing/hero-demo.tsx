@@ -132,7 +132,7 @@ export function HeroDemo({ demo }: { demo: Demo }) {
       <div ref={panelRef} aria-hidden className="relative overflow-hidden rounded-panel bg-surface shadow-float">
         <div className="flex items-center gap-2.5 border-b border-border px-5 py-3.5">
           <DonnaMark size={22} label="" />
-          <span className="font-brand text-[0.9375rem] tracking-[0.18em] text-brand-strong">DONNA</span>
+          <span className="font-brand text-[0.9375rem] tracking-wordmark text-brand-strong">DONNA</span>
         </div>
 
         <div

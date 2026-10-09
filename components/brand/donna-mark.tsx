@@ -104,7 +104,7 @@ export function DonnaLockup({ size = 32, signature = true }: { size?: number; si
     <span className="inline-flex items-center gap-3">
       <DonnaMark size={size} label="" />
       <span className="flex flex-col">
-        <span className="font-brand text-[1.25rem] leading-6 tracking-[0.2em] text-brand-strong">DONNA</span>
+        <span className="font-brand text-[1.25rem] leading-6 tracking-wordmark text-brand-strong">DONNA</span>
         {signature && (
           <span className="font-brand text-signature uppercase text-ink-3">powered by xcore</span>
         )}

@@ -71,9 +71,14 @@
   --font-brand: var(--font-jost), Futura, "Century Gothic", sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
+  /* Espacement de la marque : UNE valeur, partagée par le wordmark (grand et petit) et la signature. La maquette (fondations/Main.dc.html)
+     garde l'ancien — 0,22 / 0,32 em — que le code a adouci le 2026-10-09 (voir docs/frontend/design.md) : c'est le code qui fait foi. */
+  --tracking-wordmark: 0.1em;
+  --tracking-signature: 0.18em;
+
   --text-wordmark: 2.5rem; /* 40 */
   --text-wordmark--line-height: 3rem;
-  --text-wordmark--letter-spacing: 0.22em;
+  --text-wordmark--letter-spacing: var(--tracking-wordmark);
   --text-greeting: 1.625rem; /* 26 */
   --text-greeting--line-height: 2.125rem;
   --text-hero-sm: 1.5rem; /* 24 — titres de page (projets, projet, invitation) */
@@ -98,7 +103,7 @@
   --text-caps--letter-spacing: 0.06em;
   --text-signature: 0.6875rem; /* 11 — « powered by xcore » */
   --text-signature--line-height: 1rem;
-  --text-signature--letter-spacing: 0.32em;
+  --text-signature--letter-spacing: var(--tracking-signature);
 
   /* ── Rayons ───────────────────────────────────────────── */
   --radius-badge: 6px;
