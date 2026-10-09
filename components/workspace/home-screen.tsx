@@ -15,6 +15,8 @@ import { Image as ImageIcon } from "lucide-react";
 type WorkspaceDict = Dictionary["workspace"];
 
 const MAX_PROJECTS = 4;
+/** Au-delà, l'accueil cesserait d'être un aperçu : la page « À valider » prend le relais. */
+const MAX_PENDING = 3;
 
 /**
  * Accueil d'une nouvelle conversation.
@@ -65,10 +67,20 @@ export function HomeScreen({
                 <span className="rounded-full bg-attention-fill px-1.5 text-meta font-medium text-white tabular-nums">{pending.length}</span>
               </h2>
               <ul className="flex flex-col divide-y divide-border overflow-hidden rounded-panel border border-attention/40 bg-attention-soft">
-                {pending.map((action) => (
+                {pending.slice(0, MAX_PENDING).map((action) => (
                   <PendingItem key={action.id} lang={lang} dict={dict} action={action} />
                 ))}
               </ul>
+              {/* Au-delà, l'accueil deviendrait une file d'attente : la page dédiée est là pour ça. */}
+              {pending.length > MAX_PENDING && (
+                <Link
+                  href={`/${lang}/app/approvals`}
+                  className="mt-2 inline-flex items-center gap-1 text-meta font-medium text-ink-2 no-underline hover:text-ink"
+                >
+                  {dict.chat.homeApprovalsAll.replace("{n}", String(pending.length))}
+                  <ChevronIcon size={13} className="-rotate-90" />
+                </Link>
+              )}
             </section>
           )}
 

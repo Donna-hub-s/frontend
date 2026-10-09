@@ -431,6 +431,7 @@
       "settings": "Paramètres",
       "viewAllProjects": "Voir tous les projets",
       "workflows": "Automatisations",
+      "approvals": "À valider",
       "deliverables": "Livrables",
       "usage": "Consommation",
       "newNotification": "Nouvelle notification de Donna"
@@ -452,6 +453,7 @@
       "homeResume": "Reprendre",
       "homeProjects": "Projets",
       "homeProjectsAll": "Tous les projets",
+      "homeApprovalsAll": "Voir les {n} en attente",
       "send": "Envoyer",
       "stop": "Arrêter",
       "attach": "Joindre des fichiers",
@@ -1101,6 +1103,11 @@
         "text": "Fichier texte",
         "other": "Fichier"
       }
+    },
+    "approvals": {
+      "title": "À valider",
+      "subtitle": "Tout ce que DONNA a préparé et qui attend votre accord. Rien ne part sans votre clic.",
+      "empty": "Rien n'attend votre accord."
     },
     "deliverables": {
       "indexTitle": "Mes livrables",

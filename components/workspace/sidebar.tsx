@@ -11,7 +11,7 @@ import { logout } from "@/lib/auth-actions";
 import { EXPORT_FORMATS, exportHref } from "@/lib/conversation-export";
 import { groupByDate, groupByProject } from "@/lib/sidebar-grouping";
 import type { ConversationOut } from "@/lib/workspace-types";
-import { ChatIcon, ChevronIcon, CloseIcon, ComposeIcon, FolderIcon, LogoutIcon, MoreIcon, SearchIcon, SettingsIcon } from "./icons";
+import { ChatIcon, CheckIcon, ChevronIcon, CloseIcon, ComposeIcon, FolderIcon, LogoutIcon, MoreIcon, SearchIcon, SettingsIcon } from "./icons";
 import { ConversationHoverPreview, type PreviewAnchor, useHoverPreview } from "./conversation-hover-preview";
 import { BarChart3, FolderOpen, Workflow as WorkflowGlyph } from "lucide-react";
 import { ProjectSidebarSection } from "./project-list";
@@ -48,7 +48,7 @@ export function Sidebar({
   open: boolean;
   onClose: () => void;
 }) {
-  const { conversations, projects } = useWorkspace();
+  const { conversations, projects, pending } = useWorkspace();
   const { notices } = useWorkspace();
   const unreadCount = Object.keys(notices).length;
   const pathname = usePathname();
@@ -61,6 +61,7 @@ export function Sidebar({
 
   const activeId = pathname.match(/\/app\/c\/([^/]+)/)?.[1];
   const activeProjectId = pathname.match(/\/app\/projects\/([^/]+)/)?.[1];
+  const approvalsActive = pathname.includes("/app/approvals");
   const workflowsActive = pathname.includes("/app/workflows");
   const usageActive = pathname.includes("/app/usage");
   const deliverablesActive = pathname.includes("/app/deliverables");
@@ -123,6 +124,22 @@ export function Sidebar({
         </div>
 
         <nav aria-label={labels.conversations} className="scrollbar-none mt-5 flex-1 overflow-y-auto px-2 pb-4">
+          <Link
+            href={`/${lang}/app/approvals`}
+            onClick={onClose}
+            aria-current={approvalsActive ? "page" : undefined}
+            className={`mb-3 flex h-9 items-center gap-2.5 rounded-nav px-2.5 text-label no-underline transition-colors duration-(--duration-fast) ${
+              approvalsActive ? "bg-active font-medium text-ink" : "text-ink-2 hover:bg-active/70 hover:text-ink"
+            }`}
+          >
+            <CheckIcon size={16} className={pending.length ? "text-attention" : "text-ink-3"} />
+            {labels.approvals}
+            {pending.length > 0 && (
+              <span className="ml-auto rounded-badge bg-attention-fill px-1.5 py-px text-[10px] leading-4 font-semibold text-white tabular-nums">
+                {pending.length}
+              </span>
+            )}
+          </Link>
           <Link
             href={`/${lang}/app/workflows`}
             onClick={onClose}

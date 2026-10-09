@@ -431,6 +431,7 @@
       "settings": "Settings",
       "viewAllProjects": "View all projects",
       "workflows": "Automations",
+      "approvals": "To approve",
       "deliverables": "Deliverables",
       "usage": "Usage",
       "newNotification": "New notification from Donna"
@@ -452,6 +453,7 @@
       "homeResume": "Pick up where you left off",
       "homeProjects": "Projects",
       "homeProjectsAll": "All projects",
+      "homeApprovalsAll": "See all {n} waiting",
       "send": "Send",
       "stop": "Stop",
       "attach": "Attach files",
@@ -1101,6 +1103,11 @@
         "text": "Text file",
         "other": "File"
       }
+    },
+    "approvals": {
+      "title": "To approve",
+      "subtitle": "Everything DONNA has prepared that is waiting on you. Nothing goes out without your click.",
+      "empty": "Nothing is waiting on you."
     },
     "deliverables": {
       "indexTitle": "My deliverables",
