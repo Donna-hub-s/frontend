@@ -352,6 +352,7 @@
       "generic": "La demande n'a pas abouti. Réessayez.",
       "oauth": "La connexion avec ce fournisseur n'a pas abouti. Réessayez, ou utilisez votre email.",
       "oauthExpired": "La connexion a expiré avant de se terminer. Recommencez.",
+      "oauthDenied": "Connexion annulée : vous n'avez rien autorisé. Vous pouvez réessayer quand vous voulez.",
       "resetInvalid": "Ce lien a expiré ou a déjà servi. Demandez-en un nouveau.",
       "sessionExpired": "Votre session a expiré. Reconnectez-vous."
     },
@@ -729,6 +730,7 @@
         "state_invalid": "La demande a expiré. Relancez la liaison depuis les connecteurs.",
         "provider_error": "Le fournisseur n'a pas pu finaliser la liaison. Réessayez.",
         "account_disabled": "Ce compte est désactivé. Contactez le responsable de votre espace.",
+        "access_denied": "Liaison annulée : rien n'a été modifié.",
         "generic": "La liaison n'a pas abouti. Réessayez."
       }
     },

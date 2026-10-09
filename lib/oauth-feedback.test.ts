@@ -7,6 +7,7 @@ describe("loginErrorKey", () => {
   it("traduit les codes connus du backend en clés du dictionnaire", () => {
     expect(loginErrorKey("account_disabled")).toBe("accountInactive");
     expect(loginErrorKey("state_invalid")).toBe("oauthExpired");
+    expect(loginErrorKey("access_denied")).toBe("oauthDenied");
     expect(loginErrorKey("provider_error")).toBe("oauth");
   });
 
@@ -25,6 +26,7 @@ describe("parseLinkResult", () => {
   it("reconnaît les codes d'échec annoncés par le backend", () => {
     expect(parseLinkResult(params("link_error=already_linked"))).toEqual({ status: "error", code: "already_linked" });
     expect(parseLinkResult(params("link_error=state_invalid"))).toEqual({ status: "error", code: "state_invalid" });
+    expect(parseLinkResult(params("link_error=access_denied"))).toEqual({ status: "error", code: "access_denied" });
   });
 
   it("n'affiche jamais un texte venu de l'adresse : un code inconnu devient « generic »", () => {

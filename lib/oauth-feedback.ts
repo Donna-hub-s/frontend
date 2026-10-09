@@ -17,12 +17,14 @@ export function loginErrorKey(code: string | null | undefined): AuthErrorKey {
       return "accountInactive";
     case "state_invalid":
       return "oauthExpired";
+    case "access_denied":
+      return "oauthDenied"; // l'utilisateur a annulé chez le fournisseur : ce n'est pas une panne, le message ne doit pas en avoir l'air
     default:
       return "oauth";
   }
 }
 
-const LINK_ERROR_CODES = ["already_linked", "state_invalid", "provider_error", "account_disabled"] as const;
+const LINK_ERROR_CODES = ["already_linked", "state_invalid", "provider_error", "account_disabled", "access_denied"] as const;
 export type LinkErrorCode = (typeof LINK_ERROR_CODES)[number] | "generic";
 
 /** Liaison d'un fournisseur depuis un compte connecté : ce que le callback annonce au retour dans l'espace de travail. */
