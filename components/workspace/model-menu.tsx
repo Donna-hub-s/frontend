@@ -52,7 +52,7 @@ export function ModelMenu({ lang, labels }: { lang: Locale; labels: Labels }) {
     <div ref={ref} className="sm:relative">
       <button
         type="button"
-        aria-haspopup="true"
+        aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         aria-label={`${labels.title} : ${title}`}
