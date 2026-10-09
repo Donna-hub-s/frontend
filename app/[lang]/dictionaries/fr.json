@@ -447,6 +447,9 @@
       "homeAttach": "Joindre un document",
       "homeWebSearch": "Rechercher sur le Web",
       "homeResume": "Reprendre",
+      "homeConnectors": "À brancher",
+      "homeConnectorsHint": "DONNA n'y a pas encore accès : vous les autorisez un par un.",
+      "homeConnectorsHide": "Masquer",
       "homeActivity": "Activité récente",
       "homeActivityKind": { "workflow": "Automatisation", "research": "Recherche" },
       "homeActivityState": {

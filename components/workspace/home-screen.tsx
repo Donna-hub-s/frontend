@@ -8,6 +8,7 @@ import { isBareHome, recentConversations } from "@/lib/home";
 import { parseBackendDate } from "@/lib/workspace-types";
 import { ChevronIcon, GlobeIcon, PaperclipIcon } from "./icons";
 import { HomeActivity } from "./home-activity";
+import { HomeConnectors } from "./home-connectors";
 import { ProjectIcon } from "./project-icon";
 import { PendingItem } from "./side-panel";
 import { useWorkspace } from "./workspace-provider";
@@ -153,6 +154,17 @@ export function HomeScreen({
               </ul>
             </section>
           )}
+
+          {/* Ce qui n'est pas encore branché, tout en bas : on le voit, sans qu'il passe avant ce qui attend ou ce qu'on reprend. */}
+          <HomeConnectors lang={lang} dict={dict} />
+        </div>
+      )}
+
+      {/* Compte encore vide : c'est justement lui qui n'a rien branché (la connexion ne donne que l'identité). `empty:hidden` : sans
+          rien à brancher, ce conteneur ne laisse ni marge ni blanc. */}
+      {bare && (
+        <div className="msg-enter mt-8 w-full max-w-[34rem] empty:hidden">
+          <HomeConnectors lang={lang} dict={dict} />
         </div>
       )}
     </div>

@@ -11,6 +11,7 @@ import { ConnectorRows, SidePanel } from "./side-panel";
 import { Sidebar, type Account } from "./sidebar";
 import { FileViewer } from "./file-viewer";
 import { ThemeSync } from "@/components/theme-sync";
+import { ConnectorsProvider } from "./connectors-context";
 import { MarkdownLabelsProvider } from "./markdown";
 import { OAuthLinkNotice } from "./oauth-link-notice";
 import { OfflineBanner } from "./offline-banner";
@@ -48,6 +49,7 @@ export function WorkspaceShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
+    <ConnectorsProvider value={connectors}>
     <WorkspaceProvider
       initialConversations={conversations}
       initialPending={pending}
@@ -108,6 +110,7 @@ export function WorkspaceShell({
       <ThemeSync />
       </MarkdownLabelsProvider>
     </WorkspaceProvider>
+    </ConnectorsProvider>
   );
 }
 
