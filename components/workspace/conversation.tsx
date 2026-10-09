@@ -30,6 +30,7 @@ import { FeedbackBar } from "./feedback-bar";
 import { RegenerateButton, VersionNav } from "./version-nav";
 import { LinkCard, linkCardData } from "./link-card";
 import { CanvasHost } from "./canvas-panel";
+import { HomeScreen, HomeShortcuts } from "./home-screen";
 import { VoiceBar, VoiceStartButton } from "./voice-bar";
 import { useVoiceMode } from "@/lib/use-voice-mode";
 import { ResearchProgress } from "./research-progress";
@@ -39,7 +40,7 @@ import { EmailAttachmentList } from "./email-attachments";
 import { AgentMenu, AgentReviewDialog } from "./agent-menu";
 import { markSeen, needsReview, readSeen, type AgentOut } from "@/lib/agents";
 import { useProjectAgents } from "@/lib/use-project-agents";
-import { Bot, Image as ImageIcon, Sparkles } from "lucide-react";
+import { Bot, Sparkles } from "lucide-react";
 import { WorkflowDraft } from "./workflow-draft";
 import { useConversationContext } from "@/lib/use-conversation-context";
 import { GoogleDriveIcon } from "./brand-icons";
@@ -303,25 +304,28 @@ export function Conversation({
               </Link>
             </div>
           ) : homeScreen ? (
-            <div className="mt-[10vh] flex flex-col items-center">
-              <h1 className="msg-enter max-w-[34rem] text-center font-brand text-greeting font-light text-brand-strong text-pretty">
-                {firstName ? dict.chat.homeTitleName.replace("{name}", firstName) : dict.chat.homeTitle}
-              </h1>
-              <div className="mt-6 w-full" hidden={voiceOn}>
-                <Composer
-                  lang={lang}
-                  dict={dict}
-                  busy={busy || editingId !== null}
-                  conversationId={thread?.conversationId ?? conversationId}
-                  onSend={send}
-                  onStop={() => stop(threadKey)}
-                  onComposingChange={setComposing}
-                  autoFocus
-                  onStartVoice={() => void voice.start()}
-                  variant="home"
-                />
-              </div>
-            </div>
+            <HomeScreen
+              lang={lang}
+              dict={dict}
+              firstName={firstName}
+              composer={(shortcuts) => (
+                <div hidden={voiceOn}>
+                  <Composer
+                    lang={lang}
+                    dict={dict}
+                    busy={busy || editingId !== null}
+                    conversationId={thread?.conversationId ?? conversationId}
+                    onSend={send}
+                    onStop={() => stop(threadKey)}
+                    onComposingChange={setComposing}
+                    autoFocus
+                    onStartVoice={() => void voice.start()}
+                    variant="home"
+                    shortcuts={shortcuts}
+                  />
+                </div>
+              )}
+            />
           ) : empty ? (
             <EmptyState
               dict={dict}
@@ -1244,6 +1248,7 @@ export function Composer({
   agent,
   onStartVoice,
   variant = "default",
+  shortcuts = false,
 }: {
   lang: Locale;
   dict: WorkspaceDict;
@@ -1258,8 +1263,12 @@ export function Composer({
   agent?: { projectId: string; value: string | null; onChange: (id: string | null) => void };
   /** Lance le mode vocal (absent : pas de bouton, p. ex. le composer de la page projet). */
   onStartVoice?: () => void;
-  /** "home" : bandeau resserré + raccourcis de l'accueil générique, à la place de la barre complète. */
+  /** "home" : bandeau resserré de l'accueil générique, à la place de la barre complète. */
   variant?: "default" | "home";
+  /** Raccourcis de découverte sous la barre (accueil seulement) : réservés au compte
+   * encore vide — dès qu'il y a quelque chose à reprendre, c'est l'accueil qui occupe
+   * la place, et trois amorces de texte n'y seraient que du bruit. */
+  shortcuts?: boolean;
 }) {
   const home = variant === "home";
   const { projects } = useWorkspace();
@@ -1919,39 +1928,13 @@ export function Composer({
           )}
         </div>
       </form>
-      {home && (
-        <ul className="msg-enter mx-auto mt-3 flex w-full max-w-[34rem] flex-col gap-1" style={{ animationDelay: "90ms" }}>
-          <li>
-            <button
-              type="button"
-              onClick={() => prefill(dict.chat.homeImagePrefill)}
-              className="flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-left text-label text-ink-2 transition-colors hover:bg-active hover:text-ink"
-            >
-              <ImageIcon size={18} aria-hidden className="text-brand" />
-              {dict.chat.homeImage}
-            </button>
-          </li>
-          <li>
-            <button
-              type="button"
-              onClick={() => prefill(dict.chat.homeWritePrefill)}
-              className="flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-left text-label text-ink-2 transition-colors hover:bg-active hover:text-ink"
-            >
-              <PencilIcon size={18} className="text-brand" />
-              {dict.chat.homeWrite}
-            </button>
-          </li>
-          <li>
-            <button
-              type="button"
-              onClick={activateWebSearch}
-              className="flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-left text-label text-ink-2 transition-colors hover:bg-active hover:text-ink"
-            >
-              <GlobeIcon size={18} className="text-brand" />
-              {dict.chat.homeWebSearch}
-            </button>
-          </li>
-        </ul>
+      {home && shortcuts && (
+        <HomeShortcuts
+          labels={dict.chat}
+          onImage={() => prefill(dict.chat.homeImagePrefill)}
+          onWrite={() => prefill(dict.chat.homeWritePrefill)}
+          onWebSearch={activateWebSearch}
+        />
       )}
       {/* Hors du <form> : Entrée dans la recherche du sélecteur ne doit jamais envoyer le message. */}
       <DrivePicker

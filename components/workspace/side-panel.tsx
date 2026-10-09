@@ -177,7 +177,9 @@ export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: Work
   );
 }
 
-function PendingItem({ lang, dict, action }: { lang: Locale; dict: WorkspaceDict; action: PendingActionOut }) {
+/** Une action qui attend une décision. Rendu en <li> : l'accueil la réutilise telle
+ * quelle (même rendu, mêmes garde-fous), au lieu d'une seconde carte à maintenir. */
+export function PendingItem({ lang, dict, action }: { lang: Locale; dict: WorkspaceDict; action: PendingActionOut }) {
   const { decideAction } = useWorkspace();
   const [busy, setBusy] = useState<"confirm" | "cancel" | null>(null);
   const [failed, setFailed] = useState(false);
