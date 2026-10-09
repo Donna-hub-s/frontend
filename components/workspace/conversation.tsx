@@ -602,7 +602,8 @@ function UserMessage({
           )}
         </div>
       </div>
-      <span aria-hidden className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-peche-100 text-meta font-medium text-brand-strong">
+      {/* Masquée sur téléphone : 44 px de largeur (pastille + écart) que la bulle n'a pas à céder. */}
+      <span aria-hidden className="mt-1 hidden size-8 shrink-0 items-center justify-center rounded-full bg-peche-100 text-meta font-medium text-brand-strong sm:flex">
         {initials}
       </span>
     </div>
@@ -655,8 +656,11 @@ function AssistantMessage({
     return message.attachments.filter((file) => file.mime_type.startsWith("image/") && isImageName(file.original_name) && !inline.has(file.original_name.normalize("NFC").toLowerCase().trim()));
   }, [files, message.attachments, message.content]);
 
+  // Sous `sm` (téléphone) la marque passe AU-DESSUS de la réponse au lieu d'une colonne à gauche : cette colonne
+  // (32 px + écart) retirait ~44 px de largeur au texte, aux tableaux, au graphique et aux cartes de fichiers. La
+  // marque reste affichée : c'est elle qui porte l'état en direct (voir DonnaOrb / liveOrbState).
   return (
-    <div className="msg-enter flex gap-3">
+    <div className="msg-enter flex flex-col gap-2 sm:flex-row sm:gap-3">
       <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center">
         {streaming ? (
           <DonnaOrb state={liveOrbState(message)} size={32} label="DONNA" />
