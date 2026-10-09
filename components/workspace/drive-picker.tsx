@@ -1,9 +1,11 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import type { Locale } from "@/i18n/config";
 import { DRIVE_SHARED, driveTypeLabel, formatSize, listDrive, type DriveErrorCode, type DriveFileOut } from "@/lib/drive";
+import { linkHref } from "@/lib/oauth-link";
 import { GoogleDriveIcon } from "./brand-icons";
 import { Dialog, DialogHeader } from "./dialog";
 import { FileLink } from "./file-viewer";
@@ -83,6 +85,7 @@ function PickerBody({
   onImportFolder?: (file: DriveFileOut) => void;
   existingDocuments?: ExistingDocument[];
 }) {
+  const pathname = usePathname();
   const [tab, setTab] = useState<Tab>("my");
   const [trail, setTrail] = useState<Crumb[]>([]);
   const [query, setQuery] = useState("");
@@ -150,7 +153,8 @@ function PickerBody({
   };
 
   const dateFormat = useMemo(() => new Intl.DateTimeFormat(lang, { day: "numeric", month: "short", year: "numeric" }), [lang]);
-  const link = `/oauth/google?lang=${lang}&link=1`;
+  // Seul Drive est demandé, et l'on revient sur la page d'où l'on vient (la conversation dont le sélecteur vient de se fermer).
+  const link = linkHref(lang, { services: ["drive"], next: pathname });
   const atMax = selected.size >= max;
   const error = loaded?.key === key ? loaded.error : null;
   const files = loaded?.key === key ? loaded.files : [];

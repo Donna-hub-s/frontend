@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { BACKEND_URL, getOAuthProviders } from "@/lib/backend";
+import { parseLinkRequest } from "@/lib/oauth-link";
 import { COOKIES } from "@/lib/session-cookies";
 import { LOCALE_COOKIE, isLocale } from "@/i18n/config";
 
@@ -13,12 +14,15 @@ const PROVIDERS = new Set(["google", "microsoft", "github", "discord"]);
  * - Connexion : xauth redirige vers le fournisseur puis revient sur /auth (voir app/auth/route.ts).
  * - Liaison (?link=1, utilisateur connecté) : xauth associe le fournisseur à CE compte
  *   (appel authentifié, voir routes/oauth.py::authorize) puis revient sur l'espace de travail.
+ *   `services=gmail,drive` (Google) ne demande que ces accès ; `next=/fr/app/c/…` ramène sur la page d'où l'on est parti
+ *   (lib/oauth-link.ts : liste fermée de services, chemin de l'espace de travail seulement).
  */
 export async function GET(request: NextRequest, { params }: RouteContext<"/oauth/[provider]">) {
   const { provider } = await params;
   const langParam = request.nextUrl.searchParams.get("lang");
   const lang = isLocale(langParam) ? langParam : "fr";
   const link = request.nextUrl.searchParams.get("link") === "1";
+  const { services, next } = parseLinkRequest(request.nextUrl.searchParams, lang);
 
   // Fournisseur inconnu ou non configuré côté backend : retour avec un message explicite.
   if (!PROVIDERS.has(provider) || !(await getOAuthProviders()).includes(provider)) {
@@ -29,8 +33,10 @@ export async function GET(request: NextRequest, { params }: RouteContext<"/oauth
   if (link) {
     const token = (await cookies()).get(COOKIES.access)?.value;
     if (!token) return NextResponse.redirect(new URL(`/${lang}/login?next=/${lang}/app`, request.url));
-    const back = encodeURIComponent(new URL(`/${lang}/app`, request.url).toString());
-    const authUrl = await fetch(`${BACKEND_URL}/app/auth/oauth/${provider}/authorize?redirect=${back}`, {
+    const back = encodeURIComponent(new URL(next ?? `/${lang}/app`, request.url).toString());
+    // Les services ne concernent que Google : les autres fournisseurs n'ont pas d'accès à découper.
+    const only = provider === "google" && services.length ? `&services=${services.join(",")}` : "";
+    const authUrl = await fetch(`${BACKEND_URL}/app/auth/oauth/${provider}/authorize?redirect=${back}${only}`, {
       headers: { authorization: `Bearer ${token}` },
       cache: "no-store",
       signal: AbortSignal.timeout(10_000),

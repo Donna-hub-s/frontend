@@ -1,10 +1,12 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { GmailIcon, GoogleCalendarIcon, GoogleDriveIcon, WhatsAppIcon } from "./brand-icons";
 import { visibleSteps } from "@/lib/chat-run";
+import { linkHref, type GoogleService } from "@/lib/oauth-link";
 import { useNow } from "@/lib/use-now";
 import { parseBackendDate, type ConnectorsOut, type PendingActionOut, type Step } from "@/lib/workspace-types";
 import { ElapsedBadge } from "./elapsed-badge";
@@ -260,12 +262,17 @@ type Row = {
 export function ConnectorRows({ lang, dict, connectors }: { lang: Locale; dict: WorkspaceDict; connectors: ConnectorsOut | null }) {
   const { panel } = dict;
   const google = connectors?.google;
-  const link = `/oauth/google?lang=${lang}&link=1`;
-  const googleAction = google?.connected ? { href: link, label: panel.authorize } : { href: link, label: panel.connect };
+  const pathname = usePathname();
+  // Un lien PAR service : relier l'agenda ne réclame plus la boîte mail, et l'on revient sur la page d'où l'on est parti
+  // (la conversation, le projet…) au lieu d'une nouvelle conversation vide.
+  const googleAction = (service: GoogleService) => ({
+    href: linkHref(lang, { services: [service], next: pathname }),
+    label: google?.connected ? panel.authorize : panel.connect,
+  });
   const rows: Row[] = [
-    { key: "gmail", icon: <GmailIcon />, name: panel.gmail, detail: panel.gmailDetail, connected: Boolean(google?.gmail), offLabel: panel.notConnected, action: googleAction },
-    { key: "calendar", icon: <GoogleCalendarIcon />, name: panel.googleCalendar, detail: panel.calendarDetail, connected: Boolean(google?.calendar), offLabel: panel.notConnected, action: googleAction },
-    { key: "drive", icon: <GoogleDriveIcon />, name: panel.googleDrive, detail: panel.driveDetail, connected: Boolean(google?.drive), offLabel: panel.notConnected, action: googleAction },
+    { key: "gmail", icon: <GmailIcon />, name: panel.gmail, detail: panel.gmailDetail, connected: Boolean(google?.gmail), offLabel: panel.notConnected, action: googleAction("gmail") },
+    { key: "calendar", icon: <GoogleCalendarIcon />, name: panel.googleCalendar, detail: panel.calendarDetail, connected: Boolean(google?.calendar), offLabel: panel.notConnected, action: googleAction("calendar") },
+    { key: "drive", icon: <GoogleDriveIcon />, name: panel.googleDrive, detail: panel.driveDetail, connected: Boolean(google?.drive), offLabel: panel.notConnected, action: googleAction("drive") },
   ];
   if (connectors?.whatsapp.enabled) {
     const wa = connectors.whatsapp;
@@ -295,6 +302,7 @@ export function ConnectorRows({ lang, dict, connectors }: { lang: Locale; dict: 
           ) : (
             <a
               href={row.action.href}
+              aria-label={`${row.action.label} — ${row.name}`}
               className="shrink-0 rounded-button border border-border bg-surface px-2.5 py-1 text-meta font-medium text-brand no-underline hover:border-brand/40 hover:text-brand-strong"
             >
               {row.action.label}
