@@ -10,6 +10,17 @@ const PALETTES = {
   onDark: { from: "#FDFAF8", to: "#E3ADAA", highlight: "#FFFFFF", shade: "#D99A98", deep: "#B7777A" },
 } as const;
 
+// La variante « plain » pose le logo directement sur la page : il suit donc le THÈME. Ses couleurs sont les jetons --mark-* de
+// globals.css (clair : la palette « light » ci-dessus ; sombre : « onDark »). Avant, il restait bordeaux sur un fond presque noir
+// — ~2:1 de contraste. Les variantes à tuile (tile, dark, circle) portent leur propre fond : elles gardent leur palette fixe.
+const THEMED = {
+  from: "var(--mark-from)",
+  to: "var(--mark-to)",
+  highlight: "var(--mark-highlight)",
+  shade: "var(--mark-shade)",
+  deep: "var(--mark-deep)",
+} as const;
+
 const SURFACES: Record<Exclude<Variant, "plain">, { className: string; palette: keyof typeof PALETTES }> = {
   tile: {
     className:
@@ -44,7 +55,7 @@ type Props = {
 export function DonnaMark({ size = 40, variant = "plain", label = "DONNA", className = "" }: Props) {
   const uid = useId().replace(/:/g, "");
   const surface = variant === "plain" ? null : SURFACES[variant];
-  const c = PALETTES[surface?.palette ?? "light"];
+  const c = surface ? PALETTES[surface.palette] : THEMED;
   const detailed = size >= 32;
 
   const svg = (

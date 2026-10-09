@@ -157,6 +157,13 @@
   --color-ink-2: #bcb1ab;
   --color-ink-3: #978b85;
 
+  /* Le logo s'inverse sur fond sombre : ruban pêche, ombres rosées (palette « onDark » de donna-mark.tsx). */
+  --mark-from: #fdfaf8;
+  --mark-to: #e3adaa;
+  --mark-highlight: #ffffff;
+  --mark-shade: #d99a98;
+  --mark-deep: #b7777a;
+
   /* Marque décorative (halos, puces, tuiles d'icône). */
   --color-rose-300: #b87c80;
   --color-peche-100: #3b2c26;
@@ -184,6 +191,15 @@
 @layer base {
   html {
     color-scheme: light;
+  }
+
+  /* Couleurs du logo posé directement sur la page (DonnaMark « plain », voir donna-mark.tsx) : celles de la palette « light ». */
+  :root {
+    --mark-from: #a65a66;
+    --mark-to: #7c3040;
+    --mark-highlight: #d9a3a2;
+    --mark-shade: #5e1b2a;
+    --mark-deep: #3a0c15;
   }
 
   body {
