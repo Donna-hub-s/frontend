@@ -420,6 +420,26 @@
   }
 }
 
+/* Changement d'état (voir donna-orb.tsx : ORB_SWITCH_MS) : le nouveau dessin fond par-dessus l'ancien, qui reste dessous, opaque —
+   deux dessins qui fondraient l'un vers l'autre feraient passer le disque à 75 % d'opacité. Seul le halo de l'ancien état,
+   qui dépasse du disque, s'éteint. Même durée que .orb-enter : le test de l'orbe vérifie qu'elles restent égales. */
+.orb-layer-in {
+  animation: orb-layer-in 280ms var(--ease-enter) both;
+}
+@keyframes orb-layer-in {
+  from {
+    opacity: 0;
+  }
+}
+.orb-halo-out {
+  animation: orb-halo-out 280ms var(--ease-enter) both;
+}
+@keyframes orb-halo-out {
+  to {
+    opacity: 0;
+  }
+}
+
 /* idle : halo qui respire */
 .orb-breathe {
   animation: orb-breathe var(--duration-orb-loop) ease-in-out infinite alternate;
