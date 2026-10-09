@@ -165,11 +165,16 @@ export function Markdown({
   streaming = false,
   conversationId,
   breaks = false,
+  reading = false,
 }: {
   children: string;
   files?: readonly MarkdownFile[];
   renderFile?: (file: MarkdownFile, label: ReactNode, variant: "link" | "image") => ReactNode;
   streaming?: boolean;
+  /** Texte destiné à être LU longtemps (réponse de DONNA, contenu d'un document) :
+   * corps et interligne de lecture au lieu de ceux du chrome. Un message tapé par
+   * l'utilisateur, lui, reste à la taille de l'interface. */
+  reading?: boolean;
   /** Pour l'aperçu d'un lien cité (voir LinkCard) : sans conversation, pas d'aperçu possible
    * (le backend vérifie que le lien est déjà visible dans CETTE conversation). */
   conversationId?: string | null;
@@ -232,7 +237,7 @@ export function Markdown({
     [files, renderFile, conversationId, labels],
   );
   return (
-    <div className="text-message text-ink [overflow-wrap:anywhere]">
+    <div className={`text-ink [overflow-wrap:anywhere] ${reading ? "text-reading" : "text-message"}`}>
       <ReactMarkdown remarkPlugins={remarkPlugins} rehypePlugins={rehypePlugins} components={merged} urlTransform={keepTarget}>
         {text}
       </ReactMarkdown>

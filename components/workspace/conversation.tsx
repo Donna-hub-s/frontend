@@ -665,7 +665,7 @@ function AssistantMessage({
 
         {message.content ? (
           <div aria-live={streaming ? "polite" : undefined}>
-            <Markdown files={files} renderFile={renderFile} streaming={streaming} conversationId={conversationId}>
+            <Markdown files={files} renderFile={renderFile} streaming={streaming} conversationId={conversationId} reading>
               {message.content}
             </Markdown>
             {streaming && <span aria-hidden className="demo-caret ml-0.5 inline-block h-4 w-px translate-y-0.5 bg-bordeaux-700" />}
@@ -987,7 +987,10 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
   };
 
   return (
-    <div className="rounded-panel border border-border bg-ivoire-50 p-4">
+    // Une carte qui attend une décision se voit d'un coup d'œil, et ne se confond
+    // pas avec celles déjà tranchées : c'est le seul moment du produit qui exige
+    // la personne. Les autres gardent le fond neutre.
+    <div className={`rounded-panel border p-4 ${awaiting ? "border-attention/40 bg-attention-soft" : "border-border bg-ivoire-50"}`}>
       <div className="flex items-center justify-between gap-3 text-meta">
         <span className="font-medium text-ink">
           {isEmail ? dict.chat.draftEmail : isDriveUpload ? dict.chat.draftDriveUpload : isWorkflow ? dict.chat.draftWorkflow : isResearch ? dict.chat.draftResearch : dict.chat.draftEvent}
@@ -1004,8 +1007,8 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
           </span>
         ) : (
           awaiting && (
-            <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-bordeaux-700">
-              <span className="pending-dot size-1.5 rounded-full bg-bordeaux-700" />
+            <span className="inline-flex items-center gap-1.5 whitespace-nowrap font-medium text-attention">
+              <span className="pending-dot size-1.5 rounded-full bg-attention" />
               {dict.chat.awaiting}
             </span>
           )

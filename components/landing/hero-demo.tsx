@@ -194,11 +194,11 @@ export function HeroDemo({ demo }: { demo: Demo }) {
                             <span className="font-medium text-ink">{demo.draftLabel}</span>
                             <span className="relative h-5 min-w-44 whitespace-nowrap">
                               <span
-                                className={`absolute inset-0 flex items-center justify-end gap-1.5 text-bordeaux-700 transition-opacity duration-300 ${
+                                className={`absolute inset-0 flex items-center justify-end gap-1.5 font-medium text-attention transition-opacity duration-300 ${
                                   sent ? "opacity-0" : "opacity-100"
                                 }`}
                               >
-                                <span className="pending-dot size-1.5 rounded-full bg-bordeaux-700" />
+                                <span className="pending-dot size-1.5 rounded-full bg-attention" />
                                 {demo.pending}
                               </span>
                               <span

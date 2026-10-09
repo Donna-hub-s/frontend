@@ -153,7 +153,7 @@ export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: Work
         <header className="flex items-center justify-between border-b border-border px-4 py-3.5">
           <h2 className="text-panel-title font-medium text-ink">{panel.pending}</h2>
           {pending.length > 0 && (
-            <span className="rounded-full bg-bordeaux-700 px-2 text-meta font-medium text-white tabular-nums">{pending.length}</span>
+            <span className="rounded-full bg-attention px-2 text-meta font-medium text-white tabular-nums">{pending.length}</span>
           )}
         </header>
         {pending.length ? (

@@ -163,8 +163,8 @@ function Rendered({ labels, content, name }: { labels: Labels; content: Content;
     case "markdown":
       return (
         <div className="px-4 py-6 md:px-8">
-          <article className="mx-auto max-w-[46rem] rounded-card bg-white px-6 py-8 text-message text-ink shadow-card md:px-12">
-            <Markdown>{content.text}</Markdown>
+          <article className="mx-auto max-w-[46rem] rounded-card bg-white px-6 py-8 text-ink shadow-card md:px-12">
+            <Markdown reading>{content.text}</Markdown>
             {content.truncated && <p className="mt-4 text-meta text-ink-3">{labels.truncatedText}</p>}
           </article>
         </div>
