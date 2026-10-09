@@ -464,6 +464,7 @@
       "you": "You",
       "thinking": "Thinking…",
       "working": "She's on it",
+      "elapsed": { "second": "s", "minute": "min", "hour": "h" },
       "done": "Done",
       "sources": "Sources",
       "sourcesPrev": "Previous sources",

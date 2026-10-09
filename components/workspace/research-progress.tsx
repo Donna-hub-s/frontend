@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import type { Locale } from "@/i18n/config";
+import { visibleElapsed } from "@/lib/elapsed";
 import { POLL_MS, cancelRun, fetchRun, formatUsd, isFinished, visibleSteps, type ResearchRun } from "@/lib/research";
+import { useNow } from "@/lib/use-now";
+import { parseBackendDate } from "@/lib/workspace-types";
+import { ElapsedBadge } from "./elapsed-badge";
 import { CheckIcon, CloseIcon } from "./icons";
 
 type Labels = Dictionary["workspace"]["chat"];
@@ -28,6 +32,8 @@ export function ResearchProgress({
 }) {
   const [run, setRun] = useState<ResearchRun | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  // Une recherche dure des minutes : sans durée, « en cours » ne dit pas si cela fait dix secondes ou dix minutes.
+  const now = useNow(run?.status === "running");
   const finishedRef = useRef(onFinished);
   useEffect(() => {
     finishedRef.current = onFinished;
@@ -58,6 +64,9 @@ export function ResearchProgress({
   if (!run) return <p className="mt-3 text-secondary text-ink-3">{labels.researchStarting}</p>;
 
   const steps = visibleSteps(run.steps);
+  const startedAt = parseBackendDate(run.created_at);
+  const finishedAt = parseBackendDate(run.finished_at);
+  const took = startedAt !== null && finishedAt !== null ? visibleElapsed(startedAt, finishedAt, labels.elapsed) : null;
   const pages = labels.researchPages.replace("{read}", String(run.pages_read)).replace("{failed}", String(run.pages_failed));
 
   if (run.status === "running") {
@@ -67,6 +76,7 @@ export function ResearchProgress({
           <span className="pending-dot size-1.5 rounded-full bg-brand-fill" />
           {labels.researchRunning}
           <span className="font-normal text-ink-3">· {pages}</span>
+          {startedAt !== null && <ElapsedBadge startedAt={startedAt} now={now} units={labels.elapsed} className="font-normal text-ink-3" separator />}
         </p>
         {steps.length > 0 && (
           <ul className="flex flex-col gap-0.5 text-meta text-ink-2">
@@ -100,6 +110,7 @@ export function ResearchProgress({
           <CheckIcon size={14} />
           {labels.researchDone}
           <span className="font-normal text-ink-3">· {pages}</span>
+          {took && <span className="font-normal text-ink-3 tabular-nums">· {took}</span>}
         </p>
         {run.cost_usd !== null && (
           <p className="text-meta text-ink-3">{labels.researchCost.replace("{cost}", formatUsd(run.cost_usd, lang))}</p>

@@ -5,7 +5,9 @@ import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { GmailIcon, GoogleCalendarIcon, GoogleDriveIcon, WhatsAppIcon } from "./brand-icons";
 import { visibleSteps } from "@/lib/chat-run";
+import { useNow } from "@/lib/use-now";
 import { parseBackendDate, type ConnectorsOut, type PendingActionOut, type Step } from "@/lib/workspace-types";
+import { ElapsedBadge } from "./elapsed-badge";
 import { EmailAttachmentList } from "./email-attachments";
 import { WorkflowDraft } from "./workflow-draft";
 import { useWorkspace } from "./workspace-provider";
@@ -108,6 +110,8 @@ export function StepDot({ status, warn = false }: { status: Step["status"]; warn
 export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: WorkspaceDict; connectors: ConnectorsOut | null }) {
   const { activity, pending } = useWorkspace();
   const { panel } = dict;
+  // Une seule horloge pour la liste, arrêtée dès que plus rien ne tourne (voir lib/use-now.ts).
+  const now = useNow(activity.steps.some((step) => step.status === "running"));
 
   return (
     <aside aria-label={panel.label} className="scrollbar-none hidden w-[20rem] shrink-0 flex-col gap-4 overflow-y-auto bg-page p-4 xl:flex [body[data-canvas-open]_&]:hidden">
@@ -138,6 +142,7 @@ export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: Work
                     </span>
                   )}
                 </span>
+                {step.status === "running" && <ElapsedBadge startedAt={step.at} now={now} units={dict.chat.elapsed} />}
                 <time className="text-meta text-ink-3 tabular-nums" suppressHydrationWarning>
                   {timeFormat(lang).format(step.at)}
                 </time>

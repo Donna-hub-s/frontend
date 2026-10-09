@@ -40,6 +40,7 @@ import { EmailAttachmentList } from "./email-attachments";
 import { AgentMenu, AgentReviewDialog } from "./agent-menu";
 import { markSeen, needsReview, readSeen, type AgentOut } from "@/lib/agents";
 import { useProjectAgents } from "@/lib/use-project-agents";
+import { useNow } from "@/lib/use-now";
 import { Bot } from "lucide-react";
 import { WorkflowDraft } from "./workflow-draft";
 import { useConversationContext } from "@/lib/use-conversation-context";
@@ -48,6 +49,7 @@ import { ContextMenu } from "./context-menu";
 import { ModelMenu } from "./model-menu";
 import { SkillsMenu } from "./skills-menu";
 import { DrivePicker } from "./drive-picker";
+import { ElapsedBadge } from "./elapsed-badge";
 import { StepDot, stepDetail, stepLabel } from "./side-panel";
 import { useWorkspace } from "./workspace-provider";
 
@@ -879,6 +881,9 @@ function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict;
   const [open, setOpen] = useState(true);
   const steps = visibleSteps(message.steps ?? []);
   const expanded = streaming || open;
+  // Durée de l'étape en cours (muette sous quelques secondes, voir lib/elapsed.ts) : une étape de deux secondes
+  // et une de deux minutes n'avaient jusqu'ici que leur heure de début pour les distinguer.
+  const now = useNow(steps.some((step) => step.status === "running"));
 
   return (
     <div className="rounded-panel bg-surface shadow-card">
@@ -909,6 +914,7 @@ function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict;
                   {stepLabel(dict, step.key)}
                   {detail && <span className={`block text-meta text-pretty ${detail.warn ? "text-danger" : "text-ink-3"}`}>{detail.text}</span>}
                 </span>
+                {step.status === "running" && <ElapsedBadge startedAt={step.at} now={now} units={dict.chat.elapsed} />}
                 <Time lang={lang} at={step.at} />
               </li>
             );
