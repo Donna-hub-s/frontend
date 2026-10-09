@@ -276,7 +276,7 @@ export function ConnectorRows({ lang, dict, connectors }: { lang: Locale; dict: 
     <ul className="flex flex-col">
       {rows.map((row) => (
         <li key={row.key} className="flex items-center gap-3 border-b border-border px-4 py-3 last:border-b-0">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-nav border border-border bg-white">{row.icon}</span>
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-nav border border-border bg-surface">{row.icon}</span>
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="truncate text-label font-medium text-ink">{row.name}</span>
             <span className="truncate text-meta text-ink-3" title={row.detail}>
@@ -288,7 +288,7 @@ export function ConnectorRows({ lang, dict, connectors }: { lang: Locale; dict: 
           ) : (
             <a
               href={row.action.href}
-              className="shrink-0 rounded-button border border-border bg-white px-2.5 py-1 text-meta font-medium text-bordeaux-700 no-underline hover:border-bordeaux-700/40 hover:text-bordeaux-900"
+              className="shrink-0 rounded-button border border-border bg-surface px-2.5 py-1 text-meta font-medium text-bordeaux-700 no-underline hover:border-bordeaux-700/40 hover:text-bordeaux-900"
             >
               {row.action.label}
             </a>

@@ -70,7 +70,7 @@ function etiquetteVoix(voix: VoiceOut, labels: Labels): string {
 }
 
 const fieldClass =
-  "h-10 w-full rounded-button border border-border bg-white px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none";
+  "h-10 w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none";
 
 /** Paramètres du compte, en fenêtre : profil, préférences, notifications, connecteurs. */
 export function SettingsDialog({
@@ -217,7 +217,7 @@ function SettingsBody({
                 aria-selected={tab === item.key}
                 onClick={() => setTab(item.key)}
                 className={`flex w-full items-center gap-2.5 rounded-nav px-3 py-2 text-left text-label ${
-                  tab === item.key ? "bg-white font-medium text-ink shadow-card" : "text-ink-2 hover:bg-active hover:text-ink"
+                  tab === item.key ? "bg-surface font-medium text-ink shadow-card" : "text-ink-2 hover:bg-active hover:text-ink"
                 }`}
               >
                 <span className={tab === item.key ? "text-bordeaux-700" : "text-ink-3"}>{item.icon}</span>
@@ -340,7 +340,7 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
         onClick={() => onChange(!checked)}
         className={`relative mt-0.5 h-6 w-10 shrink-0 rounded-full transition-colors ${checked ? "bg-bordeaux-700" : "bg-active"}`}
       >
-        <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow-card transition-transform ${checked ? "translate-x-4" : ""}`} />
+        <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-surface shadow-card transition-transform ${checked ? "translate-x-4" : ""}`} />
       </button>
     </div>
   );

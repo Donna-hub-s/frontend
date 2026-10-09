@@ -64,7 +64,7 @@ export function TeamUsage({ lang, labels, days }: { lang: Locale; labels: Labels
   const memberName = (m: TeamMember) => m.email ?? m.user_id;
   return (
     <>
-      <section className="flex flex-col gap-3 rounded-panel bg-white p-5 shadow-card">
+      <section className="flex flex-col gap-3 rounded-panel bg-surface p-5 shadow-card">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex max-w-[34rem] flex-col gap-1">
             <h2 className="text-label font-medium text-ink">{labels.teamTitle}</h2>
@@ -195,7 +195,7 @@ function describeLimits(row: UsageBudgetRow, money: (usd: number) => string, lan
   return parts.length ? parts.join(" · ") : labels.teamNoBudget;
 }
 
-const field = "h-10 w-full rounded-button border border-border bg-white px-3 text-label text-ink outline-none focus:border-bordeaux-700";
+const field = "h-10 w-full rounded-button border border-border bg-surface px-3 text-label text-ink outline-none focus:border-bordeaux-700";
 
 function BudgetDialog({
   labels,

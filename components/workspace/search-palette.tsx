@@ -177,7 +177,7 @@ export function SearchPalette({ lang, labels }: { lang: Locale; labels: Labels }
         aria-modal="true"
         aria-label={labels.searchLabel}
         onMouseDown={(event) => event.stopPropagation()}
-        className="w-full max-w-[36rem] overflow-hidden rounded-panel bg-white shadow-float"
+        className="w-full max-w-[36rem] overflow-hidden rounded-panel bg-surface shadow-float"
       >
         <div className="flex items-center gap-3 border-b border-border px-4">
           <SearchIcon size={18} className="shrink-0 text-ink-3" />

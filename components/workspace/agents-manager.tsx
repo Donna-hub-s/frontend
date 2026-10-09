@@ -37,7 +37,7 @@ import { ProjectIcon, ProjectIconPicker } from "./project-icon";
 type ProjectLabels = Dictionary["workspace"]["projects"];
 
 const fieldClass =
-  "w-full rounded-button border border-border bg-white px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none disabled:bg-surface disabled:text-ink-2";
+  "w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none disabled:bg-surface disabled:text-ink-2";
 const primaryButton = "rounded-button bg-bordeaux-700 px-3.5 py-2 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60";
 const ghostButton = "rounded-button px-3.5 py-2 text-label font-medium text-ink hover:bg-active disabled:opacity-60";
 const smallButton = "rounded-button px-2 py-1 text-meta font-medium text-ink-2 hover:bg-active hover:text-ink disabled:opacity-60";
@@ -68,7 +68,7 @@ export function AgentsCard({ lang, labels, projectLabels, projectId, canEdit }: 
   };
 
   return (
-    <section id="agents" aria-labelledby="project-agents" className="scroll-mt-4 rounded-card border border-border bg-white p-4">
+    <section id="agents" aria-labelledby="project-agents" className="scroll-mt-4 rounded-card border border-border bg-surface p-4">
       <div className="flex items-start justify-between gap-2">
         <h2 id="project-agents" className="flex items-baseline gap-2 text-label font-medium text-ink">
           {labels.cardTitle}
@@ -378,7 +378,7 @@ function AgentEditor({
                   type="button"
                   title={template.description}
                   onClick={() => (setDraft(draftFromTemplate(template)), setTouched(true))}
-                  className="inline-flex items-center gap-1.5 rounded-button border border-border bg-white px-2.5 py-1.5 text-label text-ink hover:border-bordeaux-700/40"
+                  className="inline-flex items-center gap-1.5 rounded-button border border-border bg-surface px-2.5 py-1.5 text-label text-ink hover:border-bordeaux-700/40"
                 >
                   <ProjectIcon icon={template.icon} size={15} className="text-ink-3" />
                   {template.name}
@@ -456,7 +456,7 @@ function AgentEditor({
                     disabled={readOnly}
                     aria-checked={draft.effort === effort}
                     onClick={() => set({ effort })}
-                    className={`flex-1 rounded-badge px-2 py-1.5 text-meta font-medium transition-colors ${draft.effort === effort ? "bg-white text-ink shadow-sm" : "text-ink-3 hover:text-ink-2"}`}
+                    className={`flex-1 rounded-badge px-2 py-1.5 text-meta font-medium transition-colors ${draft.effort === effort ? "bg-surface text-ink shadow-sm" : "text-ink-3 hover:text-ink-2"}`}
                   >
                     {effort ? labels.efforts[effort] : labels.efforts.auto}
                   </button>

@@ -168,7 +168,7 @@ function PickerBody({
             onChange={(event) => setQuery(event.target.value)}
             placeholder={tab === "project" ? labels.searchProject : labels.search}
             aria-label={tab === "project" ? labels.searchProject : labels.search}
-            className="h-10 w-full rounded-button border border-border bg-white pr-3 pl-9 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
+            className="h-10 w-full rounded-button border border-border bg-surface pr-3 pl-9 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
           />
         </div>
         {/* La recherche Drive remplace tout l'arbre de dossiers (globale, Drive entier) — l'onglet « Dans ce
@@ -186,7 +186,7 @@ function PickerBody({
                   role="tab"
                   aria-selected={tab === value}
                   onClick={() => switchTab(value)}
-                  className={`rounded-badge px-2.5 py-1 text-meta ${tab === value ? "bg-white font-medium text-ink shadow-card" : "text-ink-3 hover:text-ink"}`}
+                  className={`rounded-badge px-2.5 py-1 text-meta ${tab === value ? "bg-surface font-medium text-ink shadow-card" : "text-ink-3 hover:text-ink"}`}
                 >
                   {value === "my" ? labels.myDrive : value === "shared" ? labels.shared : labels.inProject}
                 </button>
@@ -267,7 +267,7 @@ function PickerBody({
                   >
                     <span
                       aria-hidden
-                      className={`flex size-5 shrink-0 items-center justify-center rounded-badge border ${checked ? "border-bordeaux-700 bg-bordeaux-700 text-white" : "border-border bg-white"}`}
+                      className={`flex size-5 shrink-0 items-center justify-center rounded-badge border ${checked ? "border-bordeaux-700 bg-bordeaux-700 text-white" : "border-border bg-surface"}`}
                     >
                       {checked && <CheckIcon size={13} />}
                     </span>
@@ -355,7 +355,7 @@ function DriveError({ code, labels, link, onRetry }: { code: DriveErrorCode; lab
           {code === "scope_missing" ? labels.authorize : labels.connect}
         </a>
       ) : (
-        <button type="button" onClick={onRetry} className="rounded-button border border-border bg-white px-3.5 py-2 text-label font-medium text-bordeaux-700 hover:border-bordeaux-700/40">
+        <button type="button" onClick={onRetry} className="rounded-button border border-border bg-surface px-3.5 py-2 text-label font-medium text-bordeaux-700 hover:border-bordeaux-700/40">
           {labels.retry}
         </button>
       )}

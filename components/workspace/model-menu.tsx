@@ -66,7 +66,7 @@ export function ModelMenu({ lang, labels }: { lang: Locale; labels: Labels }) {
       </button>
 
       {open && (
-        <div role="dialog" aria-label={labels.title} className="absolute bottom-full inset-x-0 z-30 mb-2 sm:inset-x-auto sm:left-0 flex max-h-[min(34rem,70dvh)] sm:w-[24rem] flex-col overflow-hidden rounded-panel border border-border bg-white shadow-float">
+        <div role="dialog" aria-label={labels.title} className="absolute bottom-full inset-x-0 z-30 mb-2 sm:inset-x-auto sm:left-0 flex max-h-[min(34rem,70dvh)] sm:w-[24rem] flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-float">
           <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto p-2">
             <p className="px-2 pt-1 pb-1.5 text-meta text-ink-3">{labels.hint}</p>
             <Row selected={!active} onSelect={() => writeModelChoice(null)} title={labels.defaultModel} detail={data?.default_provider} />
@@ -102,7 +102,7 @@ export function ModelMenu({ lang, labels }: { lang: Locale; labels: Labels }) {
                     role="radio"
                     aria-checked={active.effort === effort}
                     onClick={() => setEffort(effort)}
-                    className={`flex-1 rounded-badge px-2 py-1 text-meta font-medium transition-colors ${active.effort === effort ? "bg-white text-ink shadow-sm" : "text-ink-3 hover:text-ink-2"}`}
+                    className={`flex-1 rounded-badge px-2 py-1 text-meta font-medium transition-colors ${active.effort === effort ? "bg-surface text-ink shadow-sm" : "text-ink-3 hover:text-ink-2"}`}
                   >
                     {effort ? labels.efforts[effort] : labels.efforts.auto}
                   </button>

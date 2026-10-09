@@ -356,7 +356,7 @@ function RunRow({ lang, labels, run, defaultOpen }: { lang: Locale; labels: Labe
   const at = parseBackendDate(run.started_at);
   const count = tally(run);
   return (
-    <li className="rounded-badge bg-white px-3 py-2 shadow-card">
+    <li className="rounded-badge bg-surface px-3 py-2 shadow-card">
       <button type="button" aria-expanded={open} aria-controls={id} onClick={() => setOpen((value) => !value)} className="flex w-full flex-wrap items-center gap-x-3 gap-y-0.5 text-left">
         <span className={`text-label font-medium ${RUN_TONE[run.status] ?? "text-ink-2"}`}>
           {labels.runStatus[run.status as keyof Labels["runStatus"]] ?? run.status}
@@ -441,7 +441,7 @@ function BriefingDialog({ labels, onClose, onCreated }: { labels: Labels; onClos
     else setError(d.error);
   };
 
-  const field = "h-10 w-full rounded-button border border-border bg-white px-3 text-message text-ink focus:border-bordeaux-700 focus:shadow-focus focus:outline-none";
+  const field = "h-10 w-full rounded-button border border-border bg-surface px-3 text-message text-ink focus:border-bordeaux-700 focus:shadow-focus focus:outline-none";
   return (
     <form
       onSubmit={(event) => {

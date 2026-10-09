@@ -64,7 +64,7 @@ export function SkillsMenu({ lang, labels }: { lang: Locale; labels: Dictionary[
       </button>
 
       {open && (
-        <div role="group" aria-label={labels.skillsMenu} className="absolute bottom-full inset-x-0 z-30 mb-2 sm:inset-x-auto sm:left-0 sm:w-[20rem] rounded-panel border border-border bg-white p-2 shadow-float">
+        <div role="group" aria-label={labels.skillsMenu} className="absolute bottom-full inset-x-0 z-30 mb-2 sm:inset-x-auto sm:left-0 sm:w-[20rem] rounded-panel border border-border bg-surface p-2 shadow-float">
           <p className="px-2 pt-1 pb-2 text-meta text-ink-3">{labels.skillsMenuHint}</p>
           {!skills ? (
             <p className="px-2 py-3 text-secondary text-ink-3">…</p>
@@ -92,7 +92,7 @@ export function SkillsMenu({ lang, labels }: { lang: Locale; labels: Dictionary[
                         )}
                       </span>
                       <span aria-hidden className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${enabled ? "bg-bordeaux-700" : "bg-active"}`}>
-                        <span className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow-card transition-transform ${enabled ? "translate-x-4" : ""}`} />
+                        <span className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-surface shadow-card transition-transform ${enabled ? "translate-x-4" : ""}`} />
                       </span>
                     </button>
                   </li>

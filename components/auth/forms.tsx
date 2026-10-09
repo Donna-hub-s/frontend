@@ -304,7 +304,7 @@ export function WorkspacePicker({ lang, auth, tenants }: Base & { tenants: Tenan
                 name="tenant"
                 value={tenant.id}
                 disabled={pending}
-                className="group flex w-full items-center gap-3.5 rounded-card border border-border bg-white px-4 py-3.5 text-left transition-[border-color,box-shadow] duration-(--duration-fast) hover:border-bordeaux-700/40 hover:shadow-card disabled:cursor-progress disabled:opacity-60"
+                className="group flex w-full items-center gap-3.5 rounded-card border border-border bg-surface px-4 py-3.5 text-left transition-[border-color,box-shadow] duration-(--duration-fast) hover:border-bordeaux-700/40 hover:shadow-card disabled:cursor-progress disabled:opacity-60"
               >
                 <span
                   aria-hidden

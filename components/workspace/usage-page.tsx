@@ -79,7 +79,7 @@ export function UsagePage({ lang, labels }: { lang: Locale; labels: Labels }) {
                 type="button"
                 aria-pressed={days === option}
                 onClick={() => setDays(option)}
-                className={`rounded-badge px-3 py-1.5 text-label ${days === option ? "bg-white font-medium text-ink shadow-card" : "text-ink-2 hover:text-ink"}`}
+                className={`rounded-badge px-3 py-1.5 text-label ${days === option ? "bg-surface font-medium text-ink shadow-card" : "text-ink-2 hover:text-ink"}`}
               >
                 {fill(labels.periodDays, { n: option })}
               </button>
@@ -96,7 +96,7 @@ export function UsagePage({ lang, labels }: { lang: Locale; labels: Labels }) {
                 role="tab"
                 aria-selected={tab === option}
                 onClick={() => setTab(option)}
-                className={`rounded-badge px-3 py-1.5 text-label ${tab === option ? "bg-white font-medium text-ink shadow-card" : "text-ink-2 hover:text-ink"}`}
+                className={`rounded-badge px-3 py-1.5 text-label ${tab === option ? "bg-surface font-medium text-ink shadow-card" : "text-ink-2 hover:text-ink"}`}
               >
                 {option === "mine" ? labels.tabMine : labels.tabTeam}
               </button>
@@ -206,7 +206,7 @@ function Dashboard({ lang, labels, data, metric, onMetric }: { lang: Locale; lab
           />
         )}
         {data.top_conversations.length > 0 && (
-          <section className="rounded-panel bg-white p-5 shadow-card">
+          <section className="rounded-panel bg-surface p-5 shadow-card">
             <h2 className="text-label font-medium text-ink">{labels.topConversations}</h2>
             <ul className="mt-3 flex flex-col divide-y divide-border">
               {data.top_conversations.map((conversation) => (
@@ -232,7 +232,7 @@ function Dashboard({ lang, labels, data, metric, onMetric }: { lang: Locale; lab
 
 function Card({ title, value, hint }: { title: string; value: string; hint?: string }) {
   return (
-    <div className="flex flex-col gap-1 rounded-panel bg-white p-4 shadow-card">
+    <div className="flex flex-col gap-1 rounded-panel bg-surface p-4 shadow-card">
       <p className="text-meta text-ink-3">{title}</p>
       <p className="text-panel-title font-medium text-ink">{value}</p>
       {hint && <p className="text-meta text-ink-3 text-pretty">{hint}</p>}
@@ -246,7 +246,7 @@ function DailyChart({ lang, labels, data, money, metric, onMetric }: { lang: Loc
   const text = (day: UsageSummary["by_day"][number]) => (metric === "cost" ? money(day.cost_usd) : formatTokens(day.input_tokens + day.output_tokens, lang));
   const last = data.by_day.length - 1;
   return (
-    <section className="rounded-panel bg-white p-5 shadow-card">
+    <section className="rounded-panel bg-surface p-5 shadow-card">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-label font-medium text-ink">{labels.chartTitle}</h2>
         <div role="group" aria-label={labels.chartTitle} className="inline-flex rounded-button bg-fill p-0.5">
@@ -256,7 +256,7 @@ function DailyChart({ lang, labels, data, money, metric, onMetric }: { lang: Loc
               type="button"
               aria-pressed={metric === option}
               onClick={() => onMetric(option)}
-              className={`rounded-badge px-2.5 py-1 text-meta ${metric === option ? "bg-white font-medium text-ink shadow-card" : "text-ink-2 hover:text-ink"}`}
+              className={`rounded-badge px-2.5 py-1 text-meta ${metric === option ? "bg-surface font-medium text-ink shadow-card" : "text-ink-2 hover:text-ink"}`}
             >
               {option === "cost" ? labels.metricCost : labels.metricTokens}
             </button>
@@ -313,7 +313,7 @@ function Breakdown({
   sub?: (bucket: UsageBucket) => string;
 }) {
   return (
-    <section className="rounded-panel bg-white p-5 shadow-card">
+    <section className="rounded-panel bg-surface p-5 shadow-card">
       <h2 className="text-label font-medium text-ink">{title}</h2>
       <ul className="mt-3 flex flex-col gap-3">
         {rows.map((bucket) => {
@@ -356,7 +356,7 @@ function BudgetCard({ labels, lang, budget, money }: { labels: Labels; lang: Loc
         ? fill(labels.budgetWarn, { percent: Math.round(budget.ratio * 100) })
         : null;
   return (
-    <section className="flex flex-col gap-2 rounded-panel bg-white p-5 shadow-card" aria-label={labels.budgetTitle}>
+    <section className="flex flex-col gap-2 rounded-panel bg-surface p-5 shadow-card" aria-label={labels.budgetTitle}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-label font-medium text-ink">{labels.budgetTitle}</h2>
         <span className="text-meta text-ink-3">{budget.source === "default" ? labels.budgetDefault : labels.budgetOwn}</span>

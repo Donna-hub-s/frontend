@@ -144,18 +144,18 @@ function Fallback({ message }: { message: string }) {
 function Rendered({ labels, content, name }: { labels: Labels; content: Content; name: string }) {
   switch (content.kind) {
     case "pdf":
-      return <iframe src={content.url} title={name} className="size-full border-0 bg-white" />;
+      return <iframe src={content.url} title={name} className="size-full border-0 bg-surface" />;
     case "image":
       return (
         <div className="flex min-h-full items-center justify-center p-6">
           {/* eslint-disable-next-line @next/next/no-img-element -- blob local, pas d'optimisation possible */}
-          <img src={content.url} alt={name} className="max-h-full max-w-full rounded-card bg-white object-contain shadow-card" />
+          <img src={content.url} alt={name} className="max-h-full max-w-full rounded-card bg-surface object-contain shadow-card" />
         </div>
       );
     case "docx":
       return (
         <div className="px-4 py-6 md:px-8">
-          <article className="doc-preview mx-auto max-w-[46rem] rounded-card bg-white px-6 py-8 shadow-card md:px-12 md:py-10" dangerouslySetInnerHTML={{ __html: content.html }} />
+          <article className="doc-preview mx-auto max-w-[46rem] rounded-card bg-surface px-6 py-8 shadow-card md:px-12 md:py-10" dangerouslySetInnerHTML={{ __html: content.html }} />
         </div>
       );
     case "sheets":
@@ -163,7 +163,7 @@ function Rendered({ labels, content, name }: { labels: Labels; content: Content;
     case "markdown":
       return (
         <div className="px-4 py-6 md:px-8">
-          <article className="mx-auto max-w-[46rem] rounded-card bg-white px-6 py-8 text-ink shadow-card md:px-12">
+          <article className="mx-auto max-w-[46rem] rounded-card bg-surface px-6 py-8 text-ink shadow-card md:px-12">
             <Markdown reading>{content.text}</Markdown>
             {content.truncated && <p className="mt-4 text-meta text-ink-3">{labels.truncatedText}</p>}
           </article>
@@ -172,7 +172,7 @@ function Rendered({ labels, content, name }: { labels: Labels; content: Content;
     case "text":
       return (
         <div className="p-4">
-          <pre className="overflow-x-auto rounded-card bg-white p-5 font-mono text-[0.8125rem] leading-6 whitespace-pre-wrap text-ink shadow-card">{content.text}</pre>
+          <pre className="overflow-x-auto rounded-card bg-surface p-5 font-mono text-[0.8125rem] leading-6 whitespace-pre-wrap text-ink shadow-card">{content.text}</pre>
           {content.truncated && <p className="mt-3 text-meta text-ink-3">{labels.truncatedText}</p>}
         </div>
       );
@@ -190,7 +190,7 @@ function Sheets({ labels, sheets }: { labels: Labels; sheets: Sheet[] }) {
   return (
     <div className="flex h-full flex-col">
       {sheets.length > 1 && (
-        <div role="tablist" aria-label={labels.sheets} className="scrollbar-none flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-white px-3 pt-2">
+        <div role="tablist" aria-label={labels.sheets} className="scrollbar-none flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-surface px-3 pt-2">
           {sheets.map((s, index) => (
             <button
               key={s.name}
@@ -211,7 +211,7 @@ function Sheets({ labels, sheets }: { labels: Labels; sheets: Sheet[] }) {
         <Fallback message={labels.emptySheet} />
       ) : (
         <div className="min-h-0 flex-1 overflow-auto">
-          <table className="min-w-full border-separate border-spacing-0 bg-white text-secondary tabular-nums">
+          <table className="min-w-full border-separate border-spacing-0 bg-surface text-secondary tabular-nums">
             <tbody>
               {sheet.rows.map((row, r) => (
                 <tr key={r} className={r === 0 ? "sticky top-0 z-10 bg-surface font-medium" : ""}>

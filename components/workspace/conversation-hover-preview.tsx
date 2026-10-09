@@ -98,7 +98,7 @@ export function ConversationHoverPreview({
       // pointer-events: none : rien n'y est cliquable, et surtout le curseur
       // peut traverser la carte sans déclencher la fermeture (sinon clignotement).
       style={{ top: pos.top, left: pos.left, width: CARD_WIDTH }}
-      className="pointer-events-none fixed z-50 overflow-hidden rounded-panel border border-border bg-white shadow-float"
+      className="pointer-events-none fixed z-50 overflow-hidden rounded-panel border border-border bg-surface shadow-float"
     >
       {messages === null ? (
         <p className="px-3.5 py-3 text-meta text-ink-3">{labels.loading}</p>

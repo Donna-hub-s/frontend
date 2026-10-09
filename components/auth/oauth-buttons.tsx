@@ -49,7 +49,7 @@ export function OAuthButtons({ providers, lang, dict }: { providers: string[]; l
           <a
             key={provider}
             href={`/oauth/${provider}?lang=${lang}`}
-            className="inline-flex h-11 w-full items-center justify-center gap-3 rounded-button border border-border bg-white px-4 text-label font-medium text-ink no-underline transition-[border-color,background-color] duration-(--duration-fast) hover:border-ink-3/50 hover:bg-surface hover:text-ink"
+            className="inline-flex h-11 w-full items-center justify-center gap-3 rounded-button border border-border bg-surface px-4 text-label font-medium text-ink no-underline transition-[border-color,background-color] duration-(--duration-fast) hover:border-ink-3/50 hover:bg-surface hover:text-ink"
           >
             <ProviderIcon provider={provider} />
             {dict.auth.providers[provider]}

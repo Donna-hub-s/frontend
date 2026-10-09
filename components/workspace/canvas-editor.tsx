@@ -68,5 +68,5 @@ export function CanvasEditor({
     instance.dispatch({ changes: { from: 0, to: current.length, insert: value }, selection: { anchor: caret } });
   }, [value]);
 
-  return <div ref={host} data-testid="canvas-editor" className="size-full overflow-hidden bg-white" />;
+  return <div ref={host} data-testid="canvas-editor" className="size-full overflow-hidden bg-surface" />;
 }

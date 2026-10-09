@@ -4,7 +4,7 @@ import { useId, useState, type InputHTMLAttributes, type ReactNode } from "react
 import { passwordRules, type PasswordRule } from "@/lib/auth-rules";
 
 const inputClass =
-  "h-11 w-full rounded-button border bg-white px-3.5 text-message text-ink placeholder:text-ink-3 transition-[border-color,box-shadow] duration-(--duration-fast) focus:border-bordeaux-700 focus:shadow-focus focus:outline-none disabled:opacity-60";
+  "h-11 w-full rounded-button border bg-surface px-3.5 text-message text-ink placeholder:text-ink-3 transition-[border-color,box-shadow] duration-(--duration-fast) focus:border-bordeaux-700 focus:shadow-focus focus:outline-none disabled:opacity-60";
 
 type FieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "className"> & {
   label: string;

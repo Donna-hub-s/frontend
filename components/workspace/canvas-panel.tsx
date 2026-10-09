@@ -64,7 +64,7 @@ export function CanvasHost({
               aria-expanded={open}
               aria-label={open ? labels.toggleClose : labels.toggleOpen}
               className={`inline-flex h-8 items-center gap-1.5 rounded-button border px-3 text-label font-medium transition-colors ${
-                open ? "border-bordeaux-700/30 bg-bordeaux-700/10 text-bordeaux-700" : "border-border bg-white text-ink hover:bg-active"
+                open ? "border-bordeaux-700/30 bg-bordeaux-700/10 text-bordeaux-700" : "border-border bg-surface text-ink hover:bg-active"
               }`}
             >
               <FileText size={15} aria-hidden />
@@ -102,7 +102,7 @@ function CanvasPanel({
   return (
     <aside
       aria-label={labels.panelLabel}
-      className="fixed inset-0 z-40 flex flex-col bg-white lg:static lg:inset-auto lg:z-auto lg:w-[46%] lg:max-w-[46rem] lg:min-w-[24rem] lg:border-l lg:border-border"
+      className="fixed inset-0 z-40 flex flex-col bg-surface lg:static lg:inset-auto lg:z-auto lg:w-[46%] lg:max-w-[46rem] lg:min-w-[24rem] lg:border-l lg:border-border"
     >
       <header className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2.5">
         {list && list.length > 1 ? (
@@ -110,7 +110,7 @@ function CanvasPanel({
             aria-label={labels.pickLabel}
             value={activeId ?? ""}
             onChange={(event) => canvas.select(event.target.value)}
-            className="max-w-[10rem] truncate rounded-button border border-border bg-white px-2 py-1.5 text-label text-ink"
+            className="max-w-[10rem] truncate rounded-button border border-border bg-surface px-2 py-1.5 text-label text-ink"
           >
             {list.map((item) => (
               <option key={item.id} value={item.id}>
@@ -292,7 +292,7 @@ function ModeTab({ selected, onSelect, icon, label }: { selected: boolean; onSel
       role="tab"
       aria-selected={selected}
       onClick={onSelect}
-      className={`inline-flex items-center gap-1.5 rounded-button px-2.5 py-1 text-label transition-colors ${selected ? "bg-white font-medium text-ink shadow-card" : "text-ink-3 hover:text-ink"}`}
+      className={`inline-flex items-center gap-1.5 rounded-button px-2.5 py-1 text-label transition-colors ${selected ? "bg-surface font-medium text-ink shadow-card" : "text-ink-3 hover:text-ink"}`}
     >
       {icon}
       {label}
@@ -323,7 +323,7 @@ function ConflictBanner({ labels, canvas }: { labels: Labels; canvas: CanvasCont
         <button type="button" onClick={canvas.keepMine} className="rounded-button bg-bordeaux-700 px-3 py-1.5 text-label font-medium text-white hover:bg-bordeaux-900">
           {labels.keepMine}
         </button>
-        <button type="button" onClick={canvas.takeTheirs} className="rounded-button bg-white px-3 py-1.5 text-label font-medium text-ink hover:bg-active">
+        <button type="button" onClick={canvas.takeTheirs} className="rounded-button bg-surface px-3 py-1.5 text-label font-medium text-ink hover:bg-active">
           {labels.takeTheirs}
         </button>
       </div>
@@ -353,7 +353,7 @@ function ExportMenu({ id, labels }: { id: string; labels: Labels }) {
         <Download size={17} />
       </button>
       {open && (
-        <div role="menu" className="absolute top-full right-0 z-30 mt-1 w-44 overflow-hidden rounded-panel border border-border bg-white py-1 shadow-float">
+        <div role="menu" className="absolute top-full right-0 z-30 mt-1 w-44 overflow-hidden rounded-panel border border-border bg-surface py-1 shadow-float">
           {EXPORT_FORMATS.map((format) => (
             <a
               key={format}
@@ -395,7 +395,7 @@ function HistoryView({ labels, canvas, lang, active, onClose }: { labels: Labels
   const when = (iso: string) => new Intl.DateTimeFormat(lang, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
   return (
-    <div className="absolute inset-0 z-10 flex flex-col bg-white" role="region" aria-label={labels.history} data-testid="canvas-history">
+    <div className="absolute inset-0 z-10 flex flex-col bg-surface" role="region" aria-label={labels.history} data-testid="canvas-history">
       <header className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <h3 className="text-label font-medium text-ink">{labels.history}</h3>
         <button type="button" className={BUTTON} onClick={onClose} aria-label={labels.historyClose} title={labels.historyClose}>
@@ -493,7 +493,7 @@ function VersionDetail({
         <p className="text-meta text-ink-3">{stats.added + stats.removed === 0 ? labels.changesNone : fill(labels.changesVs, { added: stats.added, removed: stats.removed })}</p>
       )}
       {folded && stats && stats.added + stats.removed > 0 && (
-        <pre data-testid="canvas-diff" className="scrollbar-none mt-2 max-h-64 overflow-auto rounded-button border border-border bg-white py-1 font-mono text-meta leading-5">
+        <pre data-testid="canvas-diff" className="scrollbar-none mt-2 max-h-64 overflow-auto rounded-button border border-border bg-surface py-1 font-mono text-meta leading-5">
           {folded.map((line, index) =>
             line.kind === "gap" ? (
               <span key={index} className="block px-3 text-ink-3">

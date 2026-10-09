@@ -80,7 +80,7 @@ export function AgentMenu({
       </button>
 
       {open && (
-        <div role="dialog" aria-label={labels.menuTitle} className="absolute bottom-full inset-x-0 z-30 mb-2 sm:inset-x-auto sm:left-0 flex max-h-[min(30rem,70dvh)] sm:w-[22rem] flex-col overflow-hidden rounded-panel border border-border bg-white shadow-float">
+        <div role="dialog" aria-label={labels.menuTitle} className="absolute bottom-full inset-x-0 z-30 mb-2 sm:inset-x-auto sm:left-0 flex max-h-[min(30rem,70dvh)] sm:w-[22rem] flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-float">
           <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto p-2">
             <p className="px-2 pt-1 pb-1.5 text-meta text-ink-3 text-pretty">{labels.menuHint}</p>
             <div role="radiogroup" aria-label={labels.menuTitle}>

@@ -114,7 +114,7 @@ export function DeliverablesPage({ lang, labels }: { lang: Locale; labels: Label
               value={input}
               onChange={(event) => setInput(event.target.value)}
               placeholder={labels.searchPlaceholder}
-              className="h-9 w-full rounded-button border border-border bg-white px-3 text-secondary text-ink outline-none focus:border-bordeaux-700"
+              className="h-9 w-full rounded-button border border-border bg-surface px-3 text-secondary text-ink outline-none focus:border-bordeaux-700"
             />
           </div>
           <div role="group" aria-label={labels.filterLabel} className="inline-flex rounded-button bg-fill p-0.5">
@@ -124,7 +124,7 @@ export function DeliverablesPage({ lang, labels }: { lang: Locale; labels: Label
                 type="button"
                 aria-pressed={kind === option}
                 onClick={() => setKind(option)}
-                className={`rounded-badge px-3 py-1.5 text-label ${kind === option ? "bg-white font-medium text-ink shadow-card" : "text-ink-2 hover:text-ink"}`}
+                className={`rounded-badge px-3 py-1.5 text-label ${kind === option ? "bg-surface font-medium text-ink shadow-card" : "text-ink-2 hover:text-ink"}`}
               >
                 {{ all: labels.filterAll, document: labels.filterDocuments, image: labels.filterImages }[option]}
               </button>

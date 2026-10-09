@@ -45,7 +45,7 @@ export function OAuthLinkNotice({ labels }: { labels: Dictionary["workspace"]["o
     <div role="region" aria-label={labels.region} className="pointer-events-none fixed inset-x-4 top-4 z-50 sm:inset-x-auto sm:right-4 sm:w-96">
       <div
         role={succeeded ? "status" : "alert"}
-        className="pointer-events-auto flex items-start gap-3 rounded-panel border border-border bg-white p-4 shadow-float"
+        className="pointer-events-auto flex items-start gap-3 rounded-panel border border-border bg-surface p-4 shadow-float"
       >
         <span
           className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full ${succeeded ? "bg-success-soft text-success-ink" : "bg-fill text-danger"}`}

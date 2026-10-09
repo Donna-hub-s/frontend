@@ -71,7 +71,7 @@ function CardBody({ data }: { data: LinkCardData }) {
 }
 
 const cardClass =
-  "flex w-full max-w-lg items-center gap-3 rounded-card border border-border bg-white p-3 no-underline transition-colors hover:border-ink-3/30 hover:bg-active/40";
+  "flex w-full max-w-lg items-center gap-3 rounded-card border border-border bg-surface p-3 no-underline transition-colors hover:border-ink-3/30 hover:bg-active/40";
 
 type PreviewState =
   | { status: "idle" }
@@ -133,7 +133,7 @@ function PopoverPanel({
     <span
       role="dialog"
       aria-label={data.host}
-      className={`absolute z-30 block w-80 max-w-[min(20rem,calc(100vw-2rem))] rounded-panel border border-border bg-white p-3 text-left font-normal shadow-float ${position}`}
+      className={`absolute z-30 block w-80 max-w-[min(20rem,calc(100vw-2rem))] rounded-panel border border-border bg-surface p-3 text-left font-normal shadow-float ${position}`}
     >
       {preview && (
         <span className="mb-2.5 block border-b border-border pb-2.5">

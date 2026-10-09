@@ -133,14 +133,14 @@ function ConnectorsMenu({ lang, dict, connectors }: { lang: Locale; dict: Dictio
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-2 rounded-button border border-border bg-white px-3 py-2 text-label font-medium text-ink hover:border-ink-3/40"
+        className="inline-flex items-center gap-2 rounded-button border border-border bg-surface px-3 py-2 text-label font-medium text-ink hover:border-ink-3/40"
       >
         {dict.panel.connectors}
         <span className={`size-1.5 rounded-full ${connectedCount ? "bg-success" : "bg-danger"}`} />
         <ChevronIcon size={15} className={`text-ink-3 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute top-full right-0 z-30 mt-2 w-[20rem] overflow-hidden rounded-panel bg-white shadow-float">
+        <div className="absolute top-full right-0 z-30 mt-2 w-[20rem] overflow-hidden rounded-panel bg-surface shadow-float">
           <p className="border-b border-border px-4 py-3 text-panel-title font-medium text-ink">{dict.panel.connectors}</p>
           <ConnectorRows lang={lang} dict={dict} connectors={connectors} />
         </div>

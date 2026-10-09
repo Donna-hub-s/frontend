@@ -70,7 +70,7 @@ export function ContextMenu({
       </button>
 
       {open && (
-        <div role="group" aria-label={labels.contextMenu} className="absolute bottom-full inset-x-0 z-30 mb-2 sm:inset-x-auto sm:left-0 sm:w-[20rem] rounded-panel border border-border bg-white p-3 shadow-float">
+        <div role="group" aria-label={labels.contextMenu} className="absolute bottom-full inset-x-0 z-30 mb-2 sm:inset-x-auto sm:left-0 sm:w-[20rem] rounded-panel border border-border bg-surface p-3 shadow-float">
           <p className="text-label font-medium text-ink">{labels.contextMenu}</p>
           {status && pct !== null ? (
             <>

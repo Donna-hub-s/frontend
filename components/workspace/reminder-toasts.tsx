@@ -34,7 +34,7 @@ export function ReminderToasts({ lang, labels }: { lang: Locale; labels: Diction
         <div
           key={reminder.id}
           role="alert"
-          className="pointer-events-auto w-full rounded-panel border border-border bg-white p-4 shadow-float"
+          className="pointer-events-auto w-full rounded-panel border border-border bg-surface p-4 shadow-float"
         >
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-peche-100 text-bordeaux-700">

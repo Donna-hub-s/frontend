@@ -46,7 +46,7 @@ export function Dialog({
         // Clic sur le voile : la cible est le <dialog> lui-même, pas son contenu.
         if (event.target === event.currentTarget) onClose();
       }}
-      className={`dialog-pop m-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-hidden rounded-panel bg-white p-0 text-ink shadow-float backdrop:bg-ink/30 ${className}`}
+      className={`dialog-pop m-auto max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] overflow-hidden rounded-panel bg-surface p-0 text-ink shadow-float backdrop:bg-ink/30 ${className}`}
     >
       {open && children}
     </dialog>

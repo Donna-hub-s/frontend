@@ -30,7 +30,7 @@ export function VoiceBar({ labels, voice }: { labels: Labels; voice: VoiceContro
 
   return (
     <section aria-label={labels.start} data-testid="voice-bar" data-phase={state.phase} className="px-4 pb-4 md:px-8">
-      <div className="mx-auto flex w-full max-w-[46rem] flex-col gap-3 rounded-panel border border-bordeaux-700/30 bg-white p-4 shadow-float">
+      <div className="mx-auto flex w-full max-w-[46rem] flex-col gap-3 rounded-panel border border-bordeaux-700/30 bg-surface p-4 shadow-float">
         <div className="flex items-center gap-4">
           <DonnaOrb state={ORB[state.phase]} size={52} label="" />
           <div className="min-w-0 flex-1">

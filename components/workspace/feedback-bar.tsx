@@ -85,7 +85,7 @@ export function FeedbackBar({
             event.preventDefault();
             void sendReason();
           }}
-          className="flex w-full max-w-md basis-full flex-col gap-2 rounded-card border border-border bg-white p-3"
+          className="flex w-full max-w-md basis-full flex-col gap-2 rounded-card border border-border bg-surface p-3"
         >
           <label htmlFor={`reason-${messageId}`} className="text-secondary text-ink-2">
             {labels.feedbackReasonLabel}

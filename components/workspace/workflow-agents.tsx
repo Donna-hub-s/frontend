@@ -90,7 +90,7 @@ function AgentRefRow({ item, labels }: { item: ResolvedAgentRef; labels: Labels 
                   <p className="text-meta text-ink-3">
                     {fill(labels.tools, { tools: detail.tools === null ? labels.toolsAll : detail.tools.length ? detail.tools.join(", ") : labels.toolsNone })}
                   </p>
-                  <pre className="scrollbar-none mt-1.5 max-h-56 overflow-y-auto rounded-button bg-white px-3 py-2 font-sans text-secondary leading-5 whitespace-pre-wrap break-words">
+                  <pre className="scrollbar-none mt-1.5 max-h-56 overflow-y-auto rounded-button bg-surface px-3 py-2 font-sans text-secondary leading-5 whitespace-pre-wrap break-words">
                     {detail.instructions}
                   </pre>
                 </>

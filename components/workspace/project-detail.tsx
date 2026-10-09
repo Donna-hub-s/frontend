@@ -38,7 +38,7 @@ const roleLabel = (labels: Labels, role: ProjectRole | string) =>
   role === "owner" ? labels.roleOwner : role === "editor" ? labels.roleEditor : labels.roleViewer;
 
 const fieldClass =
-  "w-full rounded-button border border-border bg-white px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none";
+  "w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none";
 const primaryButton = "rounded-button bg-bordeaux-700 px-3.5 py-2 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60";
 const ghostButton = "rounded-button px-3.5 py-2 text-label font-medium text-ink hover:bg-active";
 
@@ -163,7 +163,7 @@ export function ProjectDetail({
               <button
                 type="button"
                 onClick={() => setShareOpen(true)}
-                className="inline-flex items-center gap-2 rounded-button border border-border bg-white py-1.5 pr-3 pl-1.5 text-label font-medium text-ink hover:border-bordeaux-700/30"
+                className="inline-flex items-center gap-2 rounded-button border border-border bg-surface py-1.5 pr-3 pl-1.5 text-label font-medium text-ink hover:border-bordeaux-700/30"
               >
                 <MemberStack members={members} />
                 {isOwner ? labels.share : labels.membersTitle}
@@ -343,12 +343,12 @@ function ProjectMenu({ labels, isOwner, onEdit, onDelete, onLeave }: { labels: L
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex size-9 items-center justify-center rounded-button border border-border bg-white text-ink-2 hover:text-ink"
+        className="flex size-9 items-center justify-center rounded-button border border-border bg-surface text-ink-2 hover:text-ink"
       >
         <MoreIcon size={18} />
       </button>
       {open && (
-        <div role="menu" className="absolute top-full right-0 z-20 mt-1 w-56 rounded-card bg-white p-1.5 shadow-float">
+        <div role="menu" className="absolute top-full right-0 z-20 mt-1 w-56 rounded-card bg-surface p-1.5 shadow-float">
           {isOwner ? (
             <>
               <button role="menuitem" type="button" onClick={run(onEdit)} className={`${item} text-ink`}>
@@ -801,7 +801,7 @@ function FilesCard({
                   onChange={(event) => setFileQuery(event.target.value)}
                   placeholder={labels.filesSearchPlaceholder}
                   aria-label={labels.filesSearchPlaceholder}
-                  className="h-8 w-full rounded-button border border-border bg-white px-3 text-meta text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
+                  className="h-8 w-full rounded-button border border-border bg-surface px-3 text-meta text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
                 />
               </div>
             )}
@@ -893,7 +893,7 @@ function FilesCard({
                   type="button"
                   disabled={atCapacity}
                   onClick={() => fileRef.current?.click()}
-                  className="flex w-full flex-col items-center gap-1.5 rounded-card border border-dashed border-border px-4 py-5 text-center hover:border-bordeaux-700/40 hover:bg-white disabled:opacity-60"
+                  className="flex w-full flex-col items-center gap-1.5 rounded-card border border-dashed border-border px-4 py-5 text-center hover:border-bordeaux-700/40 hover:bg-surface disabled:opacity-60"
                 >
                   <UploadIcon size={20} className="text-ink-3" />
                   <span className="text-label font-medium text-ink">{labels.dropzoneHint}</span>
@@ -1335,7 +1335,7 @@ function InviteForm({ labels, projectId, initialInvites }: { labels: Labels; pro
           <label htmlFor={roleId} className="sr-only">
             {labels.inviteRoleLabel}
           </label>
-          <select id={roleId} value={role} onChange={(e) => setRole(e.target.value as ProjectRole)} className="h-10 flex-1 rounded-button sm:flex-none border border-border bg-white px-2 text-label text-ink">
+          <select id={roleId} value={role} onChange={(e) => setRole(e.target.value as ProjectRole)} className="h-10 flex-1 rounded-button sm:flex-none border border-border bg-surface px-2 text-label text-ink">
             <option value="editor">{labels.roleEditor}</option>
             <option value="viewer">{labels.roleViewer}</option>
             <option value="owner">{labels.roleOwner}</option>
@@ -1447,7 +1447,7 @@ function MembersList({
                   disabled={busyId === member.user_id}
                   aria-label={`${labels.inviteRoleLabel} : ${member.email ?? labels.memberUnknown}`}
                   onChange={(e) => void changeRole(member.user_id, e.target.value as ProjectRole)}
-                  className="rounded-badge border border-border bg-white px-2 py-1.5 text-meta text-ink"
+                  className="rounded-badge border border-border bg-surface px-2 py-1.5 text-meta text-ink"
                 >
                   <option value="owner">{labels.roleOwner}</option>
                   <option value="editor">{labels.roleEditor}</option>

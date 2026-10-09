@@ -83,7 +83,7 @@ export function ProjectsIndex({ lang, labels }: { lang: Locale; labels: Labels }
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={labels.searchPlaceholder}
-              className="h-10 w-64 rounded-button border border-border bg-white pr-3 pl-9 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
+              className="h-10 w-64 rounded-button border border-border bg-surface pr-3 pl-9 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
             />
           </div>
         </div>
@@ -110,7 +110,7 @@ export function ProjectsIndex({ lang, labels }: { lang: Locale; labels: Labels }
                 <li key={project.id}>
                   <Link
                     href={`/${lang}/app/projects/${project.id}`}
-                    className="flex h-full flex-col gap-2 rounded-panel bg-surface p-4 no-underline shadow-card transition-colors hover:bg-white"
+                    className="flex h-full flex-col gap-2 rounded-panel bg-surface p-4 no-underline shadow-card transition-colors hover:bg-surface"
                   >
                     <span className="flex items-center gap-2 text-label font-medium text-ink">
                       <ProjectIcon icon={project.icon} size={17} className="text-bordeaux-700" />

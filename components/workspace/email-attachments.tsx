@@ -39,7 +39,7 @@ export function EmailAttachmentList({
               <span className="shrink-0 text-meta text-ink-3 tabular-nums">{formatSize(file.size)}</span>
             </>
           );
-          const row = "flex items-center gap-2 rounded-badge border border-border bg-white px-2.5 py-1.5 text-secondary text-ink";
+          const row = "flex items-center gap-2 rounded-badge border border-border bg-surface px-2.5 py-1.5 text-secondary text-ink";
           return (
             <li key={`${file.name}-${index}`}>
               {openable ? (

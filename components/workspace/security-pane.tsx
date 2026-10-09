@@ -10,7 +10,7 @@ import { CheckIcon, KeyIcon, LaptopIcon, ShieldIcon } from "./icons";
 type Labels = Dictionary["workspace"]["settings"];
 
 const fieldClass =
-  "h-10 w-full rounded-button border border-border bg-white px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none";
+  "h-10 w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none";
 const dangerButton = "rounded-button border border-danger/30 px-3 py-1.5 text-meta font-medium text-danger hover:bg-danger/[0.06] disabled:opacity-50";
 const ghostSmall = "rounded-button border border-border px-3 py-1.5 text-meta font-medium text-ink hover:bg-active disabled:opacity-50";
 const primarySmall = "rounded-button bg-bordeaux-700 px-3.5 py-1.5 text-meta font-medium text-white hover:bg-bordeaux-900 disabled:opacity-50";
@@ -188,7 +188,7 @@ function TotpQr({ uri }: { uri: string }) {
   if (!modules) return <div className="size-40 shrink-0 animate-pulse rounded-card bg-active" />;
   const size = modules.length;
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} width={160} height={160} className="shrink-0 rounded-card border border-border bg-white p-2" role="img" aria-label="QR code">
+    <svg viewBox={`0 0 ${size} ${size}`} width={160} height={160} className="shrink-0 rounded-card border border-border bg-surface p-2" role="img" aria-label="QR code">
       {modules.map((row, r) => row.map((dark, c) => dark && <rect key={`${r}-${c}`} x={c} y={r} width={1} height={1} fill="var(--color-ink)" />))}
     </svg>
   );
@@ -352,7 +352,7 @@ function BackupCodes({
       <p className="mt-1 text-meta text-ink-3 text-pretty">{regenerated ? labels.mfaBackupCodesRegeneratedHint : labels.mfaBackupCodesHint}</p>
       <ul className="mt-2.5 grid grid-cols-2 gap-1.5 font-mono text-secondary text-ink sm:grid-cols-4">
         {codes.map((code) => (
-          <li key={code} className="rounded-badge bg-white px-2 py-1 text-center">
+          <li key={code} className="rounded-badge bg-surface px-2 py-1 text-center">
             {code}
           </li>
         ))}
@@ -496,7 +496,7 @@ function LinkedAccountsCard({ labels, lang, oauthProviders }: { labels: Labels; 
         <ul className="flex flex-col divide-y divide-border">
           {accounts.map((account) => (
             <li key={account.provider} className="flex flex-wrap items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-nav border border-border bg-white">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-nav border border-border bg-surface">
                 {isKnownProvider(account.provider) && <ProviderIcon provider={account.provider} />}
               </span>
               <span className="flex min-w-[10rem] flex-1 flex-col">
@@ -530,7 +530,7 @@ function LinkedAccountsCard({ labels, lang, oauthProviders }: { labels: Labels; 
             <li key={provider}>
               <a
                 href={`/oauth/${provider}?lang=${lang}&link=1`}
-                className="inline-flex items-center gap-2 rounded-button border border-border bg-white px-3 py-1.5 text-meta font-medium text-ink no-underline hover:border-bordeaux-700/30"
+                className="inline-flex items-center gap-2 rounded-button border border-border bg-surface px-3 py-1.5 text-meta font-medium text-ink no-underline hover:border-bordeaux-700/30"
               >
                 {isKnownProvider(provider) && <ProviderIcon provider={provider} />}
                 {labels.linkedAccountConnect} {PROVIDER_NAMES[provider] ?? provider}

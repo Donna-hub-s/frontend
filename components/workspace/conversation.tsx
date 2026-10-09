@@ -64,7 +64,7 @@ function PendingThumb({ file }: { file: File }) {
   const url = useMemo(() => URL.createObjectURL(file), [file]);
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
   // eslint-disable-next-line @next/next/no-img-element -- fichier local choisi par l'utilisateur, dimensions inconnues
-  return <img src={url} alt={file.name} loading="lazy" className="aspect-square w-full bg-white object-cover" />;
+  return <img src={url} alt={file.name} loading="lazy" className="aspect-square w-full bg-surface object-cover" />;
 }
 
 export function Conversation({
@@ -376,7 +376,7 @@ export function Conversation({
           <button
             type="button"
             onClick={() => toBottom()}
-            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3 py-1.5 text-meta font-medium text-ink shadow-float hover:bg-active"
+            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-meta font-medium text-ink shadow-float hover:bg-active"
           >
             <ChevronIcon size={14} />
             {dict.chat.jumpToLatest}
@@ -490,7 +490,7 @@ function UserMessage({
   onSaveEdit: (text: string) => void;
   onSelectVersion: (messageId: string) => Promise<boolean>;
 }) {
-  const chip = "inline-flex items-center gap-1.5 rounded-badge bg-white px-2 py-1 text-meta text-ink-2";
+  const chip = "inline-flex items-center gap-1.5 rounded-badge bg-surface px-2 py-1 text-meta text-ink-2";
   const hasFiles = Boolean(message.localFiles?.length || message.attachments.length);
   const files = useMemo(() => message.attachments.map((file) => ({ name: file.original_name, url: fileHref(file.file_url) })), [message.attachments]);
   // Pièces jointes image : aperçu dans la bulle (un clic ouvre le visualiseur), sauf si le texte les
@@ -512,14 +512,14 @@ function UserMessage({
               event.preventDefault();
               onSaveEdit(draftRef.current?.value ?? "");
             }}
-            className="flex w-full flex-col gap-2 rounded-panel rounded-tr-badge border border-border bg-white p-3"
+            className="flex w-full flex-col gap-2 rounded-panel rounded-tr-badge border border-border bg-surface p-3"
           >
             <textarea
               ref={draftRef}
               defaultValue={message.content}
               autoFocus
               rows={3}
-              className="w-full resize-none rounded-button border border-border bg-white px-3 py-2 text-message text-ink outline-none focus:border-bordeaux-700"
+              className="w-full resize-none rounded-button border border-border bg-surface px-3 py-2 text-message text-ink outline-none focus:border-bordeaux-700"
             />
             <div className="flex justify-end gap-2">
               <button type="button" onClick={onCancelEdit} className="rounded-button px-3 py-1.5 text-label text-ink-2 hover:bg-active">
@@ -702,7 +702,7 @@ function AssistantMessage({
                   <FileLink
                     url={fileHref(file.file_url)}
                     name={file.original_name}
-                    className="inline-flex items-center gap-2 rounded-button border border-border bg-white px-3 py-2 text-label text-ink no-underline hover:border-bordeaux-700/30 hover:text-ink"
+                    className="inline-flex items-center gap-2 rounded-button border border-border bg-surface px-3 py-2 text-label text-ink no-underline hover:border-bordeaux-700/30 hover:text-ink"
                   >
                     <FileIcon size={16} className="text-bordeaux-700" />
                     {file.original_name}
@@ -1106,7 +1106,7 @@ function QuestionCard({
 }) {
   const options = Array.isArray(call.arguments.options) ? (call.arguments.options as unknown[]).map(String) : [];
   return (
-    <div className="rounded-panel border border-rose-300/60 bg-white p-4">
+    <div className="rounded-panel border border-rose-300/60 bg-surface p-4">
       <p className="text-meta text-bordeaux-700">{dict.chat.questionLabel}</p>
       <p className="mt-1 text-message text-ink">{text(call.arguments.question)}</p>
       {options.length > 0 && (
@@ -1117,7 +1117,7 @@ function QuestionCard({
               type="button"
               disabled={disabled}
               onClick={() => onAnswer(option)}
-              className="rounded-full border border-border bg-surface px-3 py-1.5 text-label text-ink hover:border-bordeaux-700/40 hover:bg-white disabled:opacity-50"
+              className="rounded-full border border-border bg-surface px-3 py-1.5 text-label text-ink hover:border-bordeaux-700/40 hover:bg-surface disabled:opacity-50"
             >
               {option}
             </button>
@@ -1163,7 +1163,7 @@ function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] 
     list?.scrollBy({ left: direction * list.clientWidth * 0.8, behavior: "smooth" });
   };
   if (cards.length === 0) return null;
-  const arrow = "absolute top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-white text-ink-2 shadow-float hover:bg-active";
+  const arrow = "absolute top-1/2 z-10 flex size-8 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-surface text-ink-2 shadow-float hover:bg-active";
 
   return (
     <div>
@@ -1182,7 +1182,7 @@ function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] 
                 <FileLink
                   url={fileHref(source.file_url)}
                   name={source.original_name}
-                  className="flex h-full w-60 flex-col gap-1.5 rounded-card border border-border bg-white p-3 no-underline transition-colors hover:border-bordeaux-700/30 hover:bg-active/40"
+                  className="flex h-full w-60 flex-col gap-1.5 rounded-card border border-border bg-surface p-3 no-underline transition-colors hover:border-bordeaux-700/30 hover:bg-active/40"
                 >
                   <span className="flex items-start gap-1.5 text-label font-medium text-ink" title={source.original_name}>
                     <FileIcon size={14} className="mt-0.5 shrink-0 text-bordeaux-700" />
@@ -1711,10 +1711,10 @@ export function Composer({
           setDragging(false);
           addFiles(Array.from(event.dataTransfer.files));
         }}
-        className={`relative mx-auto w-full rounded-panel border bg-white shadow-float focus-within:border-bordeaux-700/40 ${home ? "msg-enter max-w-[34rem]" : "max-w-[46rem]"} ${dragging ? "border-bordeaux-700 shadow-focus" : "border-border"}`}
+        className={`relative mx-auto w-full rounded-panel border bg-surface shadow-float focus-within:border-bordeaux-700/40 ${home ? "msg-enter max-w-[34rem]" : "max-w-[46rem]"} ${dragging ? "border-bordeaux-700 shadow-focus" : "border-border"}`}
       >
         {dragging && (
-          <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-panel bg-white/85 text-label font-medium text-bordeaux-700">
+          <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-panel bg-surface/85 text-label font-medium text-bordeaux-700">
             {dict.chat.dropFiles}
           </p>
         )}
@@ -1723,7 +1723,7 @@ export function Composer({
             role="listbox"
             onMouseDown={(event) => event.preventDefault()}
             onClick={handleMenuListClick}
-            className="scrollbar-none absolute bottom-full left-0 right-0 z-10 mb-2 max-h-64 overflow-y-auto rounded-panel border border-border bg-white p-1.5 shadow-float"
+            className="scrollbar-none absolute bottom-full left-0 right-0 z-10 mb-2 max-h-64 overflow-y-auto rounded-panel border border-border bg-surface p-1.5 shadow-float"
           >
             {menuItems.length ? (
               menuItems.map((item, index) => (
@@ -1766,7 +1766,7 @@ export function Composer({
                   type="button"
                   aria-label={`${dict.chat.removeFile} ${file.name}`}
                   onClick={() => setFiles((list) => list.filter((_, i) => i !== index))}
-                  className="flex size-5 items-center justify-center rounded-badge hover:bg-white hover:text-ink"
+                  className="flex size-5 items-center justify-center rounded-badge hover:bg-surface hover:text-ink"
                 >
                   <CloseIcon size={12} />
                 </button>
@@ -1775,7 +1775,7 @@ export function Composer({
                 <li key={`${file.name}-${index}`} className="relative w-24 overflow-hidden rounded-card border border-border bg-active">
                   <PendingThumb file={file} />
                   <span className="block truncate px-1.5 pb-0.5 pt-1 text-meta text-ink-2">{file.name}</span>
-                  <span className="absolute right-1 top-1 bg-white/90">{remove}</span>
+                  <span className="absolute right-1 top-1 bg-surface/90">{remove}</span>
                 </li>
               ) : (
                 <li key={`${file.name}-${index}`} className="inline-flex items-center gap-1.5 rounded-badge bg-active py-1 pr-1 pl-2 text-meta text-ink-2">

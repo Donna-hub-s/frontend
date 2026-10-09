@@ -91,7 +91,7 @@ export function Sidebar({
               onClick={onClose}
               aria-label={labels.newChat}
               title={labels.newChat}
-              className="flex size-9 items-center justify-center rounded-button border border-border bg-surface text-ink-2 hover:bg-white hover:text-bordeaux-900"
+              className="flex size-9 items-center justify-center rounded-button border border-border bg-surface text-ink-2 hover:bg-surface hover:text-bordeaux-900"
             >
               <ComposeIcon size={18} />
             </Link>
@@ -116,7 +116,7 @@ export function Sidebar({
           >
             <SearchIcon size={17} />
             <span className="flex-1">{labels.search}</span>
-            <kbd className="rounded-badge border border-border bg-white px-1.5 font-sans text-meta text-ink-3" suppressHydrationWarning>
+            <kbd className="rounded-badge border border-border bg-surface px-1.5 font-sans text-meta text-ink-3" suppressHydrationWarning>
               {shortcut}
             </kbd>
           </button>
@@ -182,7 +182,7 @@ export function Sidebar({
                   onClick={() => setGrouping(mode)}
                   aria-pressed={grouping === mode}
                   className={`rounded-[5px] px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
-                    grouping === mode ? "bg-white text-ink shadow-sm" : "text-ink-3 hover:text-ink-2"
+                    grouping === mode ? "bg-surface text-ink shadow-sm" : "text-ink-3 hover:text-ink-2"
                   }`}
                 >
                   {mode === "date" ? labels.byDate : labels.byProject}
@@ -376,7 +376,7 @@ function ConversationItem({
             maxLength={255}
             disabled={busy}
             onChange={(event) => setTitle(event.target.value)}
-            className="h-8 min-w-0 flex-1 rounded-badge border border-bordeaux-700 bg-white px-2 text-label text-ink outline-none"
+            className="h-8 min-w-0 flex-1 rounded-badge border border-bordeaux-700 bg-surface px-2 text-label text-ink outline-none"
           />
           <button type="submit" disabled={busy} className="rounded-badge px-2 py-1 text-meta font-medium text-bordeaux-700">
             {labels.save}
@@ -439,7 +439,7 @@ function ConversationItem({
         aria-label={labels.more}
         aria-expanded={mode === "menu" || mode === "delete" || mode === "export"}
         onClick={() => setMode(mode === "idle" ? "menu" : "idle")}
-        className={`absolute top-1/2 right-1 flex size-7 -translate-y-1/2 items-center justify-center rounded-badge text-ink-3 hover:bg-white hover:text-ink focus-visible:opacity-100 ${
+        className={`absolute top-1/2 right-1 flex size-7 -translate-y-1/2 items-center justify-center rounded-badge text-ink-3 hover:bg-surface hover:text-ink focus-visible:opacity-100 ${
           active || mode !== "idle" ? "opacity-100" : "opacity-0 group-hover:opacity-100"
         }`}
       >
@@ -447,7 +447,7 @@ function ConversationItem({
       </button>
 
       {mode === "menu" && (
-        <div role="menu" className="absolute top-full right-1 z-10 mt-1 w-48 rounded-card bg-white p-1 shadow-float">
+        <div role="menu" className="absolute top-full right-1 z-10 mt-1 w-48 rounded-card bg-surface p-1 shadow-float">
           <button
             role="menuitem"
             type="button"
@@ -500,7 +500,7 @@ function ConversationItem({
         </div>
       )}
       {mode === "export" && (
-        <div role="menu" aria-label={labels.export} className="absolute top-full right-1 z-10 mt-1 w-48 rounded-card bg-white p-1 shadow-float">
+        <div role="menu" aria-label={labels.export} className="absolute top-full right-1 z-10 mt-1 w-48 rounded-card bg-surface p-1 shadow-float">
           <p className="px-2.5 py-1.5 text-meta font-medium text-ink-3">{labels.export}</p>
           {EXPORT_FORMATS.map((format) => (
             <a
@@ -517,7 +517,7 @@ function ConversationItem({
         </div>
       )}
       {mode === "move" && (
-        <div role="menu" aria-label={projectLabels.moveToProjectTitle} className="absolute top-full right-1 left-1 z-10 mt-1 max-h-64 overflow-y-auto rounded-card bg-white p-1 shadow-float">
+        <div role="menu" aria-label={projectLabels.moveToProjectTitle} className="absolute top-full right-1 left-1 z-10 mt-1 max-h-64 overflow-y-auto rounded-card bg-surface p-1 shadow-float">
           <p className="px-2.5 py-1.5 text-meta font-medium text-ink-3">{projectLabels.moveToProjectTitle}</p>
           {moveError && <p className="px-2.5 pb-1.5 text-meta text-danger">{projectLabels.moveError}</p>}
           {!projects.filter((p) => p.id !== conversation.project_id).length ? (
@@ -541,7 +541,7 @@ function ConversationItem({
         </div>
       )}
       {mode === "delete" && (
-        <div role="alertdialog" aria-label={labels.delete} className="absolute top-full right-1 left-1 z-10 mt-1 rounded-card bg-white p-3 shadow-float">
+        <div role="alertdialog" aria-label={labels.delete} className="absolute top-full right-1 left-1 z-10 mt-1 rounded-card bg-surface p-3 shadow-float">
           <p className="text-secondary text-ink-2 text-pretty">{labels.deleteConfirm}</p>
           <div className="mt-3 flex justify-end gap-2">
             <button type="button" onClick={() => setMode("idle")} className="rounded-button px-2.5 py-1.5 text-secondary font-medium text-ink hover:bg-active">
@@ -582,7 +582,7 @@ function AccountMenu({ lang, labels, languageLabel, account }: { lang: Locale; l
   return (
     <div ref={ref} className="relative border-t border-border p-3">
       {open && (
-        <div className="absolute right-3 bottom-full left-3 mb-1 rounded-card bg-white p-2 shadow-float">
+        <div className="absolute right-3 bottom-full left-3 mb-1 rounded-card bg-surface p-2 shadow-float">
           <p className="truncate px-2 pt-1 text-meta text-ink-3">{account.email}</p>
           <div className="mt-2 flex items-center justify-between px-1">
             <span className="text-secondary text-ink-2">{languageLabel}</span>

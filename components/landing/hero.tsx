@@ -20,7 +20,7 @@ export function GoogleButton({ href, label }: { href: string; label: string }) {
       href={href}
       className="inline-flex items-center gap-3 rounded-button bg-bordeaux-700 py-3 pr-5 pl-3.5 text-label font-medium text-white no-underline transition-colors duration-(--duration-fast) hover:bg-bordeaux-900 hover:text-white"
     >
-      <span className="inline-flex size-7 items-center justify-center rounded-badge bg-white">
+      <span className="inline-flex size-7 items-center justify-center rounded-badge bg-surface">
         <GoogleIcon />
       </span>
       {label}
