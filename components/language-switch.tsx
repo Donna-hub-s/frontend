@@ -26,7 +26,7 @@ export function LanguageSwitch({ current, label, className = "" }: Props) {
               document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=31536000; samesite=lax`;
             }}
             className={`rounded-badge px-2 py-1 text-caps font-medium uppercase no-underline transition-colors duration-(--duration-fast) ${
-              active ? "bg-active text-bordeaux-900" : "text-ink-2 hover:text-bordeaux-900"
+              active ? "bg-active text-brand-strong" : "text-ink-2 hover:text-brand-strong"
             }`}
           >
             {locale}

@@ -101,7 +101,7 @@ export function StepDot({ status, warn = false }: { status: Step["status"]; warn
       </svg>
     </span>
   ) : (
-    <span className="demo-spin size-4 shrink-0 rounded-full border-2 border-pending border-t-bordeaux-700" />
+    <span className="demo-spin size-4 shrink-0 rounded-full border-2 border-pending border-t-brand" />
   );
 }
 
@@ -195,7 +195,7 @@ function PendingItem({ lang, dict, action }: { lang: Locale; dict: WorkspaceDict
   return (
     <li className="px-4 py-3.5">
       <div className="flex items-center justify-between gap-2 text-meta">
-        <span className="rounded-badge bg-peche-100 px-1.5 py-0.5 font-medium text-bordeaux-900">
+        <span className="rounded-badge bg-peche-100 px-1.5 py-0.5 font-medium text-brand-strong">
           {(panel.kinds as Record<string, string>)[action.kind] ?? action.kind}
         </span>
         {at && (
@@ -213,7 +213,7 @@ function PendingItem({ lang, dict, action }: { lang: Locale; dict: WorkspaceDict
           type="button"
           disabled={busy !== null}
           onClick={() => void decide("confirm")}
-          className="rounded-button bg-bordeaux-700 px-3 py-1.5 text-secondary font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60"
+          className="rounded-button bg-brand-fill px-3 py-1.5 text-secondary font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60"
         >
           {panel.approve}
         </button>
@@ -288,7 +288,7 @@ export function ConnectorRows({ lang, dict, connectors }: { lang: Locale; dict: 
           ) : (
             <a
               href={row.action.href}
-              className="shrink-0 rounded-button border border-border bg-surface px-2.5 py-1 text-meta font-medium text-bordeaux-700 no-underline hover:border-bordeaux-700/40 hover:text-bordeaux-900"
+              className="shrink-0 rounded-button border border-border bg-surface px-2.5 py-1 text-meta font-medium text-brand no-underline hover:border-brand/40 hover:text-brand-strong"
             >
               {row.action.label}
             </a>

@@ -41,7 +41,7 @@ function StepIcon({ done }: { done: boolean }) {
   return (
     <span className="relative inline-flex size-4 shrink-0 items-center justify-center">
       <span
-        className={`demo-spin absolute inset-0 rounded-full border-2 border-pending border-t-bordeaux-700 transition-opacity duration-200 ${
+        className={`demo-spin absolute inset-0 rounded-full border-2 border-pending border-t-brand transition-opacity duration-200 ${
           done ? "opacity-0" : "opacity-100"
         }`}
       />
@@ -132,7 +132,7 @@ export function HeroDemo({ demo }: { demo: Demo }) {
       <div ref={panelRef} aria-hidden className="relative overflow-hidden rounded-panel bg-surface shadow-float">
         <div className="flex items-center gap-2.5 border-b border-border px-5 py-3.5">
           <DonnaMark size={22} label="" />
-          <span className="font-brand text-[0.9375rem] tracking-[0.18em] text-bordeaux-900">DONNA</span>
+          <span className="font-brand text-[0.9375rem] tracking-[0.18em] text-brand-strong">DONNA</span>
         </div>
 
         <div
@@ -148,7 +148,7 @@ export function HeroDemo({ demo }: { demo: Demo }) {
           >
             {/* Orbe : disponible, puis « écoute » pendant la saisie de la demande. */}
             <DonnaOrb state={chars > 0 && !reduced ? "listening" : "idle"} size={64} />
-            <p className="font-brand text-[1.1875rem] font-light text-bordeaux-900">{demo.greeting}</p>
+            <p className="font-brand text-[1.1875rem] font-light text-brand-strong">{demo.greeting}</p>
           </div>
 
           {p >= 1 && (
@@ -218,7 +218,7 @@ export function HeroDemo({ demo }: { demo: Demo }) {
                             <span
                               ref={sendRef}
                               className={`rounded-button px-3 py-1.5 text-meta font-medium text-white transition-[transform,background-color,box-shadow] duration-150 ${
-                                p === 8 ? "scale-95 bg-bordeaux-900 shadow-focus" : "bg-bordeaux-700"
+                                p === 8 ? "scale-95 bg-brand-fill-strong shadow-focus" : "bg-brand-fill"
                               }`}
                             >
                               {demo.send}
@@ -240,7 +240,7 @@ export function HeroDemo({ demo }: { demo: Demo }) {
             {p === 0 && chars > 0 && !reduced ? (
               <span className="text-ink">
                 {demo.request.slice(0, chars)}
-                <span className="demo-caret ml-px inline-block h-4 w-px translate-y-0.5 bg-bordeaux-700" />
+                <span className="demo-caret ml-px inline-block h-4 w-px translate-y-0.5 bg-brand-fill" />
               </span>
             ) : (
               <span className="text-ink-3">{demo.placeholder}</span>

@@ -167,8 +167,8 @@ function PopoverPanel({
           onClick={onClose}
           className={
             confirm
-              ? "rounded-button bg-bordeaux-700 px-3 py-1.5 text-label font-medium text-white no-underline hover:bg-bordeaux-900"
-              : "rounded-button px-3 py-1.5 text-label font-medium text-bordeaux-700 no-underline hover:bg-active"
+              ? "rounded-button bg-brand-fill px-3 py-1.5 text-label font-medium text-white no-underline hover:bg-brand-fill-strong"
+              : "rounded-button px-3 py-1.5 text-label font-medium text-brand no-underline hover:bg-active"
           }
         >
           {labels?.linkOpen}

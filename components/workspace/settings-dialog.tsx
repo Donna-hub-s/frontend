@@ -70,7 +70,7 @@ function etiquetteVoix(voix: VoiceOut, labels: Labels): string {
 }
 
 const fieldClass =
-  "h-10 w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none";
+  "h-10 w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-brand focus:shadow-focus focus:outline-none";
 
 /** Paramètres du compte, en fenêtre : profil, préférences, notifications, connecteurs. */
 export function SettingsDialog({
@@ -220,7 +220,7 @@ function SettingsBody({
                   tab === item.key ? "bg-surface font-medium text-ink shadow-card" : "text-ink-2 hover:bg-active hover:text-ink"
                 }`}
               >
-                <span className={tab === item.key ? "text-bordeaux-700" : "text-ink-3"}>{item.icon}</span>
+                <span className={tab === item.key ? "text-brand" : "text-ink-3"}>{item.icon}</span>
                 {item.label}
               </button>
             </li>
@@ -283,7 +283,7 @@ function SettingsBody({
               type="button"
               disabled={!dirty || busy}
               onClick={() => void save()}
-              className="rounded-button bg-bordeaux-700 px-4 py-2 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-50"
+              className="rounded-button bg-brand-fill px-4 py-2 text-label font-medium text-white hover:bg-brand-fill-strong disabled:opacity-50"
             >
               {busy ? labels.saving : labels.save}
             </button>
@@ -338,7 +338,7 @@ function Toggle({ label, hint, checked, onChange }: { label: string; hint?: stri
         role="switch"
         aria-checked={checked}
         onClick={() => onChange(!checked)}
-        className={`relative mt-0.5 h-6 w-10 shrink-0 rounded-full transition-colors ${checked ? "bg-bordeaux-700" : "bg-active"}`}
+        className={`relative mt-0.5 h-6 w-10 shrink-0 rounded-full transition-colors ${checked ? "bg-brand-fill" : "bg-active"}`}
       >
         <span className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-surface shadow-card transition-transform ${checked ? "translate-x-4" : ""}`} />
       </button>
@@ -354,7 +354,7 @@ function Avatar({ url, initials, size }: { url?: string; initials: string; size:
     // eslint-disable-next-line @next/next/no-img-element -- URL externe choisie par l'utilisateur
     <img src={url} alt="" referrerPolicy="no-referrer" onError={() => setBroken(url)} className={`${box} shrink-0 rounded-full object-cover`} />
   ) : (
-    <span className={`${box} flex shrink-0 items-center justify-center rounded-full bg-peche-100 font-medium text-bordeaux-900`}>{initials}</span>
+    <span className={`${box} flex shrink-0 items-center justify-center rounded-full bg-peche-100 font-medium text-brand-strong`}>{initials}</span>
   );
 }
 
@@ -396,7 +396,7 @@ function ProfilePane({ lang, labels, account, draft, update }: PaneProps & { lan
                 ))}
               </select>
               {deviceZone && deviceZone !== draft.timezone && (
-                <button type="button" onClick={() => update("timezone", deviceZone)} className="w-fit text-meta font-medium text-bordeaux-700 hover:text-bordeaux-900">
+                <button type="button" onClick={() => update("timezone", deviceZone)} className="w-fit text-meta font-medium text-brand hover:text-brand-strong">
                   {labels.timezoneDevice.replace("{zone}", deviceZone.replaceAll("_", " "))}
                 </button>
               )}

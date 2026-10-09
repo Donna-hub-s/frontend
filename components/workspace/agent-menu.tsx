@@ -72,7 +72,7 @@ export function AgentMenu({
         aria-label={title}
         title={title}
         className={`inline-flex h-9 max-w-[11rem] items-center gap-1.5 rounded-button px-2 text-meta transition-colors ${
-          open ? "bg-active text-ink" : gone ? "bg-danger/10 font-medium text-danger" : active ? "bg-bordeaux-700/10 font-medium text-bordeaux-700" : "text-ink-2 hover:bg-active hover:text-ink"
+          open ? "bg-active text-ink" : gone ? "bg-danger/10 font-medium text-danger" : active ? "bg-brand/10 font-medium text-brand" : "text-ink-2 hover:bg-active hover:text-ink"
         }`}
       >
         <Bot size={17} className="shrink-0" />
@@ -126,11 +126,11 @@ function Row({ selected, title, detail, icon, onSelect }: { selected: boolean; t
       role="radio"
       aria-checked={selected}
       onClick={onSelect}
-      className={`flex w-full items-start gap-2.5 rounded-button px-2 py-1.5 text-left hover:bg-active ${selected ? "bg-bordeaux-700/10" : ""}`}
+      className={`flex w-full items-start gap-2.5 rounded-button px-2 py-1.5 text-left hover:bg-active ${selected ? "bg-brand/10" : ""}`}
     >
       {icon !== undefined && <ProjectIcon icon={icon} size={16} className="mt-0.5 text-ink-3" />}
       <span className="min-w-0">
-        <span className={`block truncate text-label ${selected ? "font-medium text-bordeaux-700" : "text-ink"}`}>{title}</span>
+        <span className={`block truncate text-label ${selected ? "font-medium text-brand" : "text-ink"}`}>{title}</span>
         {detail && <span className="block text-meta text-ink-3 text-pretty">{detail}</span>}
       </span>
     </button>
@@ -164,7 +164,7 @@ export function AgentReviewDialog({
           <DialogHeader title={labels.reviewTitle} subtitle={agent.name} closeLabel={labels.close} onClose={onCancel} />
           <div className="scrollbar-none flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
             <p className="text-secondary text-ink-2 text-pretty">{labels.reviewIntro}</p>
-            {changed && <p role="status" className="rounded-button bg-peche-100 px-3 py-2 text-secondary text-bordeaux-900 text-pretty">{labels.reviewChanged}</p>}
+            {changed && <p role="status" className="rounded-button bg-peche-100 px-3 py-2 text-secondary text-brand-strong text-pretty">{labels.reviewChanged}</p>}
             {agent.description && <p className="text-label text-ink">{agent.description}</p>}
             <section aria-label={labels.instructionsLabel}>
               <h3 className="mb-1 text-label font-medium text-ink">{labels.instructionsLabel}</h3>
@@ -180,7 +180,7 @@ export function AgentReviewDialog({
             <button type="button" onClick={onCancel} className="rounded-button px-3.5 py-2 text-label font-medium text-ink hover:bg-active">
               {labels.cancel}
             </button>
-            <button type="button" autoFocus onClick={() => onConfirm(agent)} className="rounded-button bg-bordeaux-700 px-3.5 py-2 text-label font-medium text-white hover:bg-bordeaux-900">
+            <button type="button" autoFocus onClick={() => onConfirm(agent)} className="rounded-button bg-brand-fill px-3.5 py-2 text-label font-medium text-white hover:bg-brand-fill-strong">
               {labels.reviewUse}
             </button>
           </footer>

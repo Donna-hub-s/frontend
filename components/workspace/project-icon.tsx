@@ -84,7 +84,7 @@ export function ProjectIconPicker({
               aria-label={names[key]}
               title={names[key]}
               className={`flex size-9 items-center justify-center rounded-button border transition-colors ${
-                selected ? "border-bordeaux-700 bg-peche-100 text-bordeaux-700" : "border-border text-ink-2 hover:bg-active"
+                selected ? "border-brand bg-peche-100 text-brand" : "border-border text-ink-2 hover:bg-active"
               }`}
             >
               <Glyph size={18} />

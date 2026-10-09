@@ -113,7 +113,7 @@ function ViewerBody({ lang, labels, file, onClose }: { lang: Locale; labels: Lab
         <a
           href={file.url}
           download={file.name}
-          className="inline-flex shrink-0 items-center gap-1.5 rounded-button border border-border px-2.5 py-1.5 text-meta font-medium text-ink no-underline hover:border-bordeaux-700/40 hover:text-bordeaux-900"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-button border border-border px-2.5 py-1.5 text-meta font-medium text-ink no-underline hover:border-brand/40 hover:text-brand-strong"
         >
           <DownloadIcon size={15} />
           {labels.download}
@@ -133,7 +133,7 @@ function ViewerBody({ lang, labels, file, onClose }: { lang: Locale; labels: Lab
 function Fallback({ message }: { message: string }) {
   return (
     <div className="flex flex-col items-center gap-3 px-6 py-16 text-center">
-      <span className="flex size-12 items-center justify-center rounded-card bg-surface text-bordeaux-700 shadow-card">
+      <span className="flex size-12 items-center justify-center rounded-card bg-surface text-brand shadow-card">
         <FileIcon size={22} />
       </span>
       <p className="max-w-sm text-secondary text-ink-2 text-pretty">{message}</p>
@@ -199,7 +199,7 @@ function Sheets({ labels, sheets }: { labels: Labels; sheets: Sheet[] }) {
               aria-selected={index === active}
               onClick={() => setActive(index)}
               className={`-mb-px shrink-0 rounded-t-button border-b-2 px-3 py-2 text-label ${
-                index === active ? "border-bordeaux-700 font-medium text-ink" : "border-transparent text-ink-2 hover:text-ink"
+                index === active ? "border-brand font-medium text-ink" : "border-transparent text-ink-2 hover:text-ink"
               }`}
             >
               {s.name}

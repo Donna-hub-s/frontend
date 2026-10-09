@@ -8,7 +8,7 @@ import type { ContextStatusOut } from "@/lib/workspace-types";
 
 type Labels = Dictionary["workspace"]["chat"];
 
-const BAR: Record<string, string> = { ok: "bg-success", warn: "bg-bordeaux-700/70", high: "bg-danger" };
+const BAR: Record<string, string> = { ok: "bg-success", warn: "bg-brand/70", high: "bg-danger" };
 
 /**
  * Raccourci du chat : santé du contexte de la conversation et compaction à la demande. La compaction condense
@@ -62,7 +62,7 @@ export function ContextMenu({
         aria-label={title}
         title={title}
         className={`inline-flex h-9 items-center gap-1.5 rounded-button px-2 text-meta tabular-nums transition-colors ${
-          open ? "bg-active text-ink" : tone === "ok" ? "text-ink-2 hover:bg-active hover:text-ink" : tone === "warn" ? "text-bordeaux-700 hover:bg-active" : "text-danger hover:bg-active"
+          open ? "bg-active text-ink" : tone === "ok" ? "text-ink-2 hover:bg-active hover:text-ink" : tone === "warn" ? "text-brand hover:bg-active" : "text-danger hover:bg-active"
         }`}
       >
         <Gauge size={18} />
@@ -96,7 +96,7 @@ export function ContextMenu({
             {compacting ? labels.contextCompacting : labels.contextCompact}
           </button>
           {message && (
-            <p role="status" className="mt-2 text-meta text-bordeaux-700">
+            <p role="status" className="mt-2 text-meta text-brand">
               {message}
             </p>
           )}

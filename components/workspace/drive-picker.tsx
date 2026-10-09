@@ -168,7 +168,7 @@ function PickerBody({
             onChange={(event) => setQuery(event.target.value)}
             placeholder={tab === "project" ? labels.searchProject : labels.search}
             aria-label={tab === "project" ? labels.searchProject : labels.search}
-            className="h-10 w-full rounded-button border border-border bg-surface pr-3 pl-9 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
+            className="h-10 w-full rounded-button border border-border bg-surface pr-3 pl-9 text-message text-ink placeholder:text-ink-3 focus:border-brand focus:shadow-focus focus:outline-none"
           />
         </div>
         {/* La recherche Drive remplace tout l'arbre de dossiers (globale, Drive entier) — l'onglet « Dans ce
@@ -237,7 +237,7 @@ function PickerBody({
                       }}
                       className="flex min-w-0 flex-1 items-center gap-3 rounded-nav px-3 py-2.5 text-left hover:bg-active"
                     >
-                      <FolderIcon size={18} className="shrink-0 text-bordeaux-700" />
+                      <FolderIcon size={18} className="shrink-0 text-brand" />
                       <span className="min-w-0 flex-1 truncate text-label text-ink">{file.name}</span>
                       <ChevronIcon size={14} className="-rotate-90 text-ink-3" />
                     </button>
@@ -247,7 +247,7 @@ function PickerBody({
                         title={labels.importFolder.replace("{name}", file.name)}
                         aria-label={labels.importFolder.replace("{name}", file.name)}
                         onClick={() => onImportFolder(file)}
-                        className="mr-1 shrink-0 rounded-nav p-2 text-ink-3 hover:bg-active hover:text-bordeaux-700"
+                        className="mr-1 shrink-0 rounded-nav p-2 text-ink-3 hover:bg-active hover:text-brand"
                       >
                         <DownloadIcon size={16} />
                       </button>
@@ -267,7 +267,7 @@ function PickerBody({
                   >
                     <span
                       aria-hidden
-                      className={`flex size-5 shrink-0 items-center justify-center rounded-badge border ${checked ? "border-bordeaux-700 bg-bordeaux-700 text-white" : "border-border bg-surface"}`}
+                      className={`flex size-5 shrink-0 items-center justify-center rounded-badge border ${checked ? "border-brand bg-brand-fill text-white" : "border-border bg-surface"}`}
                     >
                       {checked && <CheckIcon size={13} />}
                     </span>
@@ -287,7 +287,7 @@ function PickerBody({
         )}
         {!loading && !error && loaded?.next && (
           <div className="px-3 py-2">
-            <button type="button" onClick={() => void loadMore()} disabled={moreBusy} className="rounded-button px-3 py-1.5 text-label text-bordeaux-700 hover:bg-active disabled:opacity-60">
+            <button type="button" onClick={() => void loadMore()} disabled={moreBusy} className="rounded-button px-3 py-1.5 text-label text-brand hover:bg-active disabled:opacity-60">
               {moreBusy ? labels.loading : labels.loadMore}
             </button>
           </div>
@@ -296,7 +296,7 @@ function PickerBody({
 
       <footer className="flex flex-wrap items-center gap-3 border-t border-border px-5 py-3.5">
         <div className="min-w-0 flex-1">
-          <p className={`text-meta ${atMax ? "text-bordeaux-700" : "text-ink-3"}`}>
+          <p className={`text-meta ${atMax ? "text-brand" : "text-ink-3"}`}>
             {atMax ? labels.maxReached.replace("{max}", String(max)) : labels.selected.replace("{n}", String(selected.size)).replace("{max}", String(max))}
           </p>
           <p className="truncate text-meta text-ink-3">{labels.nativeHint}</p>
@@ -308,7 +308,7 @@ function PickerBody({
           type="button"
           disabled={!selected.size || busy}
           onClick={() => void confirm()}
-          className="rounded-button bg-bordeaux-700 px-3.5 py-2 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60"
+          className="rounded-button bg-brand-fill px-3.5 py-2 text-label font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60"
         >
           {busy ? labels.working : (confirmLabel === "attach" ? labels.confirmAttach : labels.confirmImport).replace("{n}", String(selected.size))}
         </button>
@@ -351,11 +351,11 @@ function DriveError({ code, labels, link, onRetry }: { code: DriveErrorCode; lab
     <div role="alert" className="flex flex-col items-center gap-3 px-6 py-8 text-center">
       <p className="text-label text-ink text-pretty">{message}</p>
       {needsGoogle ? (
-        <a href={link} className="rounded-button bg-bordeaux-700 px-3.5 py-2 text-label font-medium text-white no-underline hover:bg-bordeaux-900">
+        <a href={link} className="rounded-button bg-brand-fill px-3.5 py-2 text-label font-medium text-white no-underline hover:bg-brand-fill-strong">
           {code === "scope_missing" ? labels.authorize : labels.connect}
         </a>
       ) : (
-        <button type="button" onClick={onRetry} className="rounded-button border border-border bg-surface px-3.5 py-2 text-label font-medium text-bordeaux-700 hover:border-bordeaux-700/40">
+        <button type="button" onClick={onRetry} className="rounded-button border border-border bg-surface px-3.5 py-2 text-label font-medium text-brand hover:border-brand/40">
           {labels.retry}
         </button>
       )}

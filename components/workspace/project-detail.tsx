@@ -38,8 +38,8 @@ const roleLabel = (labels: Labels, role: ProjectRole | string) =>
   role === "owner" ? labels.roleOwner : role === "editor" ? labels.roleEditor : labels.roleViewer;
 
 const fieldClass =
-  "w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none";
-const primaryButton = "rounded-button bg-bordeaux-700 px-3.5 py-2 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60";
+  "w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-brand focus:shadow-focus focus:outline-none";
+const primaryButton = "rounded-button bg-brand-fill px-3.5 py-2 text-label font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60";
 const ghostButton = "rounded-button px-3.5 py-2 text-label font-medium text-ink hover:bg-active";
 
 async function api<T>(path: string, init?: RequestInit): Promise<{ ok: boolean; data: T | null; status: number }> {
@@ -144,7 +144,7 @@ export function ProjectDetail({
           <HeaderForm labels={labels} project={liveProject} onCancel={() => setEditing(false)} onSaved={(p) => (upsertProject(p), setEditing(false))} />
         ) : (
           <header className="flex flex-wrap items-start gap-4">
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-card bg-peche-100 text-bordeaux-700">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-card bg-peche-100 text-brand">
               <ProjectIcon icon={liveProject.icon} size={24} />
             </span>
             <div className="min-w-[12rem] flex-1">
@@ -153,7 +153,7 @@ export function ProjectDetail({
                 <p className="mt-1 max-w-2xl text-message text-ink-2 text-pretty">{liveProject.description}</p>
               ) : (
                 isOwner && (
-                  <button type="button" onClick={() => setEditing(true)} className="mt-1 text-message text-ink-3 hover:text-bordeaux-700">
+                  <button type="button" onClick={() => setEditing(true)} className="mt-1 text-message text-ink-3 hover:text-brand">
                     {labels.addDescription}
                   </button>
                 )
@@ -163,7 +163,7 @@ export function ProjectDetail({
               <button
                 type="button"
                 onClick={() => setShareOpen(true)}
-                className="inline-flex items-center gap-2 rounded-button border border-border bg-surface py-1.5 pr-3 pl-1.5 text-label font-medium text-ink hover:border-bordeaux-700/30"
+                className="inline-flex items-center gap-2 rounded-button border border-border bg-surface py-1.5 pr-3 pl-1.5 text-label font-medium text-ink hover:border-brand/30"
               >
                 <MemberStack members={members} />
                 {isOwner ? labels.share : labels.membersTitle}
@@ -297,7 +297,7 @@ function MemberStack({ members }: { members: ProjectMemberOut[] }) {
   return (
     <span aria-hidden className="flex -space-x-1.5">
       {shown.map((member) => (
-        <span key={member.user_id} className="flex size-6 items-center justify-center rounded-full bg-peche-100 text-[0.625rem] font-medium text-bordeaux-900 ring-2 ring-white">
+        <span key={member.user_id} className="flex size-6 items-center justify-center rounded-full bg-peche-100 text-[0.625rem] font-medium text-brand-strong ring-2 ring-white">
           {initialsOf(member)}
         </span>
       ))}
@@ -426,7 +426,7 @@ function ConversationsList({ lang, labels, conversations }: { lang: Locale; labe
                 >
                   <span className="flex min-w-0 items-center gap-3">
                     <ChatIcon size={16} className="shrink-0 text-ink-3" />
-                    <span className="truncate group-hover:text-bordeaux-900">{conversation.title}</span>
+                    <span className="truncate group-hover:text-brand-strong">{conversation.title}</span>
                   </span>
                   {at && (
                     <time className="shrink-0 text-meta text-ink-3" suppressHydrationWarning>
@@ -491,7 +491,7 @@ function InstructionsCard({ labels, project, isOwner, onSaved }: { labels: Label
               setError(false);
               setEditing(true);
             }}
-            className="rounded-badge px-2 py-1 text-meta font-medium text-bordeaux-700 hover:bg-active"
+            className="rounded-badge px-2 py-1 text-meta font-medium text-brand hover:bg-active"
           >
             {project.instructions ? labels.edit : labels.add}
           </button>
@@ -515,7 +515,7 @@ function InstructionsCard({ labels, project, isOwner, onSaved }: { labels: Label
             {labels.counter.replace("{n}", String(value.length)).replace("{max}", String(PROJECT_INSTRUCTIONS_MAX))}
           </p>
           <div className="flex items-center gap-2">
-            <button type="submit" disabled={busy} className="rounded-button bg-bordeaux-700 px-3 py-1.5 text-meta font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60">
+            <button type="submit" disabled={busy} className="rounded-button bg-brand-fill px-3 py-1.5 text-meta font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60">
               {busy ? labels.saving : labels.save}
             </button>
             <button type="button" onClick={() => setEditing(false)} className="rounded-button px-3 py-1.5 text-meta font-medium text-ink hover:bg-active">
@@ -731,7 +731,7 @@ function FilesCard({
                 onClick={() => fileRef.current?.click()}
                 aria-label={labels.addFromComputer}
                 title={labels.addFromComputer}
-                className="flex size-7 items-center justify-center rounded-badge text-ink-2 hover:bg-active hover:text-bordeaux-700 disabled:opacity-40"
+                className="flex size-7 items-center justify-center rounded-badge text-ink-2 hover:bg-active hover:text-brand disabled:opacity-40"
               >
                 <PlusIcon size={16} />
               </button>
@@ -741,7 +741,7 @@ function FilesCard({
                 onClick={() => folderRef.current?.click()}
                 aria-label={labels.addFromFolder}
                 title={labels.addFromFolder}
-                className="flex size-7 items-center justify-center rounded-badge text-ink-2 hover:bg-active hover:text-bordeaux-700 disabled:opacity-40"
+                className="flex size-7 items-center justify-center rounded-badge text-ink-2 hover:bg-active hover:text-brand disabled:opacity-40"
               >
                 <FolderIcon size={15} />
               </button>
@@ -780,7 +780,7 @@ function FilesCard({
         {contextChunksLimit > 0 && (
           <div className="px-4 pb-3" title={labels.contextCapacity.replace("{used}", String(contextChunksUsed)).replace("{limit}", String(contextChunksLimit))}>
             <div className="h-1.5 overflow-hidden rounded-full bg-active" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={labels.capacityLabel}>
-              <div className={`h-full rounded-full ${atCapacity ? "bg-danger" : percent > 80 ? "bg-bordeaux-700" : "bg-rose-300"}`} style={{ width: `${Math.max(percent, contextChunksUsed ? 2 : 0)}%` }} />
+              <div className={`h-full rounded-full ${atCapacity ? "bg-danger" : percent > 80 ? "bg-brand-fill" : "bg-rose-300"}`} style={{ width: `${Math.max(percent, contextChunksUsed ? 2 : 0)}%` }} />
             </div>
             <p className={`mt-1.5 text-meta ${atCapacity ? "text-danger" : "text-ink-3"}`}>
               {atCapacity ? labels.contextCapacityReached : labels.capacityPercent.replace("{n}", String(percent))}
@@ -801,7 +801,7 @@ function FilesCard({
                   onChange={(event) => setFileQuery(event.target.value)}
                   placeholder={labels.filesSearchPlaceholder}
                   aria-label={labels.filesSearchPlaceholder}
-                  className="h-8 w-full rounded-button border border-border bg-surface px-3 text-meta text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
+                  className="h-8 w-full rounded-button border border-border bg-surface px-3 text-meta text-ink placeholder:text-ink-3 focus:border-brand focus:shadow-focus focus:outline-none"
                 />
               </div>
             )}
@@ -822,7 +822,7 @@ function FilesCard({
                         title={doc.original_name}
                         className="flex min-w-0 flex-1 items-center gap-2.5 rounded-badge px-2 py-2 text-label text-ink no-underline hover:bg-active"
                       >
-                        <FileIcon size={16} className="shrink-0 text-bordeaux-700" />
+                        <FileIcon size={16} className="shrink-0 text-brand" />
                         <span className="truncate">{doc.original_name}</span>
                         <DocStatus labels={labels} doc={doc} />
                       </FileLink>
@@ -832,7 +832,7 @@ function FilesCard({
                           onClick={() => void retry(doc.id)}
                           aria-label={`${labels.retryIndexing} ${doc.original_name}`}
                           title={doc.error ? `${labels.retryIndexing} — ${doc.error}` : labels.retryIndexing}
-                          className="shrink-0 rounded-badge px-2 py-1 text-meta text-bordeaux-700 hover:bg-active"
+                          className="shrink-0 rounded-badge px-2 py-1 text-meta text-brand hover:bg-active"
                         >
                           {labels.retryIndexing}
                         </button>
@@ -893,7 +893,7 @@ function FilesCard({
                   type="button"
                   disabled={atCapacity}
                   onClick={() => fileRef.current?.click()}
-                  className="flex w-full flex-col items-center gap-1.5 rounded-card border border-dashed border-border px-4 py-5 text-center hover:border-bordeaux-700/40 hover:bg-surface disabled:opacity-60"
+                  className="flex w-full flex-col items-center gap-1.5 rounded-card border border-dashed border-border px-4 py-5 text-center hover:border-brand/40 hover:bg-surface disabled:opacity-60"
                 >
                   <UploadIcon size={20} className="text-ink-3" />
                   <span className="text-label font-medium text-ink">{labels.dropzoneHint}</span>
@@ -903,7 +903,7 @@ function FilesCard({
                   type="button"
                   disabled={atCapacity}
                   onClick={() => setDriveOpen(true)}
-                  className="mt-2 inline-flex items-center gap-2 text-label text-bordeaux-700 hover:text-bordeaux-900 disabled:opacity-60"
+                  className="mt-2 inline-flex items-center gap-2 text-label text-brand hover:text-brand-strong disabled:opacity-60"
                 >
                   <GoogleDriveIcon size={15} />
                   {labels.addFromDrive}
@@ -1093,12 +1093,12 @@ function MemoryCard({
             type="button"
             onClick={() => void openHistory(null)}
             aria-pressed={history?.scope === "all"}
-            className="rounded-badge px-2 py-1 text-meta text-ink-2 hover:bg-active hover:text-bordeaux-700 aria-pressed:bg-active aria-pressed:text-bordeaux-700"
+            className="rounded-badge px-2 py-1 text-meta text-ink-2 hover:bg-active hover:text-brand aria-pressed:bg-active aria-pressed:text-brand"
           >
             {labels.memoryHistory}
           </button>
           {canEdit && !adding && (
-            <button type="button" onClick={() => setAdding(true)} aria-label={labels.factAdd} title={labels.factAdd} className="flex size-7 items-center justify-center rounded-badge text-ink-2 hover:bg-active hover:text-bordeaux-700">
+            <button type="button" onClick={() => setAdding(true)} aria-label={labels.factAdd} title={labels.factAdd} className="flex size-7 items-center justify-center rounded-badge text-ink-2 hover:bg-active hover:text-brand">
               <PlusIcon size={16} />
             </button>
           )}
@@ -1126,7 +1126,7 @@ function MemoryCard({
             className={`h-9 text-secondary ${fieldClass}`}
           />
           <div className="flex gap-2">
-            <button type="submit" disabled={busy || !value.trim()} className="rounded-button bg-bordeaux-700 px-3 py-1.5 text-meta font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60">
+            <button type="submit" disabled={busy || !value.trim()} className="rounded-button bg-brand-fill px-3 py-1.5 text-meta font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60">
               {busy ? labels.factAdding : labels.factAdd}
             </button>
             <button type="button" onClick={() => setAdding(false)} className="rounded-button px-3 py-1.5 text-meta font-medium text-ink hover:bg-active">
@@ -1163,7 +1163,7 @@ function MemoryCard({
                       className={`text-secondary ${fieldClass}`}
                     />
                     <div className="flex gap-2">
-                      <button type="submit" disabled={!canSave(draft, fact.fact, busy)} className="rounded-button bg-bordeaux-700 px-3 py-1.5 text-meta font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60">
+                      <button type="submit" disabled={!canSave(draft, fact.fact, busy)} className="rounded-button bg-brand-fill px-3 py-1.5 text-meta font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60">
                         {busy ? labels.saving : labels.save}
                       </button>
                       <button type="button" onClick={stopEdit} className="rounded-button px-3 py-1.5 text-meta font-medium text-ink hover:bg-active">
@@ -1181,7 +1181,7 @@ function MemoryCard({
                       onClick={() => startEdit(fact)}
                       aria-label={`${labels.factEdit} : ${fact.fact}`}
                       title={labels.factEdit}
-                      className="shrink-0 rounded-badge p-1 text-ink-3 opacity-0 group-hover:opacity-100 hover:text-bordeaux-700 focus:opacity-100"
+                      className="shrink-0 rounded-badge p-1 text-ink-3 opacity-0 group-hover:opacity-100 hover:text-brand focus:opacity-100"
                     >
                       <PencilIcon size={14} />
                     </button>
@@ -1202,7 +1202,7 @@ function MemoryCard({
                   <p>{lastChange(conflict).by === currentUserId ? labels.factConflictSelf : labels.factConflict.replace("{name}", who(lastChange(conflict).by))}</p>
                   <p className="whitespace-pre-wrap text-ink">« {conflict.fact} »</p>
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => void keepMine()} className="rounded-button bg-bordeaux-700 px-3 py-1.5 font-medium text-white hover:bg-bordeaux-900">
+                    <button type="button" onClick={() => void keepMine()} className="rounded-button bg-brand-fill px-3 py-1.5 font-medium text-white hover:bg-brand-fill-strong">
                       {labels.factKeepMine}
                     </button>
                     <button type="button" onClick={stopEdit} className="rounded-button px-3 py-1.5 font-medium text-ink hover:bg-active">
@@ -1214,7 +1214,7 @@ function MemoryCard({
               <p className="flex flex-wrap items-center gap-x-2 pl-3 text-meta text-ink-3">
                 <span>{stampOf(fact)}</span>
                 {fact.version > 1 && (
-                  <button type="button" onClick={() => void openHistory(fact.id)} aria-pressed={history?.scope === fact.id} className="underline-offset-2 hover:text-bordeaux-700 hover:underline aria-pressed:text-bordeaux-700">
+                  <button type="button" onClick={() => void openHistory(fact.id)} aria-pressed={history?.scope === fact.id} className="underline-offset-2 hover:text-brand hover:underline aria-pressed:text-brand">
                     {labels.factHistory}
                   </button>
                 )}
@@ -1363,7 +1363,7 @@ function InviteForm({ labels, projectId, initialInvites }: { labels: Labels; pro
                   </span>
                 </span>
                 {invite.token && (
-                  <button type="button" onClick={() => void copyLink(invite)} className="rounded-badge px-2 py-1 text-meta font-medium text-bordeaux-700 hover:bg-active">
+                  <button type="button" onClick={() => void copyLink(invite)} className="rounded-badge px-2 py-1 text-meta font-medium text-brand hover:bg-active">
                     {copiedId === invite.id ? labels.inviteLinkCopied : labels.inviteCopyLink}
                   </button>
                 )}
@@ -1433,7 +1433,7 @@ function MembersList({
           const self = member.user_id === currentUserId;
           return (
             <li key={member.user_id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2">
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-peche-100 text-meta font-medium text-bordeaux-900">{initialsOf(member)}</span>
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-peche-100 text-meta font-medium text-brand-strong">{initialsOf(member)}</span>
               <span className="flex min-w-[11rem] flex-1 flex-col">
                 <span className="truncate text-label text-ink" title={member.email ?? member.user_id}>
                   {member.email ?? labels.memberUnknown}

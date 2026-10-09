@@ -64,12 +64,12 @@ export function CanvasHost({
               aria-expanded={open}
               aria-label={open ? labels.toggleClose : labels.toggleOpen}
               className={`inline-flex h-8 items-center gap-1.5 rounded-button border px-3 text-label font-medium transition-colors ${
-                open ? "border-bordeaux-700/30 bg-bordeaux-700/10 text-bordeaux-700" : "border-border bg-surface text-ink hover:bg-active"
+                open ? "border-brand/30 bg-brand/10 text-brand" : "border-border bg-surface text-ink hover:bg-active"
               }`}
             >
               <FileText size={15} aria-hidden />
               {labels.toggle}
-              {count > 1 && <span className="rounded-full bg-bordeaux-700 px-1.5 text-meta text-white">{count}</span>}
+              {count > 1 && <span className="rounded-full bg-brand-fill px-1.5 text-meta text-white">{count}</span>}
             </button>
           </div>
         )}
@@ -185,7 +185,7 @@ function CanvasPanel({
 
       {editor.status === "conflict" && editor.conflict && <ConflictBanner labels={labels} canvas={canvas} />}
       {editor.updatedByDonna && editor.doc && editor.status !== "conflict" && (
-        <div role="status" className="flex flex-wrap items-center gap-3 border-b border-border bg-bordeaux-700/[0.06] px-4 py-2 text-secondary text-bordeaux-900">
+        <div role="status" className="flex flex-wrap items-center gap-3 border-b border-border bg-brand/[0.06] px-4 py-2 text-secondary text-brand-strong">
           <span className="flex-1">{fill(labels.donnaUpdated, { n: editor.doc.version })}</span>
           <button
             type="button"
@@ -207,7 +207,7 @@ function CanvasPanel({
         <div className="flex flex-1 flex-col items-center justify-center gap-4 px-8 text-center">
           <FileText size={30} className="text-ink-3" aria-hidden />
           <p className="max-w-[22rem] text-secondary text-ink-3 text-pretty">{labels.empty}</p>
-          <button type="button" onClick={() => void canvas.create()} className="rounded-button bg-bordeaux-700 px-4 py-2 text-label font-medium text-white hover:bg-bordeaux-900">
+          <button type="button" onClick={() => void canvas.create()} className="rounded-button bg-brand-fill px-4 py-2 text-label font-medium text-white hover:bg-brand-fill-strong">
             {labels.createFirst}
           </button>
         </div>
@@ -316,11 +316,11 @@ function ConflictBanner({ labels, canvas }: { labels: Labels; canvas: CanvasCont
   if (!conflict) return null;
   const body = conflict.updatedBy === "donna" ? labels.conflictByDonna : labels.conflictByUser;
   return (
-    <div role="alertdialog" aria-label={labels.conflictTitle} className="border-b border-border bg-peche-100 px-4 py-3 text-secondary text-bordeaux-900">
+    <div role="alertdialog" aria-label={labels.conflictTitle} className="border-b border-border bg-peche-100 px-4 py-3 text-secondary text-brand-strong">
       <p className="font-medium">{labels.conflictTitle}</p>
       <p className="mt-0.5 text-pretty">{fill(body, { n: conflict.currentVersion })}</p>
       <div className="mt-2 flex flex-wrap gap-2">
-        <button type="button" onClick={canvas.keepMine} className="rounded-button bg-bordeaux-700 px-3 py-1.5 text-label font-medium text-white hover:bg-bordeaux-900">
+        <button type="button" onClick={canvas.keepMine} className="rounded-button bg-brand-fill px-3 py-1.5 text-label font-medium text-white hover:bg-brand-fill-strong">
           {labels.keepMine}
         </button>
         <button type="button" onClick={canvas.takeTheirs} className="rounded-button bg-surface px-3 py-1.5 text-label font-medium text-ink hover:bg-active">
@@ -419,7 +419,7 @@ function HistoryView({ labels, canvas, lang, active, onClose }: { labels: Labels
                 >
                   <span className="flex items-center gap-2 text-label font-medium text-ink">
                     {fill(labels.versionRow, { n: item.version, who: who(item.author) })}
-                    {index === 0 && <span className="rounded-badge bg-bordeaux-700/10 px-1.5 py-0.5 text-meta font-medium text-bordeaux-700">{labels.current}</span>}
+                    {index === 0 && <span className="rounded-badge bg-brand/10 px-1.5 py-0.5 text-meta font-medium text-brand">{labels.current}</span>}
                   </span>
                   <span className="text-meta text-ink-3">
                     {when(item.created_at)}
@@ -513,7 +513,7 @@ function VersionDetail({
         </pre>
       )}
       {!isCurrent && (
-        <button type="button" onClick={onRestore} className="mt-3 rounded-button bg-bordeaux-700 px-3 py-1.5 text-label font-medium text-white hover:bg-bordeaux-900">
+        <button type="button" onClick={onRestore} className="mt-3 rounded-button bg-brand-fill px-3 py-1.5 text-label font-medium text-white hover:bg-brand-fill-strong">
           {labels.restore}
         </button>
       )}

@@ -272,7 +272,7 @@ export function Conversation({
           {projectId && projectName && (
             <Link
               href={`/${lang}/app/projects/${projectId}`}
-              className="flex w-fit items-center gap-1.5 rounded-badge bg-peche-100 px-2.5 py-1 text-meta font-medium text-bordeaux-900 no-underline hover:bg-peche-100/70"
+              className="flex w-fit items-center gap-1.5 rounded-badge bg-peche-100 px-2.5 py-1 text-meta font-medium text-brand-strong no-underline hover:bg-peche-100/70"
             >
               {projectName}
             </Link>
@@ -280,7 +280,7 @@ export function Conversation({
           {selectedAgent && (
             <span
               title={selectedAgent.description ?? undefined}
-              className="flex w-fit items-center gap-1.5 rounded-badge bg-bordeaux-700/10 px-2.5 py-1 text-meta font-medium text-bordeaux-700"
+              className="flex w-fit items-center gap-1.5 rounded-badge bg-brand/10 px-2.5 py-1 text-meta font-medium text-brand"
             >
               <Bot size={13} aria-hidden />
               <span className="sr-only">{dict.agents.menuTitle} : </span>
@@ -298,13 +298,13 @@ export function Conversation({
           {loadError ? (
             <div className="mt-16 flex flex-col items-center gap-4 text-center">
               <p className="text-message text-ink-2">{dict.chat.loadError}</p>
-              <Link href={`/${lang}/app`} className="rounded-button bg-bordeaux-700 px-4 py-2.5 text-label font-medium text-white no-underline hover:bg-bordeaux-900 hover:text-white">
+              <Link href={`/${lang}/app`} className="rounded-button bg-brand-fill px-4 py-2.5 text-label font-medium text-white no-underline hover:bg-brand-fill-strong hover:text-white">
                 {dict.chat.backHome}
               </Link>
             </div>
           ) : homeScreen ? (
             <div className="mt-[10vh] flex flex-col items-center">
-              <h1 className="msg-enter max-w-[34rem] text-center font-brand text-greeting font-light text-bordeaux-900 text-pretty">
+              <h1 className="msg-enter max-w-[34rem] text-center font-brand text-greeting font-light text-brand-strong text-pretty">
                 {firstName ? dict.chat.homeTitleName.replace("{name}", firstName) : dict.chat.homeTitle}
               </h1>
               <div className="mt-6 w-full" hidden={voiceOn}>
@@ -427,7 +427,7 @@ function EmptyState({
   return (
     <div className="mt-[10vh] flex flex-col items-center text-center">
       <DonnaOrb state={listening ? "listening" : "idle"} size={76} />
-      <h1 className="mt-6 font-brand text-greeting font-light text-bordeaux-900">
+      <h1 className="mt-6 font-brand text-greeting font-light text-brand-strong">
         {firstName ? `${dict.chat.greeting} ${firstName},` : `${dict.chat.greeting},`}
       </h1>
       <p className="mt-1 text-panel-title text-ink-2">{dict.chat.prompt}</p>
@@ -437,7 +437,7 @@ function EmptyState({
             <button
               type="button"
               onClick={() => onPick(suggestion)}
-              className="w-full rounded-card border border-border bg-surface px-4 py-3 text-left text-label text-ink-2 transition-[border-color,color] duration-(--duration-fast) hover:border-bordeaux-700/30 hover:text-ink"
+              className="w-full rounded-card border border-border bg-surface px-4 py-3 text-left text-label text-ink-2 transition-[border-color,color] duration-(--duration-fast) hover:border-brand/30 hover:text-ink"
             >
               {suggestion}
             </button>
@@ -519,13 +519,13 @@ function UserMessage({
               defaultValue={message.content}
               autoFocus
               rows={3}
-              className="w-full resize-none rounded-button border border-border bg-surface px-3 py-2 text-message text-ink outline-none focus:border-bordeaux-700"
+              className="w-full resize-none rounded-button border border-border bg-surface px-3 py-2 text-message text-ink outline-none focus:border-brand"
             />
             <div className="flex justify-end gap-2">
               <button type="button" onClick={onCancelEdit} className="rounded-button px-3 py-1.5 text-label text-ink-2 hover:bg-active">
                 {chat.editCancel}
               </button>
-              <button type="submit" className="rounded-button bg-bordeaux-700 px-3 py-1.5 text-label font-medium text-white hover:bg-bordeaux-900">
+              <button type="submit" className="rounded-button bg-brand-fill px-3 py-1.5 text-label font-medium text-white hover:bg-brand-fill-strong">
                 {chat.editSave}
               </button>
             </div>
@@ -598,7 +598,7 @@ function UserMessage({
           )}
         </div>
       </div>
-      <span aria-hidden className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-peche-100 text-meta font-medium text-bordeaux-900">
+      <span aria-hidden className="mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-peche-100 text-meta font-medium text-brand-strong">
         {initials}
       </span>
     </div>
@@ -668,7 +668,7 @@ function AssistantMessage({
             <Markdown files={files} renderFile={renderFile} streaming={streaming} conversationId={conversationId} reading>
               {message.content}
             </Markdown>
-            {streaming && <span aria-hidden className="demo-caret ml-0.5 inline-block h-4 w-px translate-y-0.5 bg-bordeaux-700" />}
+            {streaming && <span aria-hidden className="demo-caret ml-0.5 inline-block h-4 w-px translate-y-0.5 bg-brand-fill" />}
           </div>
         ) : null}
 
@@ -702,9 +702,9 @@ function AssistantMessage({
                   <FileLink
                     url={fileHref(file.file_url)}
                     name={file.original_name}
-                    className="inline-flex items-center gap-2 rounded-button border border-border bg-surface px-3 py-2 text-label text-ink no-underline hover:border-bordeaux-700/30 hover:text-ink"
+                    className="inline-flex items-center gap-2 rounded-button border border-border bg-surface px-3 py-2 text-label text-ink no-underline hover:border-brand/30 hover:text-ink"
                   >
-                    <FileIcon size={16} className="text-bordeaux-700" />
+                    <FileIcon size={16} className="text-brand" />
                     {file.original_name}
                   </FileLink>
                 </li>
@@ -1075,7 +1075,7 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
             type="button"
             disabled={busy}
             onClick={() => void decide("confirm")}
-            className="rounded-button bg-bordeaux-700 px-3.5 py-2 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60"
+            className="rounded-button bg-brand-fill px-3.5 py-2 text-label font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60"
           >
             {isResearch ? dict.chat.researchStart : dict.panel.approve}
           </button>
@@ -1107,7 +1107,7 @@ function QuestionCard({
   const options = Array.isArray(call.arguments.options) ? (call.arguments.options as unknown[]).map(String) : [];
   return (
     <div className="rounded-panel border border-rose-300/60 bg-surface p-4">
-      <p className="text-meta text-bordeaux-700">{dict.chat.questionLabel}</p>
+      <p className="text-meta text-brand">{dict.chat.questionLabel}</p>
       <p className="mt-1 text-message text-ink">{text(call.arguments.question)}</p>
       {options.length > 0 && (
         <div role="group" aria-label={dict.chat.optionsLabel} className="mt-3 flex flex-wrap gap-2">
@@ -1117,7 +1117,7 @@ function QuestionCard({
               type="button"
               disabled={disabled}
               onClick={() => onAnswer(option)}
-              className="rounded-full border border-border bg-surface px-3 py-1.5 text-label text-ink hover:border-bordeaux-700/40 hover:bg-surface disabled:opacity-50"
+              className="rounded-full border border-border bg-surface px-3 py-1.5 text-label text-ink hover:border-brand/40 hover:bg-surface disabled:opacity-50"
             >
               {option}
             </button>
@@ -1182,10 +1182,10 @@ function Sources({ dict, sources }: { dict: WorkspaceDict; sources: SourceOut[] 
                 <FileLink
                   url={fileHref(source.file_url)}
                   name={source.original_name}
-                  className="flex h-full w-60 flex-col gap-1.5 rounded-card border border-border bg-surface p-3 no-underline transition-colors hover:border-bordeaux-700/30 hover:bg-active/40"
+                  className="flex h-full w-60 flex-col gap-1.5 rounded-card border border-border bg-surface p-3 no-underline transition-colors hover:border-brand/30 hover:bg-active/40"
                 >
                   <span className="flex items-start gap-1.5 text-label font-medium text-ink" title={source.original_name}>
-                    <FileIcon size={14} className="mt-0.5 shrink-0 text-bordeaux-700" />
+                    <FileIcon size={14} className="mt-0.5 shrink-0 text-brand" />
                     <span className="line-clamp-2 [overflow-wrap:anywhere]">{source.original_name}</span>
                   </span>
                   {excerpt && <span className="line-clamp-3 text-meta text-ink-3 [overflow-wrap:anywhere]">{excerpt}</span>}
@@ -1674,7 +1674,7 @@ export function Composer({
       onClick={onStop}
       aria-label={dict.chat.stop}
       title={dict.chat.stop}
-      className="flex size-9 items-center justify-center rounded-button bg-ink text-white hover:bg-bordeaux-900"
+      className="flex size-9 items-center justify-center rounded-button bg-ink text-white hover:bg-brand-fill-strong"
     >
       <StopIcon size={16} />
     </button>
@@ -1684,7 +1684,7 @@ export function Composer({
       disabled={!canSend}
       aria-label={dict.chat.send}
       title={dict.chat.send}
-      className="flex size-9 items-center justify-center rounded-button bg-bordeaux-700 text-white transition-colors hover:bg-bordeaux-900 disabled:bg-pending disabled:text-ink-3"
+      className="flex size-9 items-center justify-center rounded-button bg-brand-fill text-white transition-colors hover:bg-brand-fill-strong disabled:bg-pending disabled:text-ink-3"
     >
       <SendIcon size={18} />
     </button>
@@ -1711,10 +1711,10 @@ export function Composer({
           setDragging(false);
           addFiles(Array.from(event.dataTransfer.files));
         }}
-        className={`relative mx-auto w-full rounded-panel border bg-surface shadow-float focus-within:border-bordeaux-700/40 ${home ? "msg-enter max-w-[34rem]" : "max-w-[46rem]"} ${dragging ? "border-bordeaux-700 shadow-focus" : "border-border"}`}
+        className={`relative mx-auto w-full rounded-panel border bg-surface shadow-float focus-within:border-brand/40 ${home ? "msg-enter max-w-[34rem]" : "max-w-[46rem]"} ${dragging ? "border-brand shadow-focus" : "border-border"}`}
       >
         {dragging && (
-          <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-panel bg-surface/85 text-label font-medium text-bordeaux-700">
+          <p className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center rounded-panel bg-surface/85 text-label font-medium text-brand">
             {dict.chat.dropFiles}
           </p>
         )}
@@ -1737,7 +1737,7 @@ export function Composer({
                     index === activeIndex ? "bg-active text-ink" : "text-ink-2"
                   }`}
                 >
-                  {item.kind === "project" && <FolderIcon size={16} className="shrink-0 text-bordeaux-700" />}
+                  {item.kind === "project" && <FolderIcon size={16} className="shrink-0 text-brand" />}
                   {item.kind === "document" && <FileIcon size={16} className="shrink-0 text-ink-3" />}
                   <span className="truncate">{item.label}</span>
                   {item.hint && <span className="ml-auto shrink-0 pl-2 text-meta text-ink-3">{item.hint}</span>}
@@ -1754,7 +1754,7 @@ export function Composer({
           </p>
         )}
         {notice && (
-          <p role="status" className="px-4 pt-3 text-meta text-bordeaux-700">
+          <p role="status" className="px-4 pt-3 text-meta text-brand">
             {notice}
           </p>
         )}
@@ -1880,7 +1880,7 @@ export function Composer({
                   aria-pressed={webSearch}
                   title={webSearch ? dict.chat.webSearchOn : dict.chat.webSearchOff}
                   className={`inline-flex h-9 items-center gap-1.5 rounded-button px-2.5 text-label transition-colors ${
-                    webSearch ? "bg-bordeaux-700/10 font-medium text-bordeaux-700" : "text-ink-2 hover:bg-active hover:text-ink"
+                    webSearch ? "bg-brand/10 font-medium text-brand" : "text-ink-2 hover:bg-active hover:text-ink"
                   }`}
                 >
                   <GlobeIcon size={18} />
@@ -1927,7 +1927,7 @@ export function Composer({
               onClick={() => prefill(dict.chat.homeImagePrefill)}
               className="flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-left text-label text-ink-2 transition-colors hover:bg-active hover:text-ink"
             >
-              <ImageIcon size={18} aria-hidden className="text-bordeaux-700" />
+              <ImageIcon size={18} aria-hidden className="text-brand" />
               {dict.chat.homeImage}
             </button>
           </li>
@@ -1937,7 +1937,7 @@ export function Composer({
               onClick={() => prefill(dict.chat.homeWritePrefill)}
               className="flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-left text-label text-ink-2 transition-colors hover:bg-active hover:text-ink"
             >
-              <PencilIcon size={18} className="text-bordeaux-700" />
+              <PencilIcon size={18} className="text-brand" />
               {dict.chat.homeWrite}
             </button>
           </li>
@@ -1947,7 +1947,7 @@ export function Composer({
               onClick={activateWebSearch}
               className="flex w-full items-center gap-2.5 rounded-card px-3 py-2.5 text-left text-label text-ink-2 transition-colors hover:bg-active hover:text-ink"
             >
-              <GlobeIcon size={18} className="text-bordeaux-700" />
+              <GlobeIcon size={18} className="text-brand" />
               {dict.chat.homeWebSearch}
             </button>
           </li>

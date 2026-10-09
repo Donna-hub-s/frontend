@@ -69,7 +69,7 @@ export function FeatureExplorer({ features, alts }: { features: Features; alts: 
               tabIndex={selected ? 0 : -1}
               onClick={() => select(index)}
               className={`relative shrink-0 overflow-hidden rounded-nav px-4 py-3 text-left text-label font-medium whitespace-nowrap transition-colors duration-(--duration-fast) ${
-                selected ? "bg-bordeaux-900 text-white" : "text-ink-2 hover:bg-active hover:text-ink"
+                selected ? "bg-brand-fill-strong text-white" : "text-ink-2 hover:bg-active hover:text-ink"
               }`}
             >
               {feature.tab}
@@ -103,7 +103,7 @@ export function FeatureExplorer({ features, alts }: { features: Features; alts: 
           />
         </figure>
         <div>
-          <h3 className="font-brand text-[clamp(1.75rem,3vw,2.25rem)] leading-[1.15] font-light text-bordeaux-900 text-balance">
+          <h3 className="font-brand text-[clamp(1.75rem,3vw,2.25rem)] leading-[1.15] font-light text-brand-strong text-balance">
             {item.title}
           </h3>
           <p className="mt-5 text-meta text-ink-3">{features.exampleLabel}</p>
@@ -115,7 +115,7 @@ export function FeatureExplorer({ features, alts }: { features: Features; alts: 
           <ul className="mt-6 flex flex-col gap-3">
             {item.points.map((point) => (
               <li key={point} className="flex gap-3 text-message text-ink-2">
-                <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden className="mt-1 shrink-0 text-bordeaux-700">
+                <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden className="mt-1 shrink-0 text-brand">
                   <path d="M4 10.5l3.5 3.5L16 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <span className="text-pretty">{point}</span>

@@ -154,7 +154,7 @@ export function SearchPalette({ lang, labels }: { lang: Locale; labels: Labels }
           className={`flex w-full items-center gap-3 rounded-nav px-3 py-2.5 text-left ${isActive ? "bg-active" : ""}`}
         >
           <span className="flex size-8 shrink-0 items-center justify-center rounded-badge bg-surface text-ink-2">
-            {item.kind === "new" ? <ComposeIcon size={16} /> : item.kind === "document" ? <FileIcon size={16} className="text-bordeaux-700" /> : <ChatIcon size={16} />}
+            {item.kind === "new" ? <ComposeIcon size={16} /> : item.kind === "document" ? <FileIcon size={16} className="text-brand" /> : <ChatIcon size={16} />}
           </span>
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="flex items-baseline gap-2">

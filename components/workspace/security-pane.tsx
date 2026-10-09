@@ -10,10 +10,10 @@ import { CheckIcon, KeyIcon, LaptopIcon, ShieldIcon } from "./icons";
 type Labels = Dictionary["workspace"]["settings"];
 
 const fieldClass =
-  "h-10 w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none";
+  "h-10 w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-brand focus:shadow-focus focus:outline-none";
 const dangerButton = "rounded-button border border-danger/30 px-3 py-1.5 text-meta font-medium text-danger hover:bg-danger/[0.06] disabled:opacity-50";
 const ghostSmall = "rounded-button border border-border px-3 py-1.5 text-meta font-medium text-ink hover:bg-active disabled:opacity-50";
-const primarySmall = "rounded-button bg-bordeaux-700 px-3.5 py-1.5 text-meta font-medium text-white hover:bg-bordeaux-900 disabled:opacity-50";
+const primarySmall = "rounded-button bg-brand-fill px-3.5 py-1.5 text-meta font-medium text-white hover:bg-brand-fill-strong disabled:opacity-50";
 
 /** Réponse de GET /app/auth/me (schemas/auth.py::UserResponse). */
 type Me = { id: string; email: string; is_active: boolean; mfa_enabled: boolean; has_password: boolean };
@@ -359,7 +359,7 @@ function BackupCodes({
       </ul>
       {onAcknowledge && (
         <label htmlFor={checkboxId} className="mt-3 flex items-center gap-2 text-meta text-ink">
-          <input id={checkboxId} type="checkbox" checked={acknowledged} onChange={(e) => onAcknowledge(e.target.checked)} className="size-4 rounded border-border text-bordeaux-700 focus:ring-bordeaux-700" />
+          <input id={checkboxId} type="checkbox" checked={acknowledged} onChange={(e) => onAcknowledge(e.target.checked)} className="size-4 rounded border-border text-brand focus:ring-brand" />
           {labels.mfaBackupCodesSavedLabel}
         </label>
       )}
@@ -424,7 +424,7 @@ function SessionsCard({ labels, lang }: { labels: Labels; lang: Locale }) {
                   </span>
                 </span>
                 {session.is_current ? (
-                  <span className="rounded-badge bg-peche-100 px-2 py-1 text-meta font-medium text-bordeaux-900">{labels.sessionCurrentBadge}</span>
+                  <span className="rounded-badge bg-peche-100 px-2 py-1 text-meta font-medium text-brand-strong">{labels.sessionCurrentBadge}</span>
                 ) : (
                   <button type="button" disabled={busyId === session.id} onClick={() => void revoke(session.id)} className={ghostSmall}>
                     {busyId === session.id ? labels.sessionRevoking : labels.sessionRevoke}
@@ -530,7 +530,7 @@ function LinkedAccountsCard({ labels, lang, oauthProviders }: { labels: Labels; 
             <li key={provider}>
               <a
                 href={`/oauth/${provider}?lang=${lang}&link=1`}
-                className="inline-flex items-center gap-2 rounded-button border border-border bg-surface px-3 py-1.5 text-meta font-medium text-ink no-underline hover:border-bordeaux-700/30"
+                className="inline-flex items-center gap-2 rounded-button border border-border bg-surface px-3 py-1.5 text-meta font-medium text-ink no-underline hover:border-brand/30"
               >
                 {isKnownProvider(provider) && <ProviderIcon provider={provider} />}
                 {labels.linkedAccountConnect} {PROVIDER_NAMES[provider] ?? provider}

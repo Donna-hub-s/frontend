@@ -76,8 +76,8 @@ export function DriveFolderImportProgress({
   if (run.status === "running") {
     return (
       <div className="flex flex-col gap-2 rounded-card border border-border bg-surface p-3" role="status" aria-live="polite">
-        <p className="flex items-center gap-2 text-label font-medium text-bordeaux-700">
-          <span className="pending-dot size-1.5 rounded-full bg-bordeaux-700" />
+        <p className="flex items-center gap-2 text-label font-medium text-brand">
+          <span className="pending-dot size-1.5 rounded-full bg-brand-fill" />
           {labels.running.replace("{name}", name)}
         </p>
         <p className="text-meta text-ink-3">{counts}</p>

@@ -72,7 +72,7 @@ export function WorkflowsPage({ lang, labels, agentLabels }: { lang: Locale; lab
           <button
             type="button"
             onClick={() => setDialogOpen(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-button bg-bordeaux-700 px-4 text-label font-medium text-white hover:bg-bordeaux-900"
+            className="inline-flex h-10 items-center gap-2 rounded-button bg-brand-fill px-4 text-label font-medium text-white hover:bg-brand-fill-strong"
           >
             <PlusIcon size={16} />
             {labels.create}
@@ -87,7 +87,7 @@ export function WorkflowsPage({ lang, labels, agentLabels }: { lang: Locale; lab
           <p className="py-10 text-center text-secondary text-ink-3">…</p>
         ) : !items.length ? (
           <div className="flex flex-col items-center gap-2 rounded-panel border-2 border-dashed border-border bg-fill/40 px-6 py-12 text-center">
-            <span className="flex size-10 items-center justify-center rounded-full bg-peche-100 text-bordeaux-700">
+            <span className="flex size-10 items-center justify-center rounded-full bg-peche-100 text-brand">
               <WorkflowGlyph size={18} />
             </span>
             <p className="text-label font-medium text-ink">{labels.empty}</p>
@@ -121,7 +121,7 @@ export function WorkflowsPage({ lang, labels, agentLabels }: { lang: Locale; lab
 // ── Une automatisation ────────────────────────────────────────────────────────
 
 const BADGE: Record<string, string> = {
-  draft: "bg-peche-100 text-bordeaux-900",
+  draft: "bg-peche-100 text-brand-strong",
   active: "bg-success/10 text-success-ink",
   paused: "bg-fill text-ink-2",
 };
@@ -234,14 +234,14 @@ function WorkflowCard({
           </p>
         </div>
         {workflow.conversation_id && (
-          <Link href={`/${lang}/app/c/${workflow.conversation_id}`} className="text-label text-bordeaux-700 no-underline hover:underline">
+          <Link href={`/${lang}/app/c/${workflow.conversation_id}`} className="text-label text-brand no-underline hover:underline">
             {labels.openConversation}
           </Link>
         )}
       </header>
 
       {approval && (
-        <p className="mt-3 rounded-badge bg-peche-100 px-3 py-2 text-secondary text-bordeaux-900 text-pretty">
+        <p className="mt-3 rounded-badge bg-peche-100 px-3 py-2 text-secondary text-brand-strong text-pretty">
           {workflow.status === "draft" ? labels.draftNote : labels.editedNote}
         </p>
       )}
@@ -270,7 +270,7 @@ function WorkflowCard({
             type="button"
             disabled={busy !== null}
             onClick={() => void act("activate", () => post(`/${workflow.id}/activate`))}
-            className={`${btn} bg-bordeaux-700 text-white hover:bg-bordeaux-900`}
+            className={`${btn} bg-brand-fill text-white hover:bg-brand-fill-strong`}
           >
             {labels.approve}
           </button>
@@ -280,7 +280,7 @@ function WorkflowCard({
             {labels.pause}
           </button>
         ) : (
-          <button type="button" disabled={busy !== null} onClick={() => void act("activate", () => post(`/${workflow.id}/activate`))} className={`${btn} bg-bordeaux-700 text-white hover:bg-bordeaux-900`}>
+          <button type="button" disabled={busy !== null} onClick={() => void act("activate", () => post(`/${workflow.id}/activate`))} className={`${btn} bg-brand-fill text-white hover:bg-brand-fill-strong`}>
             {labels.resume}
           </button>
         )}
@@ -344,7 +344,7 @@ function WorkflowCard({
 // ── Historique ────────────────────────────────────────────────────────────────
 
 const RUN_TONE: Record<string, string> = {
-  running: "text-bordeaux-700",
+  running: "text-brand",
   succeeded: "text-success-ink",
   failed: "text-danger",
   skipped: "text-ink-3",
@@ -441,7 +441,7 @@ function BriefingDialog({ labels, onClose, onCreated }: { labels: Labels; onClos
     else setError(d.error);
   };
 
-  const field = "h-10 w-full rounded-button border border-border bg-surface px-3 text-message text-ink focus:border-bordeaux-700 focus:shadow-focus focus:outline-none";
+  const field = "h-10 w-full rounded-button border border-border bg-surface px-3 text-message text-ink focus:border-brand focus:shadow-focus focus:outline-none";
   return (
     <form
       onSubmit={(event) => {
@@ -486,7 +486,7 @@ function BriefingDialog({ labels, onClose, onCreated }: { labels: Labels; onClos
                 type="checkbox"
                 checked={channels.includes(channel)}
                 onChange={(event) => setChannels((list) => (event.target.checked ? [...list, channel] : list.filter((c) => c !== channel)))}
-                className="size-4 accent-bordeaux-700"
+                className="size-4 accent-brand"
               />
               {d[channel]}
             </label>
@@ -502,7 +502,7 @@ function BriefingDialog({ labels, onClose, onCreated }: { labels: Labels; onClos
         <button type="button" onClick={onClose} className="rounded-button px-3.5 py-2 text-label font-medium text-ink hover:bg-active">
           {d.cancel}
         </button>
-        <button type="submit" disabled={busy} className="rounded-button bg-bordeaux-700 px-4 py-2 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60">
+        <button type="submit" disabled={busy} className="rounded-button bg-brand-fill px-4 py-2 text-label font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60">
           {d.submit}
         </button>
       </footer>

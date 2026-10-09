@@ -41,7 +41,7 @@ export default async function WorkspaceInvitePage({ params, searchParams }: Page
         <div className="flex gap-2">
           <Link
             href={`/${lang}/login?next=${encodeURIComponent(next)}`}
-            className="inline-flex h-11 flex-1 items-center justify-center rounded-button bg-bordeaux-700 px-5 text-label font-medium text-white no-underline hover:bg-bordeaux-900"
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-button bg-brand-fill px-5 text-label font-medium text-white no-underline hover:bg-brand-fill-strong"
           >
             {t.signIn}
           </Link>

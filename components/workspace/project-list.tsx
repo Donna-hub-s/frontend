@@ -146,7 +146,7 @@ export function NewProjectDialog({ lang, labels, onClose }: { lang: Locale; labe
             value={name}
             placeholder={labels.namePlaceholder}
             onChange={(event) => setName(event.target.value)}
-            className="h-10 w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
+            className="h-10 w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-brand focus:shadow-focus focus:outline-none"
           />
         </div>
 
@@ -161,7 +161,7 @@ export function NewProjectDialog({ lang, labels, onClose }: { lang: Locale; labe
             rows={2}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            className="w-full resize-none rounded-button border border-border bg-surface px-3 py-2 text-message text-ink focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
+            className="w-full resize-none rounded-button border border-border bg-surface px-3 py-2 text-message text-ink focus:border-brand focus:shadow-focus focus:outline-none"
           />
         </div>
 
@@ -174,7 +174,7 @@ export function NewProjectDialog({ lang, labels, onClose }: { lang: Locale; labe
             rows={3}
             value={instructions}
             onChange={(event) => setInstructions(event.target.value)}
-            className="w-full resize-none rounded-button border border-border bg-surface px-3 py-2 text-message text-ink focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
+            className="w-full resize-none rounded-button border border-border bg-surface px-3 py-2 text-message text-ink focus:border-brand focus:shadow-focus focus:outline-none"
           />
           <p className="text-meta text-ink-3">{labels.instructionsHint}</p>
         </div>
@@ -188,7 +188,7 @@ export function NewProjectDialog({ lang, labels, onClose }: { lang: Locale; labe
           <button
             type="submit"
             disabled={busy || !name.trim()}
-            className="rounded-button bg-bordeaux-700 px-3.5 py-2 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60"
+            className="rounded-button bg-brand-fill px-3.5 py-2 text-label font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60"
           >
             {busy ? labels.creating : labels.create}
           </button>

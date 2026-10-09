@@ -37,11 +37,11 @@ export function ReminderToasts({ lang, labels }: { lang: Locale; labels: Diction
           className="pointer-events-auto w-full rounded-panel border border-border bg-surface p-4 shadow-float"
         >
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-peche-100 text-bordeaux-700">
+            <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-peche-100 text-brand">
               <BellIcon size={17} />
             </span>
             <div className="min-w-0 flex-1">
-              <p className="text-meta font-medium text-bordeaux-700">{reminder.title ?? labels.title}</p>
+              <p className="text-meta font-medium text-brand">{reminder.title ?? labels.title}</p>
               <p className="mt-0.5 line-clamp-6 text-label whitespace-pre-line text-ink text-pretty break-words">{reminder.content}</p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {/* Inutile quand la conversation du rappel est déjà à l'écran. */}
@@ -52,7 +52,7 @@ export function ReminderToasts({ lang, labels }: { lang: Locale; labels: Diction
                       router.push(`/${lang}/app/c/${reminder.conversationId}`);
                       dismissReminder(reminder.id);
                     }}
-                    className="rounded-button bg-bordeaux-700 px-3 py-1.5 text-secondary font-medium text-white hover:bg-bordeaux-900"
+                    className="rounded-button bg-brand-fill px-3 py-1.5 text-secondary font-medium text-white hover:bg-brand-fill-strong"
                   >
                     {labels.open}
                   </button>

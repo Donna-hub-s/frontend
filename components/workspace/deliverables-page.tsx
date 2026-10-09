@@ -114,7 +114,7 @@ export function DeliverablesPage({ lang, labels }: { lang: Locale; labels: Label
               value={input}
               onChange={(event) => setInput(event.target.value)}
               placeholder={labels.searchPlaceholder}
-              className="h-9 w-full rounded-button border border-border bg-surface px-3 text-secondary text-ink outline-none focus:border-bordeaux-700"
+              className="h-9 w-full rounded-button border border-border bg-surface px-3 text-secondary text-ink outline-none focus:border-brand"
             />
           </div>
           <div role="group" aria-label={labels.filterLabel} className="inline-flex rounded-button bg-fill p-0.5">
@@ -131,7 +131,7 @@ export function DeliverablesPage({ lang, labels }: { lang: Locale; labels: Label
             ))}
           </div>
           <label className="flex items-center gap-2 text-label text-ink-2">
-            <input type="checkbox" checked={abandoned} onChange={(event) => setAbandoned(event.target.checked)} className="size-4 accent-bordeaux-700" />
+            <input type="checkbox" checked={abandoned} onChange={(event) => setAbandoned(event.target.checked)} className="size-4 accent-brand" />
             {labels.showAbandoned}
           </label>
         </div>
@@ -144,7 +144,7 @@ export function DeliverablesPage({ lang, labels }: { lang: Locale; labels: Label
           <p className="py-10 text-center text-secondary text-ink-3">{labels.loading}</p>
         ) : empty ? (
           <div className="flex flex-col items-center gap-2 rounded-panel border-2 border-dashed border-border bg-fill/40 px-6 py-12 text-center">
-            <span className="flex size-10 items-center justify-center rounded-full bg-peche-100 text-bordeaux-700">
+            <span className="flex size-10 items-center justify-center rounded-full bg-peche-100 text-brand">
               <FolderOpen size={18} />
             </span>
             <p className="text-label font-medium text-ink">{filtering ? labels.emptySearch : labels.empty}</p>
@@ -216,22 +216,22 @@ function FileRow({ lang, labels, file }: { lang: Locale; labels: Labels; file: D
         )}
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <FileLink url={fileUrl(file.id)} name={file.name} className="truncate text-label font-medium text-ink no-underline hover:text-bordeaux-700">
+        <FileLink url={fileUrl(file.id)} name={file.name} className="truncate text-label font-medium text-ink no-underline hover:text-brand">
           {file.name}
         </FileLink>
         <p className="flex flex-wrap items-center gap-x-2 text-meta text-ink-3">
           {extension && <span className="rounded-badge bg-fill px-1.5 py-px font-medium">{extension}</span>}
           <span>{when(lang, file.created_at)}</span>
-          <Link href={conversationHref(lang, file.conversation_id)} className="truncate no-underline hover:text-bordeaux-700 hover:underline">
+          <Link href={conversationHref(lang, file.conversation_id)} className="truncate no-underline hover:text-brand hover:underline">
             {fill(labels.inConversation, { title: file.conversation_title })}
           </Link>
-          {!file.on_shown_branch && <span className="rounded-badge bg-peche-100 px-1.5 py-px text-bordeaux-900">{labels.abandoned}</span>}
+          {!file.on_shown_branch && <span className="rounded-badge bg-peche-100 px-1.5 py-px text-brand-strong">{labels.abandoned}</span>}
         </p>
       </div>
       <a
         href={fileUrl(file.id)}
         download={file.name}
-        className="shrink-0 rounded-button px-3 py-1.5 text-label font-medium text-ink-2 no-underline hover:bg-active hover:text-bordeaux-700"
+        className="shrink-0 rounded-button px-3 py-1.5 text-label font-medium text-ink-2 no-underline hover:bg-active hover:text-brand"
       >
         {labels.download}
       </a>
@@ -246,7 +246,7 @@ function CanvasRow({ lang, labels, canvas }: { lang: Locale; labels: Labels; can
         <FileIcon size={18} />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <Link href={conversationHref(lang, canvas.conversation_id)} className="truncate text-label font-medium text-ink no-underline hover:text-bordeaux-700">
+        <Link href={conversationHref(lang, canvas.conversation_id)} className="truncate text-label font-medium text-ink no-underline hover:text-brand">
           {canvas.title}
         </Link>
         <p className="flex flex-wrap items-center gap-x-2 text-meta text-ink-3">

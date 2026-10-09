@@ -4,7 +4,7 @@ import { useId, useState, type InputHTMLAttributes, type ReactNode } from "react
 import { passwordRules, type PasswordRule } from "@/lib/auth-rules";
 
 const inputClass =
-  "h-11 w-full rounded-button border bg-surface px-3.5 text-message text-ink placeholder:text-ink-3 transition-[border-color,box-shadow] duration-(--duration-fast) focus:border-bordeaux-700 focus:shadow-focus focus:outline-none disabled:opacity-60";
+  "h-11 w-full rounded-button border bg-surface px-3.5 text-message text-ink placeholder:text-ink-3 transition-[border-color,box-shadow] duration-(--duration-fast) focus:border-brand focus:shadow-focus focus:outline-none disabled:opacity-60";
 
 type FieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "className"> & {
   label: string;
@@ -90,7 +90,7 @@ export function PasswordField({ showLabel, hideLabel, label, error, hint, aside,
           onClick={() => setVisible((v) => !v)}
           aria-label={visible ? hideLabel : showLabel}
           aria-pressed={visible}
-          className="absolute top-1/2 right-1.5 flex size-8 -translate-y-1/2 items-center justify-center rounded-badge text-ink-2 hover:text-bordeaux-900"
+          className="absolute top-1/2 right-1.5 flex size-8 -translate-y-1/2 items-center justify-center rounded-badge text-ink-2 hover:text-brand-strong"
         >
           <EyeIcon open={!visible} />
         </button>
@@ -183,7 +183,7 @@ export function SubmitButton({ pending, label, pendingLabel }: { pending: boolea
       type="submit"
       disabled={pending}
       aria-disabled={pending}
-      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-button bg-bordeaux-700 px-5 text-label font-medium text-white transition-colors duration-(--duration-fast) hover:bg-bordeaux-900 disabled:cursor-progress disabled:bg-bordeaux-900"
+      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-button bg-brand-fill px-5 text-label font-medium text-white transition-colors duration-(--duration-fast) hover:bg-brand-fill-strong disabled:cursor-progress disabled:bg-brand-fill-strong"
     >
       {pending && <span aria-hidden className="demo-spin size-4 rounded-full border-2 border-white/35 border-t-white" />}
       {pending ? pendingLabel : label}

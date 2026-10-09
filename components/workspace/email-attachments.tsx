@@ -33,7 +33,7 @@ export function EmailAttachmentList({
         {attachments.map((file, index) => {
           const content = (
             <>
-              <PaperclipIcon size={14} className="shrink-0 text-bordeaux-700" />
+              <PaperclipIcon size={14} className="shrink-0 text-brand" />
               <span className="min-w-0 flex-1 truncate">{file.name}</span>
               {file.source === "drive" && <span className="shrink-0 rounded-badge bg-surface px-1.5 text-meta text-ink-3">{labels.emailAttachmentDrive}</span>}
               <span className="shrink-0 text-meta text-ink-3 tabular-nums">{formatSize(file.size)}</span>
@@ -46,7 +46,7 @@ export function EmailAttachmentList({
                 <FileLink
                   url={`/api/donna/chat/memory/actions/${encodeURIComponent(actionId)}/attachments/${index}/file`}
                   name={file.name}
-                  className={`${row} no-underline hover:border-bordeaux-700/30`}
+                  className={`${row} no-underline hover:border-brand/30`}
                 >
                   {content}
                 </FileLink>

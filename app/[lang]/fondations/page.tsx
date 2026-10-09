@@ -78,7 +78,7 @@ export default function FondationsPage() {
   return (
     <main className="mx-auto flex w-full max-w-[1440px] flex-col gap-14 px-18 py-16">
       <header className="flex flex-col gap-2.5">
-        <span className="text-caps font-semibold uppercase text-bordeaux-700">DONNA · Fondations</span>
+        <span className="text-caps font-semibold uppercase text-brand">DONNA · Fondations</span>
         <h1 className="text-[2.5rem] leading-12 font-medium tracking-[-0.01em]">Tokens</h1>
         <p className="max-w-205 text-message text-ink-2 text-pretty">
           Palette unifiée de la planche d&apos;identité et de la maquette d&apos;écran. Chaque échantillon utilise
@@ -89,7 +89,7 @@ export default function FondationsPage() {
       <Section title="Marque">
         <SwatchGrid items={brand} cols="grid-cols-6" />
         <div className="grid grid-cols-6 gap-4">
-          {["bg-bordeaux-900", "bg-bordeaux-700", "bg-bordeaux-500", "bg-rose-300", "bg-peche-100", "bg-ivoire-50"].map((c) => (
+          {["bg-brand-fill-strong", "bg-brand-fill", "bg-brand-fill", "bg-rose-300", "bg-peche-100", "bg-ivoire-50"].map((c) => (
             <div key={c} className={`h-3 rounded-badge ${c} shadow-card`} title={`classe ${c}`} />
           ))}
         </div>
@@ -110,7 +110,7 @@ export default function FondationsPage() {
               <span className="text-secondary font-semibold">text-wordmark</span>
               <span className="font-mono text-meta text-ink-2">Jost 300 · 40/48 · +0,22em</span>
             </div>
-            <span className="font-brand text-wordmark font-light text-bordeaux-900">DONNA</span>
+            <span className="font-brand text-wordmark font-light text-brand-strong">DONNA</span>
           </div>
           <div className="grid grid-cols-[220px_minmax(0,1fr)] items-center gap-6 border-b border-border px-6 py-5">
             <div className="flex flex-col gap-0.5">

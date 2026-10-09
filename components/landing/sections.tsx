@@ -10,7 +10,7 @@ import { Reveal } from "./reveal";
 type SectionProps = { lang: Locale; dict: Dictionary };
 
 const sectionTitle =
-  "font-brand text-[clamp(2.125rem,4vw,3.25rem)] leading-[1.08] font-light tracking-[-0.01em] text-bordeaux-900 text-balance";
+  "font-brand text-[clamp(2.125rem,4vw,3.25rem)] leading-[1.08] font-light tracking-[-0.01em] text-brand-strong text-balance";
 
 export function Features({ dict }: SectionProps) {
   return (
@@ -50,7 +50,7 @@ export function HowItWorks({ dict }: SectionProps) {
                 />
               </div>
               <div className="mt-8 flex items-center gap-3">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-bordeaux-700 font-brand text-[0.9375rem] text-white">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-brand-fill font-brand text-[0.9375rem] text-white">
                   {index + 1}
                 </span>
                 <h3 className="text-[1.1875rem] leading-7 font-medium text-ink text-balance">{step.title}</h3>
@@ -90,7 +90,7 @@ export function Audience({ dict }: SectionProps) {
             <Reveal
               key={column.label}
               delay={index * 140}
-              className={`flex flex-col rounded-[24px] p-8 md:p-10 ${business ? "bg-bordeaux-900 text-white" : "bg-surface shadow-card"}`}
+              className={`flex flex-col rounded-[24px] p-8 md:p-10 ${business ? "bg-brand-fill-strong text-white" : "bg-surface shadow-card"}`}
             >
               <div className={`flex h-48 items-end justify-center rounded-panel px-4 pt-4 ${business ? "bg-ivoire-50" : ""}`}>
                 <Image
@@ -101,10 +101,10 @@ export function Audience({ dict }: SectionProps) {
                   className="h-auto max-h-44 w-auto max-w-full"
                 />
               </div>
-              <p className={`mt-8 text-label font-medium ${business ? "text-rose-300" : "text-bordeaux-700"}`}>{column.label}</p>
+              <p className={`mt-8 text-label font-medium ${business ? "text-rose-300" : "text-brand"}`}>{column.label}</p>
               <h3
                 className={`mt-1 font-brand text-[clamp(1.625rem,2.6vw,2rem)] leading-[1.15] font-light text-balance ${
-                  business ? "text-white" : "text-bordeaux-900"
+                  business ? "text-white" : "text-brand-strong"
                 }`}
               >
                 {column.title}
@@ -112,14 +112,14 @@ export function Audience({ dict }: SectionProps) {
               <ul className="mt-6 flex flex-col gap-3">
                 {column.points.map((point) => (
                   <li key={point} className={`flex gap-3 text-message ${business ? "text-peche-100/90" : "text-ink-2"}`}>
-                    <Tick className={business ? "text-rose-300" : "text-bordeaux-700"} />
+                    <Tick className={business ? "text-rose-300" : "text-brand"} />
                     <span className="text-pretty">{point}</span>
                   </li>
                 ))}
               </ul>
               {business && (
                 <div className="mt-8 rounded-card border border-white/15 p-5">
-                  <p className="inline-flex rounded-badge bg-rose-300 px-2 py-0.5 text-meta font-medium text-bordeaux-900">
+                  <p className="inline-flex rounded-badge bg-rose-300 px-2 py-0.5 text-meta font-medium text-brand-strong">
                     {audience.soon.label}
                   </p>
                   <ul className="mt-3 flex flex-col gap-2">
@@ -141,7 +141,7 @@ export function Audience({ dict }: SectionProps) {
 
 export function Security({ dict }: SectionProps) {
   return (
-    <section id="securite" className="scroll-mt-6 bg-bordeaux-900 py-20 text-peche-100 lg:py-28">
+    <section id="securite" className="scroll-mt-6 bg-brand-fill-strong py-20 text-peche-100 lg:py-28">
       <div className="mx-auto w-full max-w-[1200px] px-6 md:px-10">
         <Reveal className="grid items-end gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-20">
           <div>
@@ -192,7 +192,7 @@ export function Faq({ dict }: SectionProps) {
                 width="20"
                 height="20"
                 aria-hidden
-                className="shrink-0 text-bordeaux-700 transition-transform duration-(--duration-standard) group-open:rotate-45"
+                className="shrink-0 text-brand transition-transform duration-(--duration-standard) group-open:rotate-45"
               >
                 <path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
               </svg>

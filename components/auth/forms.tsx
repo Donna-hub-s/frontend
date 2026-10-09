@@ -26,7 +26,7 @@ const say = (auth: Auth, key?: AuthErrorKey) => (key ? auth.errors[key] : undefi
 export function Heading({ title, intro }: { title: string; intro: string }) {
   return (
     <div className="flex flex-col gap-2">
-      <h1 className="font-brand text-[2rem] leading-[2.375rem] font-light text-bordeaux-900 text-balance">{title}</h1>
+      <h1 className="font-brand text-[2rem] leading-[2.375rem] font-light text-brand-strong text-balance">{title}</h1>
       <p className="text-message text-ink-2 text-pretty">{intro}</p>
     </div>
   );
@@ -126,7 +126,7 @@ function MfaStep({ lang, auth, next, onRestart }: Base & { next?: string; onRest
           </>
         )}
       </form>
-      <button type="button" onClick={onRestart} className="self-start text-label font-medium text-bordeaux-700 hover:text-bordeaux-900">
+      <button type="button" onClick={onRestart} className="self-start text-label font-medium text-brand hover:text-brand-strong">
         {auth.mfa.restart}
       </button>
     </div>
@@ -220,7 +220,7 @@ export function ResetForm({ lang, auth, token }: Base & { token: string }) {
         <FormAlert tone="success">{auth.reset.done}</FormAlert>
         <Link
           href={`/${lang}/login`}
-          className="inline-flex h-11 items-center justify-center rounded-button bg-bordeaux-700 px-5 text-label font-medium text-white no-underline hover:bg-bordeaux-900 hover:text-white"
+          className="inline-flex h-11 items-center justify-center rounded-button bg-brand-fill px-5 text-label font-medium text-white no-underline hover:bg-brand-fill-strong hover:text-white"
         >
           {auth.reset.loginLink}
         </Link>
@@ -304,11 +304,11 @@ export function WorkspacePicker({ lang, auth, tenants }: Base & { tenants: Tenan
                 name="tenant"
                 value={tenant.id}
                 disabled={pending}
-                className="group flex w-full items-center gap-3.5 rounded-card border border-border bg-surface px-4 py-3.5 text-left transition-[border-color,box-shadow] duration-(--duration-fast) hover:border-bordeaux-700/40 hover:shadow-card disabled:cursor-progress disabled:opacity-60"
+                className="group flex w-full items-center gap-3.5 rounded-card border border-border bg-surface px-4 py-3.5 text-left transition-[border-color,box-shadow] duration-(--duration-fast) hover:border-brand/40 hover:shadow-card disabled:cursor-progress disabled:opacity-60"
               >
                 <span
                   aria-hidden
-                  className="flex size-10 shrink-0 items-center justify-center rounded-nav bg-peche-100 font-brand text-[1.125rem] text-bordeaux-900 uppercase"
+                  className="flex size-10 shrink-0 items-center justify-center rounded-nav bg-peche-100 font-brand text-[1.125rem] text-brand-strong uppercase"
                 >
                   {name.charAt(0)}
                 </span>
@@ -318,7 +318,7 @@ export function WorkspacePicker({ lang, auth, tenants }: Base & { tenants: Tenan
                     {tenant.is_owner ? auth.workspaces.owner : auth.workspaces.member}
                   </span>
                 </span>
-                <span className="text-label font-medium text-bordeaux-700 group-hover:text-bordeaux-900">
+                <span className="text-label font-medium text-brand group-hover:text-brand-strong">
                   {auth.workspaces.open}
                 </span>
               </button>

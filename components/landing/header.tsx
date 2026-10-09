@@ -21,7 +21,7 @@ export function LandingHeader({ lang, dict }: { lang: Locale; dict: Dictionary }
               ["#questions", dict.nav.faq],
             ] as const
           ).map(([href, text]) => (
-            <a key={href} href={href} className="text-label text-ink-2 no-underline hover:text-bordeaux-900">
+            <a key={href} href={href} className="text-label text-ink-2 no-underline hover:text-brand-strong">
               {text}
             </a>
           ))}
@@ -29,13 +29,13 @@ export function LandingHeader({ lang, dict }: { lang: Locale; dict: Dictionary }
         <LanguageSwitch current={lang} label={dict.language.label} />
         <Link
           href={`/${lang}/login`}
-          className="hidden text-label font-medium text-ink no-underline hover:text-bordeaux-900 sm:inline"
+          className="hidden text-label font-medium text-ink no-underline hover:text-brand-strong sm:inline"
         >
           {dict.nav.signIn}
         </Link>
         <Link
           href={`/${lang}/signup`}
-          className="rounded-button bg-bordeaux-700 px-4 py-2.5 text-label font-medium text-white no-underline transition-colors duration-(--duration-fast) hover:bg-bordeaux-900 hover:text-white"
+          className="rounded-button bg-brand-fill px-4 py-2.5 text-label font-medium text-white no-underline transition-colors duration-(--duration-fast) hover:bg-brand-fill-strong hover:text-white"
         >
           {dict.nav.start}
         </Link>

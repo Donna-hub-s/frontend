@@ -62,7 +62,7 @@ export function FeedbackBar({
       aria-label={label}
       title={label}
       onClick={() => void choose(kind)}
-      className={`flex size-6 items-center justify-center rounded-full hover:bg-active hover:text-ink ${value === kind ? "bg-active text-bordeaux-700" : "text-ink-3"}`}
+      className={`flex size-6 items-center justify-center rounded-full hover:bg-active hover:text-ink ${value === kind ? "bg-active text-brand" : "text-ink-3"}`}
     >
       <Icon size={14} />
     </button>
@@ -97,13 +97,13 @@ export function FeedbackBar({
             rows={2}
             onChange={(event) => setReason(event.target.value)}
             placeholder={labels.feedbackReasonPlaceholder}
-            className="resize-none rounded-badge border border-border px-2.5 py-1.5 text-label text-ink outline-none focus:border-bordeaux-700"
+            className="resize-none rounded-badge border border-border px-2.5 py-1.5 text-label text-ink outline-none focus:border-brand"
           />
           <div className="flex justify-end gap-2">
             <button type="button" onClick={() => setStatus("idle")} className="rounded-button px-3 py-1.5 text-label text-ink-2 hover:bg-active">
               {labels.feedbackSkip}
             </button>
-            <button type="submit" disabled={busy || !reason.trim()} className="rounded-button bg-bordeaux-700 px-3 py-1.5 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-50">
+            <button type="submit" disabled={busy || !reason.trim()} className="rounded-button bg-brand-fill px-3 py-1.5 text-label font-medium text-white hover:bg-brand-fill-strong disabled:opacity-50">
               {labels.feedbackSend}
             </button>
           </div>

@@ -32,9 +32,9 @@ export default async function AuthLayout({ children, params }: LayoutProps<"/[la
 
       <aside
         aria-hidden
-        className="relative m-3 hidden flex-col overflow-hidden rounded-[28px] bg-bordeaux-900 p-12 text-peche-100 lg:flex xl:p-14"
+        className="relative m-3 hidden flex-col overflow-hidden rounded-[28px] bg-brand-fill-strong p-12 text-peche-100 lg:flex xl:p-14"
       >
-        <div aria-hidden className="absolute -top-40 -right-40 size-[28rem] rounded-full bg-bordeaux-700/40" />
+        <div aria-hidden className="absolute -top-40 -right-40 size-[28rem] rounded-full bg-brand/40" />
         <div className="relative max-w-[26rem]">
           <p className="font-brand text-[clamp(2rem,3vw,2.75rem)] leading-[1.1] font-light text-white text-balance">
             {panel.title}
@@ -50,8 +50,8 @@ export default async function AuthLayout({ children, params }: LayoutProps<"/[la
             <div className="w-full max-w-[25rem] rounded-card bg-ivoire-50 p-5 text-ink shadow-float">
               <div className="flex items-center justify-between gap-3 text-meta">
                 <span className="font-medium">{demo.draftLabel}</span>
-                <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-bordeaux-700">
-                  <span className="pending-dot size-1.5 rounded-full bg-bordeaux-700" />
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-brand">
+                  <span className="pending-dot size-1.5 rounded-full bg-brand-fill" />
                   {demo.pending}
                 </span>
               </div>
@@ -59,7 +59,7 @@ export default async function AuthLayout({ children, params }: LayoutProps<"/[la
               <p className="mt-0.5 text-secondary font-medium">{demo.subject}</p>
               <p className="mt-1.5 text-meta leading-5 text-ink-2">{demo.body}</p>
               <div className="mt-4 flex gap-2">
-                <span className="rounded-button bg-bordeaux-700 px-3 py-1.5 text-meta font-medium text-white">{demo.send}</span>
+                <span className="rounded-button bg-brand-fill px-3 py-1.5 text-meta font-medium text-white">{demo.send}</span>
                 <span className="rounded-button bg-fill px-3 py-1.5 text-meta font-medium">{demo.edit}</span>
               </div>
             </div>

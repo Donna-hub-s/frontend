@@ -80,7 +80,7 @@ export function TeamUsage({ lang, labels, days }: { lang: Locale; labels: Labels
           </a>
         </div>
         {!data.directory_ok && (
-          <p role="status" className="rounded-badge bg-peche-100 px-3 py-2 text-secondary text-bordeaux-900">
+          <p role="status" className="rounded-badge bg-peche-100 px-3 py-2 text-secondary text-brand-strong">
             {labels.teamDirectoryDown}
           </p>
         )}
@@ -95,7 +95,7 @@ export function TeamUsage({ lang, labels, days }: { lang: Locale; labels: Labels
             <button
               type="button"
               onClick={() => setEditing({ userId: DEFAULT_BUDGET_USER, who: labels.editDefaultWho, row: data.default_budget })}
-              className="inline-flex items-center gap-1.5 rounded-button px-2.5 py-1.5 text-label text-bordeaux-700 hover:bg-active"
+              className="inline-flex items-center gap-1.5 rounded-button px-2.5 py-1.5 text-label text-brand hover:bg-active"
             >
               <Pencil size={14} />
               {labels.teamEdit}
@@ -195,7 +195,7 @@ function describeLimits(row: UsageBudgetRow, money: (usd: number) => string, lan
   return parts.length ? parts.join(" · ") : labels.teamNoBudget;
 }
 
-const field = "h-10 w-full rounded-button border border-border bg-surface px-3 text-label text-ink outline-none focus:border-bordeaux-700";
+const field = "h-10 w-full rounded-button border border-border bg-surface px-3 text-label text-ink outline-none focus:border-brand";
 
 function BudgetDialog({
   labels,
@@ -262,7 +262,7 @@ function BudgetDialog({
           <input id={tokensId} inputMode="numeric" value={tokens} onChange={(event) => setTokens(event.target.value)} className={field} />
         </div>
         <label className="flex items-start gap-2.5 text-label text-ink">
-          <input type="checkbox" checked={block} onChange={(event) => setBlock(event.target.checked)} className="mt-1 size-4 accent-bordeaux-700" />
+          <input type="checkbox" checked={block} onChange={(event) => setBlock(event.target.checked)} className="mt-1 size-4 accent-brand" />
           <span>
             {labels.fieldBlock}
             <span className="block text-meta text-ink-3">{labels.fieldBlockHint}</span>
@@ -286,7 +286,7 @@ function BudgetDialog({
           <button type="button" onClick={onClose} className="rounded-button px-3 py-2 text-label text-ink-2 hover:bg-active">
             {labels.cancel}
           </button>
-          <button type="submit" disabled={busy} className="rounded-button bg-bordeaux-700 px-4 py-2 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60">
+          <button type="submit" disabled={busy} className="rounded-button bg-brand-fill px-4 py-2 text-label font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60">
             {busy ? labels.saving : labels.save}
           </button>
         </div>

@@ -4,7 +4,7 @@ import { budgetBarWidth, budgetPercent, budgetTone, formatTokens, type UsageBudg
 
 type Money = (usd: number) => string;
 
-const TONE_BAR = { ok: "bg-bordeaux-700/70", warn: "bg-notification", exceeded: "bg-danger" } as const;
+const TONE_BAR = { ok: "bg-brand/70", warn: "bg-notification", exceeded: "bg-danger" } as const;
 const TONE_TEXT = { ok: "text-ink-2", warn: "text-notification", exceeded: "text-danger" } as const;
 
 const fill = (template: string, values: Record<string, string | number>) => template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));

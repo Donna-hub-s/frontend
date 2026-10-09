@@ -114,7 +114,7 @@ export function UsagePage({ lang, labels }: { lang: Locale; labels: Labels }) {
           <p className="py-10 text-center text-secondary text-ink-3">{labels.loading}</p>
         ) : isEmptyUsage(data) && !data.budget ? (
           <div className="flex flex-col items-center gap-2 rounded-panel border-2 border-dashed border-border bg-fill/40 px-6 py-12 text-center">
-            <span className="flex size-10 items-center justify-center rounded-full bg-peche-100 text-bordeaux-700">
+            <span className="flex size-10 items-center justify-center rounded-full bg-peche-100 text-brand">
               <BarChart3 size={18} />
             </span>
             <p className="text-label font-medium text-ink">{labels.empty}</p>
@@ -211,7 +211,7 @@ function Dashboard({ lang, labels, data, metric, onMetric }: { lang: Locale; lab
             <ul className="mt-3 flex flex-col divide-y divide-border">
               {data.top_conversations.map((conversation) => (
                 <li key={conversation.conversation_id} className="flex items-center justify-between gap-3 py-2">
-                  <Link href={`/${lang}/app/c/${conversation.conversation_id}`} className="min-w-0 truncate text-label text-ink no-underline hover:text-bordeaux-700">
+                  <Link href={`/${lang}/app/c/${conversation.conversation_id}`} className="min-w-0 truncate text-label text-ink no-underline hover:text-brand">
                     {conversation.title ?? labels.conversationUntitled}
                   </Link>
                   <span className="shrink-0 text-secondary text-ink-2">{hasCost || conversation.cost_usd > 0 ? money(conversation.cost_usd) : formatTokens(conversation.input_tokens + conversation.output_tokens, lang)}</span>
@@ -266,7 +266,7 @@ function DailyChart({ lang, labels, data, money, metric, onMetric }: { lang: Loc
       <div role="img" aria-label={labels.chartLabel} className="mt-4 flex h-40 items-end gap-[2px]">
         {data.by_day.map((day, index) => (
           <div key={day.date} title={fill(labels.tooltip, { date: dayLabel(day.date, lang), value: text(day), requests: day.requests })} className="flex h-full min-w-0 flex-1 items-end">
-            <div className="w-full rounded-t-[3px] bg-bordeaux-700/80 hover:bg-bordeaux-900" style={{ height: `${Math.round(heights[index] * 100)}%` }} />
+            <div className="w-full rounded-t-[3px] bg-brand/80 hover:bg-brand-fill-strong" style={{ height: `${Math.round(heights[index] * 100)}%` }} />
           </div>
         ))}
       </div>
@@ -332,7 +332,7 @@ function Breakdown({
                 </span>
               </div>
               <div className="h-1.5 overflow-hidden rounded-full bg-fill" aria-hidden>
-                <div className="h-full rounded-full bg-bordeaux-700/70" style={{ width: `${share}%` }} />
+                <div className="h-full rounded-full bg-brand/70" style={{ width: `${share}%` }} />
               </div>
               <p className="text-meta text-ink-3">
                 {[sub?.(bucket), fill(labels.requestsCount, { n: bucket.requests }), `${formatTokens(tokens, lang)} tok`].filter(Boolean).join(" · ")}
@@ -363,7 +363,7 @@ function BudgetCard({ labels, lang, budget, money }: { labels: Labels; lang: Loc
       </div>
       <BudgetBar state={budget} money={money} lang={lang} labels={labels} />
       {message && (
-        <p role="status" className={`rounded-badge px-3 py-2 text-secondary text-pretty ${budget.level === "exceeded" ? "bg-danger/[0.06] text-danger" : "bg-peche-100 text-bordeaux-900"}`}>
+        <p role="status" className={`rounded-badge px-3 py-2 text-secondary text-pretty ${budget.level === "exceeded" ? "bg-danger/[0.06] text-danger" : "bg-peche-100 text-brand-strong"}`}>
           {message}
         </p>
       )}

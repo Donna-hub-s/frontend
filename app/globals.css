@@ -18,6 +18,17 @@
   --color-peche-100: #f8e5d8; /* tuile d'icône, disque de l'orbe */
   --color-ivoire-50: #fdfaf8; /* reflet de tuile, surfaces de marque */
 
+  /* ── Accent, par RÔLE ─────────────────────────────────── */
+  /* Deux rôles, et non un seul, parce qu'ils sont inconciliables sur fond sombre :
+     un aplat qui porte du texte blanc doit rester foncé (luminance ≤ 0,18), un texte
+     posé sur une page sombre doit être clair (≥ 0,20). Les deux intervalles ne se
+     recoupent pas — un token unique ne peut pas tenir les deux emplois. En clair, les
+     quatre valeurs sont celles d'avant : la scission ne change rien à ce qui est rendu. */
+  --color-brand: #7c3040; /* texte, icônes, bordures, anneaux, teintes, accent-color */
+  --color-brand-strong: #591a29; /* titre de marque, survol d'un texte d'accent */
+  --color-brand-fill: #7c3040; /* aplat qui porte du blanc */
+  --color-brand-fill-strong: #591a29; /* survol / état pressé d'un aplat */
+
   /* ── Interface ────────────────────────────────────────── */
   /* Les plans doivent se distinguer À L'ŒIL. Ils étaient à 1–3 niveaux sur 255 les
      uns des autres (page #faf9f9 / surface #fbfafa / panneau #f8f7f7), soit sous le

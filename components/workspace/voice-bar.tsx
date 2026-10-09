@@ -30,7 +30,7 @@ export function VoiceBar({ labels, voice }: { labels: Labels; voice: VoiceContro
 
   return (
     <section aria-label={labels.start} data-testid="voice-bar" data-phase={state.phase} className="px-4 pb-4 md:px-8">
-      <div className="mx-auto flex w-full max-w-[46rem] flex-col gap-3 rounded-panel border border-bordeaux-700/30 bg-surface p-4 shadow-float">
+      <div className="mx-auto flex w-full max-w-[46rem] flex-col gap-3 rounded-panel border border-brand/30 bg-surface p-4 shadow-float">
         <div className="flex items-center gap-4">
           <DonnaOrb state={ORB[state.phase]} size={52} label="" />
           <div className="min-w-0 flex-1">
@@ -46,7 +46,7 @@ export function VoiceBar({ labels, voice }: { labels: Labels; voice: VoiceContro
                   {state.muted ? labels.micMuted : labels.micLive}
                 </span>
                 <span aria-hidden className="h-1.5 w-24 overflow-hidden rounded-full bg-fill">
-                  <span className="block h-full rounded-full bg-bordeaux-700 transition-[width] duration-100" style={{ width: `${Math.round((state.muted ? 0 : level) * 100)}%` }} />
+                  <span className="block h-full rounded-full bg-brand-fill transition-[width] duration-100" style={{ width: `${Math.round((state.muted ? 0 : level) * 100)}%` }} />
                 </span>
               </p>
             )}
@@ -81,7 +81,7 @@ export function VoiceBar({ labels, voice }: { labels: Labels; voice: VoiceContro
               onClick={voice.stop}
               aria-label={labels.end}
               title={labels.end}
-              className="flex size-10 items-center justify-center rounded-button bg-bordeaux-700 text-white hover:bg-bordeaux-900"
+              className="flex size-10 items-center justify-center rounded-button bg-brand-fill text-white hover:bg-brand-fill-strong"
             >
               <X size={19} />
             </button>

@@ -60,7 +60,7 @@ export function SkillsMenu({ lang, labels }: { lang: Locale; labels: Dictionary[
         }`}
       >
         <SlidersIcon size={18} />
-        {off > 0 && <span aria-hidden className="absolute top-1.5 right-1.5 size-2 rounded-full border border-white bg-bordeaux-700" />}
+        {off > 0 && <span aria-hidden className="absolute top-1.5 right-1.5 size-2 rounded-full border border-white bg-brand-fill" />}
       </button>
 
       {open && (
@@ -91,7 +91,7 @@ export function SkillsMenu({ lang, labels }: { lang: Locale; labels: Dictionary[
                           </span>
                         )}
                       </span>
-                      <span aria-hidden className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${enabled ? "bg-bordeaux-700" : "bg-active"}`}>
+                      <span aria-hidden className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${enabled ? "bg-brand-fill" : "bg-active"}`}>
                         <span className={`absolute top-0.5 left-0.5 size-4 rounded-full bg-surface shadow-card transition-transform ${enabled ? "translate-x-4" : ""}`} />
                       </span>
                     </button>

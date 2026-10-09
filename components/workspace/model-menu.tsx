@@ -58,7 +58,7 @@ export function ModelMenu({ lang, labels }: { lang: Locale; labels: Labels }) {
         aria-label={`${labels.title} : ${title}`}
         title={`${labels.title} : ${title}`}
         className={`inline-flex h-9 max-w-[11rem] items-center gap-1.5 rounded-button px-2 text-meta transition-colors ${
-          open ? "bg-active text-ink" : active ? "bg-bordeaux-700/10 font-medium text-bordeaux-700" : "text-ink-2 hover:bg-active hover:text-ink"
+          open ? "bg-active text-ink" : active ? "bg-brand/10 font-medium text-brand" : "text-ink-2 hover:bg-active hover:text-ink"
         }`}
       >
         <Cpu size={17} className="shrink-0" />
@@ -136,10 +136,10 @@ function Row({
       role="radio"
       aria-checked={selected}
       onClick={onSelect}
-      className={`flex w-full items-center justify-between gap-3 rounded-button px-2 py-1.5 text-left hover:bg-active ${selected ? "bg-bordeaux-700/10" : ""}`}
+      className={`flex w-full items-center justify-between gap-3 rounded-button px-2 py-1.5 text-left hover:bg-active ${selected ? "bg-brand/10" : ""}`}
     >
       <span className="min-w-0">
-        <span className={`block truncate text-label ${selected ? "font-medium text-bordeaux-700" : "text-ink"}`}>{title}</span>
+        <span className={`block truncate text-label ${selected ? "font-medium text-brand" : "text-ink"}`}>{title}</span>
         {badges.some(Boolean) && (
           <span className="mt-0.5 flex flex-wrap gap-1">
             {badges.filter(Boolean).map((badge) => (

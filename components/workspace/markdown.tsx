@@ -69,7 +69,7 @@ function CodeBlock({ node, children }: { node?: unknown; children?: ReactNode })
             clearTimeout(timer.current);
             timer.current = setTimeout(() => setCopied(false), 1800);
           }}
-          className="inline-flex items-center gap-1 rounded-badge px-2 py-0.5 text-ink-2 hover:bg-fill hover:text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-bordeaux-700"
+          className="inline-flex items-center gap-1 rounded-badge px-2 py-0.5 text-ink-2 hover:bg-fill hover:text-ink focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand"
         >
           {copied ? <CheckIcon size={14} className="text-success" /> : <CopyIcon size={14} />}
           <span aria-live="polite">{copied ? labels.copied : labels.copy}</span>

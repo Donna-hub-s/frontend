@@ -83,7 +83,7 @@ export function ProjectsIndex({ lang, labels }: { lang: Locale; labels: Labels }
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={labels.searchPlaceholder}
-              className="h-10 w-64 rounded-button border border-border bg-surface pr-3 pl-9 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none"
+              className="h-10 w-64 rounded-button border border-border bg-surface pr-3 pl-9 text-message text-ink placeholder:text-ink-3 focus:border-brand focus:shadow-focus focus:outline-none"
             />
           </div>
         </div>
@@ -94,9 +94,9 @@ export function ProjectsIndex({ lang, labels }: { lang: Locale; labels: Labels }
               <button
                 type="button"
                 onClick={() => setCreating(true)}
-                className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-panel border-2 border-dashed border-border bg-fill/40 p-6 text-center transition-colors hover:border-bordeaux-700/30 hover:bg-fill/70"
+                className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-panel border-2 border-dashed border-border bg-fill/40 p-6 text-center transition-colors hover:border-brand/30 hover:bg-fill/70"
               >
-                <span className="flex size-10 items-center justify-center rounded-full bg-peche-100 text-bordeaux-700">
+                <span className="flex size-10 items-center justify-center rounded-full bg-peche-100 text-brand">
                   <PlusIcon size={18} />
                 </span>
                 <span className="text-label font-medium text-ink">{labels.newProjectCard}</span>
@@ -113,7 +113,7 @@ export function ProjectsIndex({ lang, labels }: { lang: Locale; labels: Labels }
                     className="flex h-full flex-col gap-2 rounded-panel bg-surface p-4 no-underline shadow-card transition-colors hover:bg-surface"
                   >
                     <span className="flex items-center gap-2 text-label font-medium text-ink">
-                      <ProjectIcon icon={project.icon} size={17} className="text-bordeaux-700" />
+                      <ProjectIcon icon={project.icon} size={17} className="text-brand" />
                       <span className="truncate">{project.name}</span>
                     </span>
                     <span className="line-clamp-2 flex-1 text-secondary text-ink-2 text-pretty">

@@ -91,7 +91,7 @@ export function Sidebar({
               onClick={onClose}
               aria-label={labels.newChat}
               title={labels.newChat}
-              className="flex size-9 items-center justify-center rounded-button border border-border bg-surface text-ink-2 hover:bg-surface hover:text-bordeaux-900"
+              className="flex size-9 items-center justify-center rounded-button border border-border bg-surface text-ink-2 hover:bg-surface hover:text-brand-strong"
             >
               <ComposeIcon size={18} />
             </Link>
@@ -99,7 +99,7 @@ export function Sidebar({
               type="button"
               onClick={onClose}
               aria-label={labels.close}
-              className="flex size-9 items-center justify-center rounded-button text-ink-2 hover:text-bordeaux-900 lg:hidden"
+              className="flex size-9 items-center justify-center rounded-button text-ink-2 hover:text-brand-strong lg:hidden"
             >
               <CloseIcon size={18} />
             </button>
@@ -168,7 +168,7 @@ export function Sidebar({
               {labels.conversations}
               {/* Nombre total de fils en attente, toutes conversations. */}
               {unreadCount > 0 && (
-                <span className="rounded-badge bg-bordeaux-700 px-1.5 py-px text-[10px] leading-4 font-semibold text-white tabular-nums">
+                <span className="rounded-badge bg-brand-fill px-1.5 py-px text-[10px] leading-4 font-semibold text-white tabular-nums">
                   {unreadCount}
                   <span className="sr-only">{labels.unread}</span>
                 </span>
@@ -376,9 +376,9 @@ function ConversationItem({
             maxLength={255}
             disabled={busy}
             onChange={(event) => setTitle(event.target.value)}
-            className="h-8 min-w-0 flex-1 rounded-badge border border-bordeaux-700 bg-surface px-2 text-label text-ink outline-none"
+            className="h-8 min-w-0 flex-1 rounded-badge border border-brand bg-surface px-2 text-label text-ink outline-none"
           />
-          <button type="submit" disabled={busy} className="rounded-badge px-2 py-1 text-meta font-medium text-bordeaux-700">
+          <button type="submit" disabled={busy} className="rounded-badge px-2 py-1 text-meta font-medium text-brand">
             {labels.save}
           </button>
         </form>
@@ -420,7 +420,7 @@ function ConversationItem({
             attend une action de sa part. */}
         {noticeFor(conversation) && (
           <span
-            className={`ml-auto size-1.5 shrink-0 rounded-full ${noticeFor(conversation) === "response" ? "bg-ink-3/50" : "bg-bordeaux-700"}`}
+            className={`ml-auto size-1.5 shrink-0 rounded-full ${noticeFor(conversation) === "response" ? "bg-ink-3/50" : "bg-brand-fill"}`}
           >
             <span className="sr-only">
               {noticeFor(conversation) === "question"
@@ -617,7 +617,7 @@ function AccountMenu({ lang, labels, languageLabel, account }: { lang: Locale; l
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-3 rounded-nav p-1.5 text-left hover:bg-active"
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-peche-100 text-label font-medium text-bordeaux-900">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-peche-100 text-label font-medium text-brand-strong">
           {account.initials}
         </span>
         <span className="flex min-w-0 flex-1 flex-col">

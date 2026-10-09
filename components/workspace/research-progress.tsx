@@ -63,8 +63,8 @@ export function ResearchProgress({
   if (run.status === "running") {
     return (
       <div className="mt-3 flex flex-col gap-2" role="status" aria-live="polite">
-        <p className="flex items-center gap-2 text-label font-medium text-bordeaux-700">
-          <span className="pending-dot size-1.5 rounded-full bg-bordeaux-700" />
+        <p className="flex items-center gap-2 text-label font-medium text-brand">
+          <span className="pending-dot size-1.5 rounded-full bg-brand-fill" />
           {labels.researchRunning}
           <span className="font-normal text-ink-3">· {pages}</span>
         </p>
@@ -108,7 +108,7 @@ export function ResearchProgress({
           <button
             type="button"
             onClick={() => onShowReport(run.report_message_id as string)}
-            className="self-start rounded-button bg-bordeaux-700 px-3 py-1.5 text-label font-medium text-white hover:bg-bordeaux-900"
+            className="self-start rounded-button bg-brand-fill px-3 py-1.5 text-label font-medium text-white hover:bg-brand-fill-strong"
           >
             {labels.researchShow}
           </button>

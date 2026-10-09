@@ -37,8 +37,8 @@ import { ProjectIcon, ProjectIconPicker } from "./project-icon";
 type ProjectLabels = Dictionary["workspace"]["projects"];
 
 const fieldClass =
-  "w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-bordeaux-700 focus:shadow-focus focus:outline-none disabled:bg-surface disabled:text-ink-2";
-const primaryButton = "rounded-button bg-bordeaux-700 px-3.5 py-2 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60";
+  "w-full rounded-button border border-border bg-surface px-3 text-message text-ink placeholder:text-ink-3 focus:border-brand focus:shadow-focus focus:outline-none disabled:bg-surface disabled:text-ink-2";
+const primaryButton = "rounded-button bg-brand-fill px-3.5 py-2 text-label font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60";
 const ghostButton = "rounded-button px-3.5 py-2 text-label font-medium text-ink hover:bg-active disabled:opacity-60";
 const smallButton = "rounded-button px-2 py-1 text-meta font-medium text-ink-2 hover:bg-active hover:text-ink disabled:opacity-60";
 
@@ -97,7 +97,7 @@ export function AgentsCard({ lang, labels, projectLabels, projectId, canEdit }: 
               <span className="min-w-0 flex-1 truncate text-label text-ink" title={agent.description ?? undefined}>
                 {agent.name}
               </span>
-              <Link href={`/${lang}/app?project=${encodeURIComponent(projectId)}&agent=${encodeURIComponent(agent.id)}`} className="shrink-0 text-meta text-bordeaux-700 no-underline hover:underline">
+              <Link href={`/${lang}/app?project=${encodeURIComponent(projectId)}&agent=${encodeURIComponent(agent.id)}`} className="shrink-0 text-meta text-brand no-underline hover:underline">
                 {labels.try}
               </Link>
             </li>
@@ -237,7 +237,7 @@ function AgentsDialog({
                           </div>
                           <div className="flex flex-wrap items-center gap-1">
                             {!agent.archived && (
-                              <Link href={`/${lang}/app?project=${encodeURIComponent(projectId)}&agent=${encodeURIComponent(agent.id)}`} onClick={close} className={`${smallButton} text-bordeaux-700 no-underline`}>
+                              <Link href={`/${lang}/app?project=${encodeURIComponent(projectId)}&agent=${encodeURIComponent(agent.id)}`} onClick={close} className={`${smallButton} text-brand no-underline`}>
                                 {labels.try}
                               </Link>
                             )}
@@ -378,7 +378,7 @@ function AgentEditor({
                   type="button"
                   title={template.description}
                   onClick={() => (setDraft(draftFromTemplate(template)), setTouched(true))}
-                  className="inline-flex items-center gap-1.5 rounded-button border border-border bg-surface px-2.5 py-1.5 text-label text-ink hover:border-bordeaux-700/40"
+                  className="inline-flex items-center gap-1.5 rounded-button border border-border bg-surface px-2.5 py-1.5 text-label text-ink hover:border-brand/40"
                 >
                   <ProjectIcon icon={template.icon} size={15} className="text-ink-3" />
                   {template.name}
@@ -633,7 +633,7 @@ function History({
 
   return (
     <section aria-label={labels.historyTitle} className="flex flex-col gap-2 border-t border-border pt-3">
-      <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="self-start text-label font-medium text-ink hover:text-bordeaux-700">
+      <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="self-start text-label font-medium text-ink hover:text-brand">
         {labels.historyTitle} {open ? "▾" : "▸"}
       </button>
       {open &&

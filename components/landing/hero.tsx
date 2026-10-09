@@ -18,7 +18,7 @@ export function GoogleButton({ href, label }: { href: string; label: string }) {
     // Lien de navigation complet (pas de préchargement) : /oauth/… redirige hors du site.
     <a
       href={href}
-      className="inline-flex items-center gap-3 rounded-button bg-bordeaux-700 py-3 pr-5 pl-3.5 text-label font-medium text-white no-underline transition-colors duration-(--duration-fast) hover:bg-bordeaux-900 hover:text-white"
+      className="inline-flex items-center gap-3 rounded-button bg-brand-fill py-3 pr-5 pl-3.5 text-label font-medium text-white no-underline transition-colors duration-(--duration-fast) hover:bg-brand-fill-strong hover:text-white"
     >
       <span className="inline-flex size-7 items-center justify-center rounded-badge bg-surface">
         <GoogleIcon />
@@ -37,7 +37,7 @@ export function Hero({ lang, dict }: { lang: Locale; dict: Dictionary }) {
       />
       <div className="relative mx-auto grid w-full max-w-[1200px] items-center gap-14 px-6 pt-10 pb-20 md:px-10 lg:grid-cols-[1fr_30rem] lg:gap-16 lg:pt-14 lg:pb-24">
         <div className="flex flex-col items-start">
-          <h1 className="hero-title font-brand text-[clamp(2.75rem,6.2vw,4.75rem)] leading-[1.02] font-light tracking-[-0.015em] text-bordeaux-900 text-balance">
+          <h1 className="hero-title font-brand text-[clamp(2.75rem,6.2vw,4.75rem)] leading-[1.02] font-light tracking-[-0.015em] text-brand-strong text-balance">
             {dict.hero.title}
           </h1>
           <p className="mt-6 max-w-[34rem] text-[1.125rem] leading-[1.75rem] text-ink-2 text-pretty">{dict.hero.subtitle}</p>
@@ -45,7 +45,7 @@ export function Hero({ lang, dict }: { lang: Locale; dict: Dictionary }) {
             <GoogleButton href={`/oauth/google?lang=${lang}`} label={dict.hero.ctaPrimary} />
             <a
               href="#fonctionnalites"
-              className="text-label font-medium text-ink underline decoration-rose-300 decoration-2 underline-offset-6 hover:text-bordeaux-900"
+              className="text-label font-medium text-ink underline decoration-rose-300 decoration-2 underline-offset-6 hover:text-brand-strong"
             >
               {dict.hero.ctaSecondary}
             </a>

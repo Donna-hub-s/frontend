@@ -78,7 +78,7 @@ function AgentRefRow({ item, labels }: { item: ResolvedAgentRef; labels: Labels 
       </p>
       {item.accessible && item.project_id && item.version_exists && (
         <>
-          <button type="button" onClick={toggle} aria-expanded={open} className="mt-1.5 text-label font-medium text-bordeaux-700 hover:underline">
+          <button type="button" onClick={toggle} aria-expanded={open} className="mt-1.5 text-label font-medium text-brand hover:underline">
             {open ? labels.hide : fill(labels.show, { version: item.version })}
           </button>
           {open && (

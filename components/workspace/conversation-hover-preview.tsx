@@ -111,7 +111,7 @@ export function ConversationHoverPreview({
             return (
               <li key={`${message.created_at}-${index}`} className="flex flex-col gap-0.5">
                 <span className="flex items-center gap-1.5 text-meta text-ink-3">
-                  <span className={message.role === "user" ? "font-medium text-ink-2" : "font-medium text-bordeaux-700"}>
+                  <span className={message.role === "user" ? "font-medium text-ink-2" : "font-medium text-brand"}>
                     {message.role === "user" ? labels.you : labels.donna}
                   </span>
                   {at && <span>· {new Date(at).toLocaleDateString()}</span>}

@@ -37,7 +37,7 @@ export function AcceptInviteButton({
         <p className="text-message text-success-ink">{labels.accepted}</p>
         <Link
           href={`/${lang}/app`}
-          className="inline-flex h-11 items-center justify-center rounded-button bg-bordeaux-700 px-5 text-label font-medium text-white no-underline hover:bg-bordeaux-900"
+          className="inline-flex h-11 items-center justify-center rounded-button bg-brand-fill px-5 text-label font-medium text-white no-underline hover:bg-brand-fill-strong"
         >
           {labels.goToApp}
         </Link>
@@ -51,7 +51,7 @@ export function AcceptInviteButton({
         type="button"
         disabled={state === "busy"}
         onClick={() => void accept()}
-        className="inline-flex h-11 w-full items-center justify-center rounded-button bg-bordeaux-700 px-5 text-label font-medium text-white hover:bg-bordeaux-900 disabled:opacity-60"
+        className="inline-flex h-11 w-full items-center justify-center rounded-button bg-brand-fill px-5 text-label font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60"
       >
         {state === "busy" ? labels.accepting : labels.accept}
       </button>
