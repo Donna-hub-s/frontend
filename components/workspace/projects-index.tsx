@@ -143,7 +143,21 @@ export function ProjectsIndex({ lang, labels }: { lang: Locale; labels: Labels }
 
             {!visible.length && projects.length > 0 && (
               <li className="sm:col-span-2 xl:col-span-3">
-                <p className="rounded-panel bg-surface px-5 py-8 text-center text-message text-ink-3 shadow-card">{labels.searchNone}</p>
+                <div className="flex flex-col items-center gap-3 rounded-panel bg-surface px-5 py-8 text-center shadow-card">
+                  <p className="text-message text-ink-3">{labels.searchNone}</p>
+                  {(query || filter !== "all") && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuery("");
+                        setFilter("all");
+                      }}
+                      className="rounded-button border border-border bg-fill px-3.5 py-1.5 text-meta font-medium text-ink hover:bg-active"
+                    >
+                      {labels.clearFilter}
+                    </button>
+                  )}
+                </div>
               </li>
             )}
           </ul>
