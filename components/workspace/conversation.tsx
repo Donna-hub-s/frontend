@@ -22,6 +22,7 @@ import {
   type AccessibleDocumentOut,
   type PendingActionOut,
   type SourceOut,
+  type Step,
   type ToolCall,
 } from "@/lib/workspace-types";
 import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, PencilIcon, SendIcon, SpeakerIcon, StopIcon } from "./icons";
@@ -876,7 +877,24 @@ function liveOrbState(message: ChatMessage): OrbState {
 }
 
 /** Étapes réelles du traitement (événements du flux), repliables une fois terminé. */
-function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict; message: ChatMessage }) {
+// Étapes de préparation déjà couvertes par stepDetail (clé ≠ nom d'outil) — voir side-panel.tsx::stepDetail.
+const PREP_STEP_KEYS = new Set(["rag", "rerank", "documents", "project", "memory", "conversation_files", "read", "answer", "files"]);
+// Outils déjà présentés en détail ailleurs (ActionCard pour les propositions, QuestionCard pour ask_user) :
+// pas besoin d'un second aperçu sous l'étape, ce serait redondant.
+const DETAILED_ELSEWHERE = new Set([...PROPOSALS, "ask_user"]);
+
+/** Aperçu tronqué du résultat d'un appel d'outil SANS présentation dédiée (ni étape de préparation, ni
+ * ActionCard/QuestionCard) — sinon une étape comme `search_documents` finie n'affichait qu'une coche, sans
+ * dire ce qu'elle a trouvé. Les appels sont consommés dans l'ordre (même nom d'outil → appels successifs). */
+function toolStepPreview(step: Step, tools: ToolCall[], consumed: Map<string, number>): string | null {
+  if (PREP_STEP_KEYS.has(step.key) || DETAILED_ELSEWHERE.has(step.key)) return null;
+  const index = consumed.get(step.key) ?? 0;
+  consumed.set(step.key, index + 1);
+  const call = tools.filter((t) => t.name === step.key)[index];
+  return call?.result ? readableExcerpt(call.result, 160) : null;
+}
+
+export function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict; message: ChatMessage }) {
   const streaming = message.status === "streaming";
   const [open, setOpen] = useState(true);
   const steps = visibleSteps(message.steps ?? []);
@@ -884,6 +902,7 @@ function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict;
   // Durée de l'étape en cours (muette sous quelques secondes, voir lib/elapsed.ts) : une étape de deux secondes
   // et une de deux minutes n'avaient jusqu'ici que leur heure de début pour les distinguer.
   const now = useNow(steps.some((step) => step.status === "running"));
+  const consumed = new Map<string, number>();
 
   return (
     <div className="rounded-panel bg-surface shadow-card">
@@ -905,6 +924,7 @@ function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict;
         <ol className="flex flex-col gap-2 border-t border-border px-4 py-3">
           {steps.map((step) => {
             const detail = stepDetail(dict, step);
+            const preview = !detail && step.status === "done" ? toolStepPreview(step, message.tools ?? [], consumed) : null;
             return (
               <li key={step.id} className="flex items-start gap-2.5 text-secondary">
                 <span className="mt-0.5 flex">
@@ -913,6 +933,7 @@ function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict;
                 <span className={`flex-1 ${step.status === "done" ? "text-ink-2" : "text-ink"}`}>
                   {stepLabel(dict, step.key)}
                   {detail && <span className={`block text-meta text-pretty ${detail.warn ? "text-danger" : "text-ink-3"}`}>{detail.text}</span>}
+                  {preview && <span className="block text-meta text-pretty text-ink-3">{preview}</span>}
                 </span>
                 {step.status === "running" && <ElapsedBadge startedAt={step.at} now={now} units={dict.chat.elapsed} />}
                 <Time lang={lang} at={step.at} />

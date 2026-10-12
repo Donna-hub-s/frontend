@@ -679,7 +679,18 @@
       "generate_image": "Generating an image",
       "canvas_read": "Reading the shared document",
       "canvas_write": "Writing the shared document",
-      "canvas_edit": "Editing the shared document"
+      "canvas_edit": "Editing the shared document",
+      "canvas_export": "Exporting the shared document",
+      "search_documents": "Searching your documents",
+      "find_documents": "Listing your documents",
+      "read_document": "Reading a document",
+      "run_python": "Running a script",
+      "inspect_table": "Analysing a table",
+      "read_image": "Reading an image or scan",
+      "attach_document": "Sending a document",
+      "read_email": "Reading an email",
+      "attach_drive_file": "Sending a Drive file",
+      "list_project_agents": "Reading the project's agents"
     },
     "panel": {
       "label": "Activity panel",

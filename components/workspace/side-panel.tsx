@@ -11,6 +11,7 @@ import { useNow } from "@/lib/use-now";
 import { parseBackendDate, type ConnectorsOut, type PendingActionOut, type Step } from "@/lib/workspace-types";
 import { ElapsedBadge } from "./elapsed-badge";
 import { EmailAttachmentList } from "./email-attachments";
+import { estimateText, formatUsd } from "@/lib/research";
 import { WorkflowDraft } from "./workflow-draft";
 import { useWorkspace } from "./workspace-provider";
 
@@ -216,6 +217,20 @@ export function PendingItem({ lang, dict, action }: { lang: Locale; dict: Worksp
       <p className="mt-2 text-label text-ink text-pretty">{action.summary}</p>
       {action.email && <EmailAttachmentList actionId={action.id} attachments={action.email.attachments} openable labels={dict.chat} />}
       {action.workflow && <WorkflowDraft draft={action.workflow} labels={dict.chat} agentLabels={dict.workflowAgents} />}
+      {action.research && (
+        // Même détail que ActionCard (fil de discussion) avant approbation — une fois confirmée, l'action
+        // quitte cette liste (voir decideAction) : pas besoin d'y suivre la progression, seulement l'estimation.
+        <>
+          <p className="mt-1 text-meta text-ink-3">
+            {dict.chat.researchDepth[action.research.depth as keyof typeof dict.chat.researchDepth] ?? action.research.depth}
+          </p>
+          <p className="mt-1 text-secondary text-ink-2 text-pretty">
+            {dict.chat.researchEstimateLine
+              .replace("{estimate}", estimateText(action.research.cost_usd, { unknown: dict.chat.researchUnknown, free: dict.chat.researchFree }, lang))
+              .replace("{cap}", formatUsd(action.research.cap_usd, lang))}
+          </p>
+        </>
+      )}
       {failed && <p className="mt-2 text-secondary text-danger">{panel.actionError}</p>}
       <div className="mt-3 flex gap-2">
         <button
@@ -224,7 +239,7 @@ export function PendingItem({ lang, dict, action }: { lang: Locale; dict: Worksp
           onClick={() => void decide("confirm")}
           className="rounded-button bg-brand-fill px-3 py-1.5 text-secondary font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60"
         >
-          {panel.approve}
+          {action.research ? dict.chat.researchStart : panel.approve}
         </button>
         <button
           type="button"

@@ -679,7 +679,18 @@
       "generate_image": "Génération d'une image",
       "canvas_read": "Lecture du document partagé",
       "canvas_write": "Rédaction du document partagé",
-      "canvas_edit": "Modification du document partagé"
+      "canvas_edit": "Modification du document partagé",
+      "canvas_export": "Export du document partagé",
+      "search_documents": "Recherche dans vos documents",
+      "find_documents": "Recensement de vos documents",
+      "read_document": "Lecture d'un document",
+      "run_python": "Exécution d'un script",
+      "inspect_table": "Analyse d'un tableau",
+      "read_image": "Lecture d'une image ou d'un scan",
+      "attach_document": "Envoi d'un document",
+      "read_email": "Lecture d'un email",
+      "attach_drive_file": "Envoi d'un fichier Drive",
+      "list_project_agents": "Lecture des agents du projet"
     },
     "panel": {
       "label": "Panneau d'activité",
