@@ -101,10 +101,12 @@ export function WorkspaceShell({
           {children}
         </main>
         <SidePanel lang={lang} dict={dict} connectors={connectors} />
+        {/* Dans la rangée flex : le volet d'aperçu partage la largeur en colonne sur grand écran
+            (comme le volet Document) et se superpose en plein écran sous lg. */}
+        <FileViewer lang={lang} labels={dict.viewer} />
       </div>
       <SearchPalette lang={lang} labels={dict.sidebar} />
       <SettingsDialog lang={lang} dict={dict} account={account} connectors={connectors} oauthProviders={oauthProviders} />
-      <FileViewer lang={lang} labels={dict.viewer} />
       <ReminderToasts lang={lang} labels={dict.reminders} />
       <OAuthLinkNotice labels={dict.oauthLink} />
       <ThemeSync />

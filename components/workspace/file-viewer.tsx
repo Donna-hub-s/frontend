@@ -3,9 +3,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import type { Locale } from "@/i18n/config";
-import { Dialog, DialogHeader } from "./dialog";
 import { DownloadIcon, FileIcon } from "./icons";
 import { Markdown } from "./markdown";
+import { Sheet, SheetHeader } from "./sheet";
 import { useWorkspace, type FilePreview } from "./workspace-provider";
 
 type Labels = Dictionary["workspace"]["viewer"];
@@ -59,13 +59,13 @@ type Content =
 
 type State = { status: "loading" } | { status: "error"; reason: "load" | "tooLarge" | "parse" } | { status: "ready"; content: Content };
 
-/** Fenêtre d'aperçu : PDF, images, Word, Excel, CSV, Markdown et texte, sans quitter DONNA. */
+/** Volet d'aperçu : PDF, images, Word, Excel, CSV, Markdown et texte, sans quitter DONNA. */
 export function FileViewer({ lang, labels }: { lang: Locale; labels: Labels }) {
   const { preview, setPreview } = useWorkspace();
   return (
-    <Dialog open={preview !== null} onClose={() => setPreview(null)} label={preview?.name ?? labels.title} className="flex h-[min(52rem,calc(100dvh-2rem))] max-w-[60rem] flex-col">
+    <Sheet open={preview !== null} onClose={() => setPreview(null)} label={preview?.name ?? labels.title}>
       {preview && <ViewerBody key={preview.url} lang={lang} labels={labels} file={preview} onClose={() => setPreview(null)} />}
-    </Dialog>
+    </Sheet>
   );
 }
 
@@ -109,7 +109,7 @@ function ViewerBody({ lang, labels, file, onClose }: { lang: Locale; labels: Lab
 
   return (
     <>
-      <DialogHeader title={file.name} subtitle={labels.kinds[kind]} closeLabel={labels.close} onClose={onClose}>
+      <SheetHeader title={file.name} subtitle={labels.kinds[kind]} closeLabel={labels.close} onClose={onClose}>
         <a
           href={file.url}
           download={file.name}
@@ -118,7 +118,7 @@ function ViewerBody({ lang, labels, file, onClose }: { lang: Locale; labels: Lab
           <DownloadIcon size={15} />
           {labels.download}
         </a>
-      </DialogHeader>
+      </SheetHeader>
       <div className="min-h-0 flex-1 overflow-auto bg-page">
         {state.status === "loading" && <p className="p-8 text-center text-secondary text-ink-3">{labels.loading}</p>}
         {state.status === "error" && (

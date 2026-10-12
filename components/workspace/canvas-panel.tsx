@@ -8,6 +8,7 @@ import { diffLines, diffStats, foldUnchanged } from "@/lib/diff";
 import { useCanvas, type CanvasController } from "@/lib/use-canvas";
 import type { ChatMessage } from "@/lib/workspace-types";
 import { CanvasEditor } from "./canvas-editor";
+import { Sheet, SheetHeader } from "./sheet";
 
 type Labels = Dictionary["workspace"]["canvas"];
 
@@ -43,14 +44,6 @@ export function CanvasHost({
     setLastSeen(activity.key);
     if (activity.count > 0) setOpen(true);
   }
-
-  useEffect(() => {
-    if (open) document.body.dataset.canvasOpen = "true";
-    else delete document.body.dataset.canvasOpen;
-    return () => {
-      delete document.body.dataset.canvasOpen;
-    };
-  }, [open]);
 
   const count = canvas.list?.length ?? 0;
   return (
@@ -100,57 +93,56 @@ function CanvasPanel({
   const active = list?.find((item) => item.id === activeId) ?? null;
 
   return (
-    <aside
-      aria-label={labels.panelLabel}
-      className="fixed inset-0 z-40 flex flex-col bg-surface lg:static lg:inset-auto lg:z-auto lg:w-[46%] lg:max-w-[46rem] lg:min-w-[24rem] lg:border-l lg:border-border"
-    >
-      <header className="flex flex-wrap items-center gap-2 border-b border-border px-3 py-2.5">
-        {list && list.length > 1 ? (
-          <select
-            aria-label={labels.pickLabel}
-            value={activeId ?? ""}
-            onChange={(event) => canvas.select(event.target.value)}
-            className="max-w-[10rem] truncate rounded-button border border-border bg-surface px-2 py-1.5 text-label text-ink"
-          >
-            {list.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.title}
-              </option>
-            ))}
-          </select>
-        ) : null}
-        {editor.doc?.id ? (
-          <input
-            value={editor.title}
-            onChange={(event) => canvas.edit({ title: event.target.value })}
-            aria-label={labels.titleLabel}
-            maxLength={120}
-            placeholder={labels.untitled}
-            className="min-w-[8rem] flex-1 truncate rounded-button bg-transparent px-2 py-1.5 text-panel-title font-medium text-ink outline-none hover:bg-fill focus:bg-fill"
-          />
-        ) : (
-          <span className="flex-1 px-2 text-panel-title font-medium text-ink">{labels.panelLabel}</span>
+    <Sheet open onClose={onClose} label={labels.panelLabel}>
+      <SheetHeader
+        leading={
+          list && list.length > 1 ? (
+            <select
+              aria-label={labels.pickLabel}
+              value={activeId ?? ""}
+              onChange={(event) => canvas.select(event.target.value)}
+              className="max-w-[10rem] shrink-0 truncate rounded-button border border-border bg-surface px-2 py-1.5 text-label text-ink"
+            >
+              {list.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          ) : undefined
+        }
+        title={
+          editor.doc?.id ? (
+            <input
+              value={editor.title}
+              onChange={(event) => canvas.edit({ title: event.target.value })}
+              aria-label={labels.titleLabel}
+              maxLength={120}
+              placeholder={labels.untitled}
+              className="w-full min-w-0 truncate rounded-button bg-transparent px-2 py-1.5 text-panel-title font-medium text-ink outline-none hover:bg-fill focus:bg-fill"
+            />
+          ) : (
+            labels.panelLabel
+          )
+        }
+        closeLabel={labels.close}
+        onClose={onClose}
+      >
+        {editor.doc?.id && (
+          <>
+            <button type="button" className={BUTTON} onClick={() => setHistoryOpen((value) => !value)} aria-expanded={historyOpen} aria-label={labels.history} title={labels.history}>
+              <Clock size={17} />
+            </button>
+            <ExportMenu id={editor.doc.id} labels={labels} />
+            <button type="button" className={BUTTON} onClick={() => setConfirmDelete(true)} aria-label={labels.delete} title={labels.delete}>
+              <Trash2 size={17} />
+            </button>
+          </>
         )}
-        <div className="ml-auto flex items-center gap-0.5">
-          {editor.doc?.id && (
-            <>
-              <button type="button" className={BUTTON} onClick={() => setHistoryOpen((value) => !value)} aria-expanded={historyOpen} aria-label={labels.history} title={labels.history}>
-                <Clock size={17} />
-              </button>
-              <ExportMenu id={editor.doc.id} labels={labels} />
-              <button type="button" className={BUTTON} onClick={() => setConfirmDelete(true)} aria-label={labels.delete} title={labels.delete}>
-                <Trash2 size={17} />
-              </button>
-            </>
-          )}
-          <button type="button" className={BUTTON} onClick={() => void canvas.create()} disabled={!conversationId} aria-label={labels.new} title={labels.new}>
-            <Plus size={18} />
-          </button>
-          <button type="button" className={BUTTON} onClick={onClose} aria-label={labels.close} title={labels.close}>
-            <X size={18} />
-          </button>
-        </div>
-      </header>
+        <button type="button" className={BUTTON} onClick={() => void canvas.create()} disabled={!conversationId} aria-label={labels.new} title={labels.new}>
+          <Plus size={18} />
+        </button>
+      </SheetHeader>
 
       {canvas.createError !== null && (
         <p role="alert" className="border-b border-border bg-danger/[0.06] px-4 py-2 text-secondary text-danger">
@@ -245,7 +237,7 @@ function CanvasPanel({
           </div>
         </>
       )}
-    </aside>
+    </Sheet>
   );
 }
 
