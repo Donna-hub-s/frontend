@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FolderOpen } from "lucide-react";
+import { FolderOpen, RotateCw } from "lucide-react";
 import { useEffect, useId, useMemo, useState } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import type { Locale } from "@/i18n/config";
@@ -25,7 +25,8 @@ import { ChevronIcon, FileIcon } from "./icons";
 
 type Labels = Dictionary["workspace"]["deliverables"];
 
-const fill = (template: string, values: Record<string, string | number>) => template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
+const fill = (template: string, values: Record<string, string | number>) =>
+  template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
 
 const KINDS: KindFilter[] = ["all", "document", "image"];
 
@@ -36,6 +37,7 @@ export function DeliverablesPage({ lang, labels }: { lang: Locale; labels: Label
   const [q, setQ] = useState("");
   const [kind, setKind] = useState<KindFilter>("all");
   const [abandoned, setAbandoned] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
   const searchId = useId();
 
   // La recherche part 300 ms après la dernière frappe (setState dans le rappel du minuteur, pas dans le corps de l'effet).
@@ -62,7 +64,7 @@ export function DeliverablesPage({ lang, labels }: { lang: Locale; labels: Label
     return () => {
       cancelled = true;
     };
-  }, [key, q, kind, abandoned]);
+  }, [key, q, kind, abandoned, reloadToken]);
 
   const loading = result?.key !== key;
   const data = loading ? null : (result?.data ?? null);
@@ -76,12 +78,21 @@ export function DeliverablesPage({ lang, labels }: { lang: Locale; labels: Label
     try {
       const response = await fetch(deliverablesUrl({ q, kind, abandoned, offset: files.length }), { cache: "no-store" });
       const page = response.ok ? ((await response.json()) as Deliverables) : null;
-      setMore((current) => ({ key, files: page ? mergePages(current?.key === key ? current.files : [], page.files) : (current?.key === key ? current.files : []), failed: !page }));
+      setMore((current) => ({
+        key,
+        files: page ? mergePages(current?.key === key ? current.files : [], page.files) : (current?.key === key ? current.files : []),
+        failed: !page,
+      }));
     } catch {
       setMore((current) => ({ key, files: current?.key === key ? current.files : [], failed: true }));
     } finally {
       setMoreBusy(false);
     }
+  };
+
+  const retry = () => {
+    setResult(null);
+    setReloadToken((prev) => prev + 1);
   };
 
   const filtering = q.trim() !== "" || kind !== "all" || abandoned;
@@ -103,53 +114,23 @@ export function DeliverablesPage({ lang, labels }: { lang: Locale; labels: Label
           <p className="text-secondary text-ink-3 text-pretty">{labels.subtitle}</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="min-w-[14rem] flex-1">
-            <label htmlFor={searchId} className="sr-only">
-              {labels.searchLabel}
-            </label>
-            <input
-              id={searchId}
-              type="search"
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              placeholder={labels.searchPlaceholder}
-              className="h-9 w-full rounded-button border border-border bg-surface px-3 text-secondary text-ink outline-none focus:border-brand"
-            />
-          </div>
-          <div role="group" aria-label={labels.filterLabel} className="inline-flex rounded-button bg-fill p-0.5">
-            {KINDS.map((option) => (
-              <button
-                key={option}
-                type="button"
-                aria-pressed={kind === option}
-                onClick={() => setKind(option)}
-                className={`rounded-badge px-3 py-1.5 text-label ${kind === option ? "bg-surface font-medium text-ink shadow-card" : "text-ink-2 hover:text-ink"}`}
-              >
-                {{ all: labels.filterAll, document: labels.filterDocuments, image: labels.filterImages }[option]}
-              </button>
-            ))}
-          </div>
-          <label className="flex items-center gap-2 text-label text-ink-2">
-            <input type="checkbox" checked={abandoned} onChange={(event) => setAbandoned(event.target.checked)} className="size-4 accent-brand" />
-            {labels.showAbandoned}
-          </label>
-        </div>
+        <DeliverablesFilters
+          searchId={searchId}
+          input={input}
+          onInputChange={setInput}
+          kind={kind}
+          onKindChange={setKind}
+          abandoned={abandoned}
+          onAbandonedChange={setAbandoned}
+          labels={labels}
+        />
 
         {failed ? (
-          <p role="alert" className="rounded-panel bg-surface px-5 py-8 text-center text-message text-danger shadow-card">
-            {labels.loadError}
-          </p>
+          <DeliverablesErrorState labels={labels} onRetry={retry} />
         ) : !data ? (
           <p className="py-10 text-center text-secondary text-ink-3">{labels.loading}</p>
         ) : empty ? (
-          <div className="flex flex-col items-center gap-2 rounded-panel border-2 border-dashed border-border bg-fill/40 px-6 py-12 text-center">
-            <span className="flex size-10 items-center justify-center rounded-full bg-peche-100 text-brand">
-              <FolderOpen size={18} />
-            </span>
-            <p className="text-label font-medium text-ink">{filtering ? labels.emptySearch : labels.empty}</p>
-            {!filtering && <p className="max-w-[30rem] text-secondary text-ink-3 text-pretty">{labels.emptyHint}</p>}
-          </div>
+          <DeliverablesEmptyState labels={labels} filtering={filtering} />
         ) : (
           <>
             {data.canvases.length > 0 && (
@@ -183,7 +164,12 @@ export function DeliverablesPage({ lang, labels }: { lang: Locale; labels: Label
                         {labels.loadError}
                       </p>
                     )}
-                    <button type="button" onClick={() => void loadMore()} disabled={moreBusy} className="rounded-button px-4 py-1.5 text-label font-medium text-ink hover:bg-active disabled:opacity-60">
+                    <button
+                      type="button"
+                      onClick={() => void loadMore()}
+                      disabled={moreBusy}
+                      className="rounded-button px-4 py-1.5 text-label font-medium text-ink hover:bg-active disabled:opacity-60"
+                    >
                       {moreBusy ? labels.loadingMore : labels.loadMore}
                     </button>
                   </div>
@@ -193,6 +179,91 @@ export function DeliverablesPage({ lang, labels }: { lang: Locale; labels: Label
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+function DeliverablesFilters({
+  searchId,
+  input,
+  onInputChange,
+  kind,
+  onKindChange,
+  abandoned,
+  onAbandonedChange,
+  labels,
+}: {
+  searchId: string;
+  input: string;
+  onInputChange: (val: string) => void;
+  kind: KindFilter;
+  onKindChange: (kind: KindFilter) => void;
+  abandoned: boolean;
+  onAbandonedChange: (val: boolean) => void;
+  labels: Labels;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="min-w-[14rem] flex-1">
+        <label htmlFor={searchId} className="sr-only">
+          {labels.searchLabel}
+        </label>
+        <input
+          id={searchId}
+          type="search"
+          value={input}
+          onChange={(event) => onInputChange(event.target.value)}
+          placeholder={labels.searchPlaceholder}
+          className="h-9 w-full rounded-button border border-border bg-surface px-3 text-secondary text-ink outline-none focus:border-brand"
+        />
+      </div>
+      <div role="group" aria-label={labels.filterLabel} className="inline-flex rounded-button bg-fill p-0.5">
+        {KINDS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={kind === option}
+            onClick={() => onKindChange(option)}
+            className={`rounded-badge px-3 py-1.5 text-label ${
+              kind === option ? "bg-surface font-medium text-ink shadow-card" : "text-ink-2 hover:text-ink"
+            }`}
+          >
+            {{ all: labels.filterAll, document: labels.filterDocuments, image: labels.filterImages }[option]}
+          </button>
+        ))}
+      </div>
+      <label className="flex items-center gap-2 text-label text-ink-2">
+        <input type="checkbox" checked={abandoned} onChange={(event) => onAbandonedChange(event.target.checked)} className="size-4 accent-brand" />
+        {labels.showAbandoned}
+      </label>
+    </div>
+  );
+}
+
+function DeliverablesErrorState({ labels, onRetry }: { labels: Labels; onRetry: () => void }) {
+  return (
+    <div role="alert" className="flex flex-col items-center gap-3 rounded-panel bg-surface px-5 py-8 text-center shadow-card">
+      <p className="text-message text-danger">{labels.loadError}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="inline-flex items-center gap-1.5 rounded-button bg-fill px-3 py-1.5 text-label font-medium text-ink hover:bg-active"
+      >
+        <RotateCw size={14} />
+        <span>Réessayer</span>
+      </button>
+    </div>
+  );
+}
+
+function DeliverablesEmptyState({ labels, filtering }: { labels: Labels; filtering: boolean }) {
+  return (
+    <div className="flex flex-col items-center gap-2 rounded-panel border-2 border-dashed border-border bg-fill/40 px-6 py-12 text-center">
+      <span className="flex size-10 items-center justify-center rounded-full bg-peche-100 text-brand">
+        <FolderOpen size={18} />
+      </span>
+      <p className="text-label font-medium text-ink">{filtering ? labels.emptySearch : labels.empty}</p>
+      {!filtering && <p className="max-w-[30rem] text-secondary text-ink-3 text-pretty">{labels.emptyHint}</p>}
     </div>
   );
 }
