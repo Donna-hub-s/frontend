@@ -85,6 +85,7 @@ async function forward(request: NextRequest, { params }: RouteParams) {
     });
 
   let renewed: Awaited<ReturnType<typeof refreshTokens>> = null;
+  let refreshFailed = false;
   let upstream: Response;
   try {
     upstream = await call(access);
@@ -93,6 +94,8 @@ async function forward(request: NextRequest, { params }: RouteParams) {
       if (renewed) {
         access = renewed.access_token;
         upstream = await call(access);
+      } else {
+        refreshFailed = true;
       }
     }
   } catch {
@@ -111,6 +114,13 @@ async function forward(request: NextRequest, { params }: RouteParams) {
   if (renewed) {
     store.set(COOKIES.access, renewed.access_token, cookieOptions(MAX_AGE.access));
     store.set(COOKIES.refresh, renewed.refresh_token, cookieOptions(MAX_AGE.refresh));
+  } else if (refreshFailed) {
+    // Jeton d'accès refusé ET refresh mort : les deux cookies sont connus invalides, les laisser
+    // en place ferait recommencer ce même aller-retour à chaque appel. Même nettoyage que
+    // proxy.ts::guardApp dans son cas équivalent (refresh mort), pour que les deux chemins de
+    // rafraîchissement se comportent pareil.
+    store.delete(COOKIES.access);
+    store.delete(COOKIES.refresh);
   }
   return new Response(upstream.body, { status: upstream.status, headers });
 }
