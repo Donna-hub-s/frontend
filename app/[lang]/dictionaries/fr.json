@@ -871,6 +871,7 @@
       "filterActive": "Actifs",
       "membersCount": "{n} membre(s)",
       "searchNone": "Aucun projet ne correspond.",
+      "clearFilter": "Réinitialiser les filtres",
       "homeLabel": "Accueil",
       "filterSectionTitle": "Filtrer",
       "totalFiles": "{n} fichier(s) au total",

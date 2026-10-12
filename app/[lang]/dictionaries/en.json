@@ -871,6 +871,7 @@
       "filterActive": "Active",
       "membersCount": "{n} member(s)",
       "searchNone": "No project matches.",
+      "clearFilter": "Reset filters",
       "homeLabel": "Home",
       "filterSectionTitle": "Filter",
       "totalFiles": "{n} file(s) total",

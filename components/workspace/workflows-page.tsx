@@ -307,6 +307,7 @@ function WorkflowCard({
             }
             void (async () => {
               setBusy("delete");
+              setFailed(false);
               const { ok } = await call(`/${workflow.id}`, { method: "DELETE" });
               if (!alive.current) return;
               setBusy(null);

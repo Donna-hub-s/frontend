@@ -9,7 +9,7 @@ import { ArrowReturnIcon, ChatIcon, ComposeIcon, FileIcon, SearchIcon } from "./
 import { useWorkspace } from "./workspace-provider";
 
 type Labels = Dictionary["workspace"]["sidebar"];
-type Item = {
+export type SearchPaletteItem = {
   id: string;
   href: string;
   title: string;
@@ -21,6 +21,61 @@ type Item = {
   origin?: string;
   semantic?: boolean;
 };
+
+type Item = SearchPaletteItem;
+
+export function filterSearchItems({
+  query,
+  conversations,
+  remote,
+  remoteDocs,
+  lang,
+  labels,
+}: {
+  query: string;
+  conversations: { id: string; title: string }[];
+  remote: { query: string; hits: SearchHitOut[] } | null;
+  remoteDocs: { query: string; result: DocumentSearchOut | null } | null;
+  lang: string;
+  labels: {
+    newChat: string;
+    searchDocProject: string;
+    searchDocConversation: string;
+    searchDocPersonal: string;
+  };
+}): SearchPaletteItem[] {
+  const trimmed = query.trim();
+  const q = trimmed.toLocaleLowerCase(lang);
+  const titles = (q ? conversations.filter((c) => c.title.toLocaleLowerCase(lang).includes(q)) : conversations)
+    .slice(0, q ? 8 : 6)
+    .map<Item>((c) => ({ id: c.id, href: `/${lang}/app/c/${c.id}`, title: c.title, kind: "title" }));
+  const seen = new Set(titles.map((t) => t.id));
+  const messages =
+    remote && remote.query === trimmed
+      ? remote.hits
+          .filter((hit) => hit.matched_in === "message" && !seen.has(hit.conversation_id))
+          .map<Item>((hit) => ({ id: hit.conversation_id, href: `/${lang}/app/c/${hit.conversation_id}`, title: hit.title, snippet: hit.snippet, kind: "message" }))
+      : [];
+  const documents =
+    remoteDocs && remoteDocs.query === trimmed && remoteDocs.result
+      ? remoteDocs.result.hits.map<Item>((hit) => ({
+          id: hit.doc_id,
+          href: "",
+          title: hit.original_name,
+          snippet: hit.excerpt || undefined,
+          kind: "document",
+          file: { url: fileHref(hit.file_url), name: hit.original_name },
+          origin: hit.project_name
+            ? labels.searchDocProject.replace("{name}", hit.project_name)
+            : hit.conversation_id
+              ? labels.searchDocConversation.replace("{title}", hit.conversation_title ?? "…")
+              : labels.searchDocPersonal,
+          semantic: hit.matched_in === "semantic",
+        }))
+      : [];
+  const create: Item[] = q ? [] : [{ id: "new", href: `/${lang}/app`, title: labels.newChat, kind: "new" }];
+  return [...create, ...titles, ...messages, ...documents];
+}
 
 /**
  * Fenêtre de recherche (Ctrl+K / ⌘K) : nouvelle conversation, titres (filtre
@@ -80,38 +135,10 @@ export function SearchPalette({ lang, labels }: { lang: Locale; labels: Labels }
     };
   }, [searchOpen, trimmed]);
 
-  const items = useMemo<Item[]>(() => {
-    const q = trimmed.toLocaleLowerCase(lang);
-    const titles = (q ? conversations.filter((c) => c.title.toLocaleLowerCase(lang).includes(q)) : conversations)
-      .slice(0, q ? 8 : 6)
-      .map<Item>((c) => ({ id: c.id, href: `/${lang}/app/c/${c.id}`, title: c.title, kind: "title" }));
-    const seen = new Set(titles.map((t) => t.id));
-    const messages =
-      remote && remote.query === trimmed
-        ? remote.hits
-            .filter((hit) => hit.matched_in === "message" && !seen.has(hit.conversation_id))
-            .map<Item>((hit) => ({ id: hit.conversation_id, href: `/${lang}/app/c/${hit.conversation_id}`, title: hit.title, snippet: hit.snippet, kind: "message" }))
-        : [];
-    const documents =
-      remoteDocs && remoteDocs.query === trimmed && remoteDocs.result
-        ? remoteDocs.result.hits.map<Item>((hit) => ({
-            id: hit.doc_id,
-            href: "",
-            title: hit.original_name,
-            snippet: hit.excerpt || undefined,
-            kind: "document",
-            file: { url: fileHref(hit.file_url), name: hit.original_name },
-            origin: hit.project_name
-              ? labels.searchDocProject.replace("{name}", hit.project_name)
-              : hit.conversation_id
-                ? labels.searchDocConversation.replace("{title}", hit.conversation_title ?? "…")
-                : labels.searchDocPersonal,
-            semantic: hit.matched_in === "semantic",
-          }))
-        : [];
-    const create: Item[] = q ? [] : [{ id: "new", href: `/${lang}/app`, title: labels.newChat, kind: "new" }];
-    return [...create, ...titles, ...messages, ...documents];
-  }, [conversations, remote, remoteDocs, trimmed, lang, labels]);
+  const items = useMemo<Item[]>(
+    () => filterSearchItems({ query, conversations, remote, remoteDocs, lang, labels }),
+    [query, conversations, remote, remoteDocs, lang, labels],
+  );
 
   if (!searchOpen) return null;
 
@@ -210,6 +237,10 @@ export function SearchPalette({ lang, labels }: { lang: Locale; labels: Labels }
             className="h-14 min-w-0 flex-1 bg-transparent text-message text-ink outline-none placeholder:text-ink-3 focus-visible:shadow-none"
           />
           <kbd className="rounded-badge border border-border px-1.5 font-sans text-meta text-ink-3">Esc</kbd>
+        </div>
+
+        <div className="sr-only" aria-live="polite" aria-atomic="true">
+          {waiting ? labels.searching : items.length ? `${items.length} ${items.length > 1 ? "résultats" : "résultat"}` : trimmed.length >= 2 ? labels.searchNone : ""}
         </div>
 
         <div className="scrollbar-none max-h-[55vh] overflow-y-auto p-2">
