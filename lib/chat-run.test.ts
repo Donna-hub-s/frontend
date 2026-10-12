@@ -288,6 +288,42 @@ describe("startChatRun — refus du serveur et identifiant du message", () => {
   });
 });
 
+describe("startChatRun — flux SSE interrompu avant 'done' (Phase 1 frontend : comportement ACTUEL, pas un correctif)", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("une coupure réseau pendant le flux finit en erreur générique, SANS tentative de reconnexion", async () => {
+    // Le flux s'arrête (le serveur distant a coupé, un proxy a expiré…) avant tout évènement
+    // "done" : contrairement au canal WebSocket (lib/use-project-ws.ts, backoff exponentiel),
+    // il n'existe aujourd'hui AUCUNE reconnexion ni reprise pour ce flux — un seul `fetch` est
+    // observé. Fiabiliser ça est explicitement la Phase 2 (frontendAnalyse.md) : ce test fige le
+    // point de départ, il ne corrige rien.
+    const sse = sseResponse([startEvent("conv-1"), deltaEvent("Je commence ma rép")]);
+    vi.mocked(fetch).mockResolvedValue(sse);
+
+    const harness = makeProviderLikeHarness();
+    await startChatRun({
+      message: "Une longue question",
+      files: [],
+      webSearch: false,
+      mentions: EMPTY_MENTIONS,
+      conversationId: null,
+      signal: new AbortController().signal,
+      callbacks: { patch: harness.patch, setSteps: () => {}, bind: () => {}, settled: () => {}, patchUser: () => {} },
+    });
+
+    const message = harness.getMessage();
+    expect(message.status).toBe("error");
+    expect(message.error).toBe("generic");
+    expect(message.content).toBe("Je commence ma rép"); // le texte déjà reçu n'est pas perdu, juste jamais complété
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(1); // aucun retry
+  });
+});
+
 describe("startChatRun — branches (éditer/régénérer)", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
