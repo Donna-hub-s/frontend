@@ -66,6 +66,13 @@ export function Sidebar({
   const usageActive = pathname.includes("/app/usage");
   const deliverablesActive = pathname.includes("/app/deliverables");
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   return (
     <>
       {/* Voile mobile */}
