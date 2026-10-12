@@ -9,6 +9,22 @@ type Labels = Dictionary["workspace"]["workflowAgents"];
 
 const fill = (template: string, values: Record<string, string | number>) => template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
 
+/** Les étapes d'un workflow (déclencheur déjà retiré par l'appelant), numérotées — même rendu
+ * utilisé par WorkflowDraft (brouillon dans le fil) et WorkflowCard (page Automatisations),
+ * avant Phase 4 chacun avait sa propre copie identique de ce `<ol>`. */
+export function WorkflowStepList({ steps, className = "mt-2" }: { steps: string[]; className?: string }) {
+  if (!steps.length) return null;
+  return (
+    <ol className={`${className} flex list-decimal flex-col gap-1 pl-5 text-secondary leading-5 text-ink-2 marker:text-ink-3`}>
+      {steps.map((line, index) => (
+        <li key={index} className="text-pretty">
+          {line}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 /**
  * Les agents de projet qu'un workflow FIGE : quel agent, quelle version, ce que contiennent ses consignes (lisibles de tout
  * membre du projet), et si une version plus récente existe — le workflow ne la suit pas tout seul, il faut l'approuver.

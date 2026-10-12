@@ -104,6 +104,10 @@
   --text-signature: 0.6875rem; /* 11 — « powered by xcore » */
   --text-signature--line-height: 1rem;
   --text-signature--letter-spacing: var(--tracking-signature);
+  /* Badges compacts (compteurs, risque, archivé) — répété en dur (`text-[10px]`/`text-[0.625rem]`)
+     dans plusieurs fichiers avant d'avoir ce nom ; l'interligne reste au cas par cas
+     (`leading-none`/`leading-4` selon le badge), comme avant. */
+  --text-micro: 0.625rem; /* 10 */
 
   /* ── Rayons ───────────────────────────────────────────── */
   --radius-badge: 6px;

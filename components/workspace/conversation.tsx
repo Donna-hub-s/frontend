@@ -620,7 +620,7 @@ const renderFile = (file: MarkdownFile, label: ReactNode, variant: "link" | "ima
   </FileLink>
 );
 
-function AssistantMessage({
+export function AssistantMessage({
   lang,
   dict,
   message,
@@ -674,8 +674,16 @@ function AssistantMessage({
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         {visibleSteps(message.steps ?? []).length > 0 && <StepsCard lang={lang} dict={dict} message={message} />}
 
+        {/* Annonce de PHASE pour les lecteurs d'écran, pas du contenu qui mute à chaque jeton : le texte de ce
+            span reste constant pendant tout le flux (aucune nouvelle annonce tant que rien ne change réellement),
+            il ne passe à "Terminé" qu'une fois — contrairement à aria-live posé sur message.content, qui ferait
+            annoncer la réponse en boucle à chaque delta (voir frontendAnalyse.md §6). */}
+        <span className="sr-only" aria-live="polite">
+          {streaming ? chat.working : message.status === "done" ? chat.done : ""}
+        </span>
+
         {message.content ? (
-          <div aria-live={streaming ? "polite" : undefined}>
+          <div>
             <Markdown files={files} renderFile={renderFile} streaming={streaming} conversationId={conversationId} reading>
               {message.content}
             </Markdown>

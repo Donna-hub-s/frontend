@@ -143,7 +143,7 @@ export function Sidebar({
             <CheckIcon size={16} className={pending.length ? "text-attention" : "text-ink-3"} />
             {labels.approvals}
             {pending.length > 0 && (
-              <span className="ml-auto rounded-badge bg-attention-fill px-1.5 py-px text-[10px] leading-4 font-semibold text-white tabular-nums">
+              <span className="ml-auto rounded-badge bg-attention-fill px-1.5 py-px text-micro leading-4 font-semibold text-white tabular-nums">
                 {pending.length}
               </span>
             )}
@@ -193,7 +193,7 @@ export function Sidebar({
               {labels.conversations}
               {/* Nombre total de fils en attente, toutes conversations. */}
               {unreadCount > 0 && (
-                <span className="rounded-badge bg-brand-fill px-1.5 py-px text-[10px] leading-4 font-semibold text-white tabular-nums">
+                <span className="rounded-badge bg-brand-fill px-1.5 py-px text-micro leading-4 font-semibold text-white tabular-nums">
                   {unreadCount}
                   <span className="sr-only">{labels.unread}</span>
                 </span>
@@ -206,7 +206,7 @@ export function Sidebar({
                   type="button"
                   onClick={() => setGrouping(mode)}
                   aria-pressed={grouping === mode}
-                  className={`rounded-[5px] px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                  className={`rounded-[5px] px-1.5 py-0.5 text-micro font-medium transition-colors ${
                     grouping === mode ? "bg-surface text-ink shadow-sm" : "text-ink-3 hover:text-ink-2"
                   }`}
                 >

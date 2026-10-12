@@ -94,7 +94,7 @@ const timeFormat = (lang: Locale) => new Intl.DateTimeFormat(lang, { hour: "2-di
 export function StepDot({ status, warn = false }: { status: Step["status"]; warn?: boolean }) {
   if (warn) {
     return (
-      <span aria-hidden className="flex size-4 shrink-0 items-center justify-center rounded-full bg-danger-fill text-[10px] leading-none font-bold text-white">
+      <span aria-hidden className="flex size-4 shrink-0 items-center justify-center rounded-full bg-danger-fill text-micro leading-none font-bold text-white">
         !
       </span>
     );

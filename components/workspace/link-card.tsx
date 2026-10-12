@@ -13,6 +13,7 @@
 // extrait) avec un bouton « Ouvrir » ; un clic avec Ctrl/Cmd/Maj ou du milieu ouvre la page comme un lien normal.
 
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import { fetchLinkPreview, type LinkPreview } from "@/lib/link-preview";
 import { isPlainClick } from "@/lib/link-click";
 import { GlobeIcon } from "./icons";
@@ -83,6 +84,9 @@ type PreviewState =
 function useLinkPopover(containerRef: RefObject<HTMLElement | null>, data: LinkCardData, preview: boolean, conversationId?: string) {
   const [open, setOpen] = useState(false);
   const [previewState, setPreviewState] = useState<PreviewState>({ status: "idle" });
+  // Piège de focus : le même conteneur sert déjà à détecter un clic extérieur (ci-dessous) — pas
+  // besoin d'une seconde ref, Tab boucle entre le lien déclencheur et les boutons de la fenêtre.
+  useFocusTrap(containerRef, open);
 
   useEffect(() => {
     if (!open) return;

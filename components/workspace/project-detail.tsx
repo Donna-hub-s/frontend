@@ -298,12 +298,12 @@ function MemberStack({ members }: { members: ProjectMemberOut[] }) {
   return (
     <span aria-hidden className="flex -space-x-1.5">
       {shown.map((member) => (
-        <span key={member.user_id} className="flex size-6 items-center justify-center rounded-full bg-peche-100 text-[0.625rem] font-medium text-brand-strong ring-2 ring-white">
+        <span key={member.user_id} className="flex size-6 items-center justify-center rounded-full bg-peche-100 text-micro font-medium text-brand-strong ring-2 ring-white">
           {initialsOf(member)}
         </span>
       ))}
       {members.length > shown.length && (
-        <span className="flex size-6 items-center justify-center rounded-full bg-active text-[0.625rem] font-medium text-ink-2 ring-2 ring-white">+{members.length - shown.length}</span>
+        <span className="flex size-6 items-center justify-center rounded-full bg-active text-micro font-medium text-ink-2 ring-2 ring-white">+{members.length - shown.length}</span>
       )}
       {!members.length && (
         <span className="flex size-6 items-center justify-center rounded-full bg-active text-ink-3 ring-2 ring-white">

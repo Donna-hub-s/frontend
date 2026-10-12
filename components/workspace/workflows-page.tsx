@@ -10,7 +10,7 @@ import { briefingRequest, formatToolArguments, isFinished, isValidTime, needsApp
 import { parseBackendDate, type WorkflowOut, type WorkflowRunOut } from "@/lib/workspace-types";
 import { Dialog, DialogHeader } from "./dialog";
 import { ChevronIcon, PlusIcon } from "./icons";
-import { WorkflowAgents } from "./workflow-agents";
+import { WorkflowAgents, WorkflowStepList } from "./workflow-agents";
 
 type Labels = Dictionary["workspace"]["workflows"];
 type AgentLabels = Dictionary["workspace"]["workflowAgents"];
@@ -246,15 +246,7 @@ function WorkflowCard({
         </p>
       )}
 
-      {detailsOpen && workflow.lines.length > 0 && (
-        <ol className="mt-3 flex list-decimal flex-col gap-1 pl-5 text-secondary leading-5 text-ink-2 marker:text-ink-3">
-          {workflow.lines.slice(1).map((line, index) => (
-            <li key={index} className="text-pretty">
-              {line}
-            </li>
-          ))}
-        </ol>
-      )}
+      {detailsOpen && <WorkflowStepList steps={workflow.lines.slice(1)} className="mt-3" />}
 
       {detailsOpen && <WorkflowAgents refs={agentRefsOf(workflow.definition)} labels={agentLabels} />}
 

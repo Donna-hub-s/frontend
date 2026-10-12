@@ -229,7 +229,7 @@ function AgentsDialog({
                           <div className="min-w-[10rem] flex-1">
                             <p className="flex flex-wrap items-center gap-2 text-label font-medium text-ink">
                               {agent.name}
-                              {agent.archived && <span className="rounded-badge bg-fill px-1.5 text-[10px] leading-4 font-normal text-ink-2">{labels.archivedBadge}</span>}
+                              {agent.archived && <span className="rounded-badge bg-fill px-1.5 text-micro leading-4 font-normal text-ink-2">{labels.archivedBadge}</span>}
                               <span className="text-meta font-normal text-ink-3 tabular-nums">v{agent.version}</span>
                             </p>
                             {agent.description && <p className="text-secondary text-ink-2 text-pretty">{agent.description}</p>}
@@ -538,7 +538,7 @@ function ToolsField({ labels, groups, draft, readOnly, onChange }: { labels: Age
                     />
                     <span>
                       {group.label}
-                      <span className="ml-2 rounded-badge bg-fill px-1.5 text-[10px] leading-4 font-normal text-ink-2">{labels.risk[group.risk]}</span>
+                      <span className="ml-2 rounded-badge bg-fill px-1.5 text-micro leading-4 font-normal text-ink-2">{labels.risk[group.risk]}</span>
                     </span>
                   </label>
                   <div className="ml-6 flex flex-wrap gap-x-4 gap-y-1">
