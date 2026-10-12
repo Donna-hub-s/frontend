@@ -86,8 +86,6 @@ type WorkspaceValue = {
   decideAction: (id: string, decision: "confirm" | "cancel") => Promise<boolean>;
   /** Décisions prises pendant la session (l'action disparaît de la liste backend une fois traitée). */
   decisions: Record<string, "confirm" | "cancel">;
-  activity: Activity;
-  setActivity: (activity: Activity) => void;
   preview: FilePreview | null;
   setPreview: (file: FilePreview | null) => void;
   /** Fenêtre des paramètres (settings-dialog.tsx). */
@@ -102,8 +100,6 @@ type WorkspaceValue = {
   refreshProjects: () => Promise<void>;
   projectDraft: ProjectDraft | null;
   setProjectDraft: (draft: ProjectDraft | null) => void;
-  /** Fils persistants : un par conversation, survivant à la navigation. */
-  threads: Record<string, Thread>;
   registerThread: (key: string, conversationId: string | null, initialMessages: ChatMessage[]) => void;
   /** Oublie un fil de conversation provisoire (page « nouvelle conversation »)
    * qui n'a jamais produit d'échange. */
@@ -147,6 +143,24 @@ const WorkspaceContext = createContext<WorkspaceValue | null>(null);
 export function useWorkspace() {
   const value = useContext(WorkspaceContext);
   if (!value) throw new Error("useWorkspace doit être utilisé dans <WorkspaceProvider>");
+  return value;
+}
+
+/** `threads`/`activity` changent à CHAQUE jeton du flux SSE (lib/chat-run.ts) — les seuls champs
+ * de l'état partagé qui le font. Un contexte séparé : les 12 autres fichiers qui lisent
+ * `useWorkspace()` (barre latérale, paramètres, skills…) ne s'en servent jamais et ne doivent
+ * donc pas se re-rendre à chaque jeton. Seuls `conversation.tsx` et `side-panel.tsx` en ont besoin. */
+type ThreadsValue = {
+  threads: Record<string, Thread>;
+  activity: Activity;
+  setActivity: (activity: Activity) => void;
+};
+
+const ThreadsContext = createContext<ThreadsValue | null>(null);
+
+export function useThreadsState() {
+  const value = useContext(ThreadsContext);
+  if (!value) throw new Error("useThreadsState doit être utilisé dans <WorkspaceProvider>");
   return value;
 }
 
@@ -714,8 +728,6 @@ export function WorkspaceProvider({
       refreshPending,
       decideAction,
       decisions,
-      activity,
-      setActivity,
       searchOpen,
       setSearchOpen,
       preview,
@@ -728,7 +740,6 @@ export function WorkspaceProvider({
       refreshProjects,
       projectDraft,
       setProjectDraft,
-      threads,
       registerThread,
       releaseThread,
       resolveThreadKey,
@@ -759,7 +770,6 @@ export function WorkspaceProvider({
       refreshPending,
       decideAction,
       decisions,
-      activity,
       searchOpen,
       preview,
       settingsOpen,
@@ -768,7 +778,6 @@ export function WorkspaceProvider({
       removeProject,
       refreshProjects,
       projectDraft,
-      threads,
       registerThread,
       releaseThread,
       resolveThreadKey,
@@ -791,5 +800,14 @@ export function WorkspaceProvider({
     ],
   );
 
-  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
+  // Valeur séparée : seule celle-ci change à chaque jeton du flux — `value` ci-dessus ne dépend
+  // plus de `threads`/`activity` et reste donc stable pendant tout un streaming, pour les
+  // 12 fichiers qui n'en ont pas besoin.
+  const threadsValue = useMemo(() => ({ threads, activity, setActivity }), [threads, activity]);
+
+  return (
+    <WorkspaceContext.Provider value={value}>
+      <ThreadsContext.Provider value={threadsValue}>{children}</ThreadsContext.Provider>
+    </WorkspaceContext.Provider>
+  );
 }

@@ -52,7 +52,7 @@ import { SkillsMenu } from "./skills-menu";
 import { DrivePicker } from "./drive-picker";
 import { ElapsedBadge } from "./elapsed-badge";
 import { StepDot, stepDetail, stepLabel } from "./side-panel";
-import { useWorkspace } from "./workspace-provider";
+import { useThreadsState, useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
 
@@ -103,7 +103,6 @@ export function Conversation({
     patchMessage,
     regenerate,
     selectBranch,
-    threads,
     registerThread,
     releaseThread,
     resolveThreadKey,
@@ -113,6 +112,7 @@ export function Conversation({
     setProjectDraft,
     conversations,
   } = useWorkspace();
+  const { threads } = useThreadsState();
   // Fil du provider : l'identifiant de conversation, ou un identifiant local
   // stable tant que le backend ne l'a pas créée. Le fil survit au démontage,
   // donc un flux continue quand l'utilisateur ouvre une autre conversation.
@@ -958,7 +958,8 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 
 /** Brouillon proposé par DONNA (email ou agenda) : rien ne part sans validation. */
 function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; call: ToolCall }) {
-  const { pending, decisions, decideAction, selectBranch, activeKey, threads } = useWorkspace();
+  const { pending, decisions, decideAction, selectBranch, activeKey } = useWorkspace();
+  const { threads } = useThreadsState();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [fetched, setFetched] = useState<PendingActionOut | null>(null);

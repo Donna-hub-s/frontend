@@ -13,7 +13,7 @@ import { ElapsedBadge } from "./elapsed-badge";
 import { EmailAttachmentList } from "./email-attachments";
 import { estimateText, formatUsd } from "@/lib/research";
 import { WorkflowDraft } from "./workflow-draft";
-import { useWorkspace } from "./workspace-provider";
+import { useThreadsState, useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
 
@@ -111,7 +111,8 @@ export function StepDot({ status, warn = false }: { status: Step["status"]; warn
 }
 
 export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: WorkspaceDict; connectors: ConnectorsOut | null }) {
-  const { activity, pending } = useWorkspace();
+  const { pending } = useWorkspace();
+  const { activity } = useThreadsState();
   const { panel } = dict;
   // Une seule horloge pour la liste, arrêtée dès que plus rien ne tourne (voir lib/use-now.ts).
   const now = useNow(activity.steps.some((step) => step.status === "running"));
