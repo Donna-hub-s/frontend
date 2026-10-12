@@ -20,6 +20,7 @@ import { parseBackendDate, PROJECT_INSTRUCTIONS_MAX } from "@/lib/workspace-type
 import { Composer } from "./conversation";
 import { Dialog, DialogHeader } from "./dialog";
 import { FileLink } from "./file-viewer";
+import { RejectedFiles, type RejectedFile } from "./rejected-files";
 import { ChatIcon, ChevronIcon, FileIcon, FolderIcon, LockIcon, MoreIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon, UsersIcon } from "./icons";
 import { GoogleDriveIcon } from "./brand-icons";
 import { DrivePicker, type ExistingDocument } from "./drive-picker";
@@ -559,7 +560,7 @@ function FilesCard({
   const [driveOpen, setDriveOpen] = useState(false);
   const [driveCode, setDriveCode] = useState<DriveErrorCode>("unavailable");
   // Noms des fichiers refusés lors du dernier dépôt (affichés dans le message d'erreur).
-  const [rejected, setRejected] = useState<string[]>([]);
+  const [rejected, setRejected] = useState<RejectedFile[]>([]);
   const [folderImports, setFolderImports] = useState<DriveFolderImportRun[]>([]);
   const [fileQuery, setFileQuery] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -612,11 +613,11 @@ function FilesCard({
         if (batch.documents.length) setDocuments((docs) => [...batch.documents, ...docs]);
         if (batch.errors.length) {
           setError("upload");
-          setRejected((names) => [...names, ...batch.errors.map((e) => e.filename)]);
+          setRejected((files) => [...files, ...batch.errors.map((e) => ({ name: e.filename, reason: e.detail }))]);
         }
       } else {
         setError(status === 400 ? "capacity" : "upload");
-        setRejected((names) => [...names, ...group.map((f) => f.name)]);
+        setRejected((files) => [...files, ...group.map((f) => ({ name: f.name }))]);
       }
     }
   };
@@ -638,7 +639,7 @@ function FilesCard({
       if (data.documents.length) setDocuments((docs) => [...data.documents, ...docs]);
       if (data.errors.length) {
         setError("upload");
-        setRejected(data.errors.map((e) => e.filename));
+        setRejected(data.errors.map((e) => ({ name: e.filename, reason: e.detail })));
       }
       return;
     }
@@ -648,7 +649,7 @@ function FilesCard({
       setError("drive");
     } else {
       setError(status === 400 ? "capacity" : "upload");
-      setRejected(picked.map((file) => file.name));
+      setRejected(picked.map((file) => ({ name: file.name })));
     }
   };
 
@@ -916,11 +917,13 @@ function FilesCard({
         )}
 
         {error && (
-          <p role="alert" className="border-t border-border px-4 py-2.5 text-meta text-danger">
+          <div role="alert" className="border-t border-border px-4 py-2.5 text-meta text-danger">
             {error === "upload"
-              ? rejected.length
-                ? labels.uploadErrorFiles.replace("{files}", rejected.join(", "))
-                : labels.uploadError
+              ? rejected.some((file) => file.reason)
+                ? <RejectedFiles intro={labels.uploadErrorSome} files={rejected} />
+                : rejected.length
+                  ? labels.uploadErrorFiles.replace("{files}", rejected.map((file) => file.name).join(", "))
+                  : labels.uploadError
               : error === "drive"
                 ? ((driveLabels.errors as Record<string, string>)[driveCode] ?? driveLabels.errors.unavailable)
                 : error === "delete"
@@ -930,7 +933,7 @@ function FilesCard({
                   : error === "retryBusy"
                     ? labels.retryIndexingBusy
                     : labels.contextCapacityReached}
-          </p>
+          </div>
         )}
       </Card>
     </div>

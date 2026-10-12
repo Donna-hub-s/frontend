@@ -854,6 +854,7 @@
       "dropzoneTypes": "PDF, Word, Excel, text or images. You can also drop them here.",
       "uploadError": "Couldn't add this file.",
       "uploadErrorFiles": "Couldn't add: {files}.",
+      "uploadErrorSome": "These files were not added:",
       "addFromDrive": "From Google Drive",
       "addFromComputer": "From this computer",
       "addFromFolder": "From a folder on this computer (subfolders included)",
