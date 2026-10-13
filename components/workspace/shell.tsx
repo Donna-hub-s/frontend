@@ -101,10 +101,13 @@ export function WorkspaceShell({
           {children}
         </main>
         <SidePanel lang={lang} dict={dict} connectors={connectors} />
+        {/* Docké dans la MÊME ligne que la barre latérale/le panneau d'activité (même gabarit que
+            CanvasHost : plein écran sous `lg`, partage la largeur au-dessus) — avant, une fenêtre
+            modale globale qui recouvrait tout, sans rapport avec le reste de la mise en page. */}
+        <FileViewer lang={lang} labels={dict.viewer} />
       </div>
       <SearchPalette lang={lang} labels={dict.sidebar} />
       <SettingsDialog lang={lang} dict={dict} account={account} connectors={connectors} oauthProviders={oauthProviders} />
-      <FileViewer lang={lang} labels={dict.viewer} />
       <ReminderToasts lang={lang} labels={dict.reminders} />
       <OAuthLinkNotice labels={dict.oauthLink} />
       <ThemeSync />

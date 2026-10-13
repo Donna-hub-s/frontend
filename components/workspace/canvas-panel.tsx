@@ -8,6 +8,7 @@ import { diffLines, diffStats, foldUnchanged } from "@/lib/diff";
 import { useCanvas, type CanvasController } from "@/lib/use-canvas";
 import type { ChatMessage } from "@/lib/workspace-types";
 import { CanvasEditor } from "./canvas-editor";
+import { useWorkspace } from "./workspace-provider";
 
 type Labels = Dictionary["workspace"]["canvas"];
 
@@ -37,11 +38,23 @@ export function CanvasHost({
   const canvas = useCanvas(conversationId, activity.key, activity.canvasId);
   const [open, setOpen] = useState(false);
   const [lastSeen, setLastSeen] = useState(activity.key);
+  const { preview } = useWorkspace();
+  const previewOpen = preview !== null;
+  const [lastPreviewOpen, setLastPreviewOpen] = useState(previewOpen);
 
   // DONNA vient de créer ou modifier le document : on l'ouvre (ajustement d'état pendant le rendu, voir la doc React).
   if (activity.key !== lastSeen) {
     setLastSeen(activity.key);
     if (activity.count > 0) setOpen(true);
+  }
+
+  // Un seul panneau docké à la fois : un aperçu de fichier qui s'ouvre ferme le canvas (jamais
+  // l'inverse — ouvrir le canvas pendant qu'un aperçu est déjà affiché resterait surprenant).
+  // Même patron d'ajustement d'état pendant le rendu que ci-dessus, pas un useEffect (évite les
+  // rendus en cascade).
+  if (previewOpen !== lastPreviewOpen) {
+    setLastPreviewOpen(previewOpen);
+    if (previewOpen) setOpen(false);
   }
 
   useEffect(() => {

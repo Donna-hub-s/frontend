@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import type { Locale } from "@/i18n/config";
-import { Dialog, DialogHeader } from "./dialog";
+import { DialogHeader } from "./dialog";
 import { DownloadIcon, FileIcon } from "./icons";
 import { Markdown } from "./markdown";
 import { useWorkspace, type FilePreview } from "./workspace-provider";
@@ -59,13 +59,28 @@ type Content =
 
 type State = { status: "loading" } | { status: "error"; reason: "load" | "tooLarge" | "parse" } | { status: "ready"; content: Content };
 
-/** Fenêtre d'aperçu : PDF, images, Word, Excel, CSV, Markdown et texte, sans quitter DONNA. */
+/** Panneau d'aperçu : PDF, images, Word, Excel, CSV, Markdown et texte, sans quitter DONNA.
+ * Docké à droite (même gabarit que CanvasHost/CanvasPanel : plein écran sous `lg`, partage la
+ * largeur avec la conversation au-dessus) — avant, une fenêtre modale qui recouvrait tout l'écran. */
 export function FileViewer({ lang, labels }: { lang: Locale; labels: Labels }) {
   const { preview, setPreview } = useWorkspace();
+
+  useEffect(() => {
+    if (preview) document.body.dataset.filePreviewOpen = "true";
+    else delete document.body.dataset.filePreviewOpen;
+    return () => {
+      delete document.body.dataset.filePreviewOpen;
+    };
+  }, [preview]);
+
+  if (!preview) return null;
   return (
-    <Dialog open={preview !== null} onClose={() => setPreview(null)} label={preview?.name ?? labels.title} className="flex h-[min(52rem,calc(100dvh-2rem))] max-w-[60rem] flex-col">
-      {preview && <ViewerBody key={preview.url} lang={lang} labels={labels} file={preview} onClose={() => setPreview(null)} />}
-    </Dialog>
+    <aside
+      aria-label={preview.name || labels.title}
+      className="fixed inset-0 z-40 flex flex-col bg-surface lg:static lg:inset-auto lg:z-auto lg:w-[46%] lg:max-w-[46rem] lg:min-w-[24rem] lg:border-l lg:border-border"
+    >
+      <ViewerBody key={preview.url} lang={lang} labels={labels} file={preview} onClose={() => setPreview(null)} />
+    </aside>
   );
 }
 
