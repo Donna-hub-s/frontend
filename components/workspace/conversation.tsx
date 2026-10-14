@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { DonnaMark } from "@/components/brand/donna-mark";
@@ -524,6 +524,7 @@ function UserMessage({
               ref={draftRef}
               defaultValue={message.content}
               autoFocus
+              aria-label={chat.edit}
               rows={3}
               className="w-full resize-none rounded-button border border-border bg-surface px-3 py-2 text-message text-ink outline-none focus:border-brand"
             />
@@ -1323,6 +1324,7 @@ export function Composer({
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [accessibleDocs, setAccessibleDocs] = useState<AccessibleDocumentOut[] | null>(null);
   const docsFetchedRef = useRef(false);
+  const composerId = useId();
 
   const ensurePersonalDocs = useCallback(() => {
     if (docsFetchedRef.current) return;
@@ -1796,11 +1798,11 @@ export function Composer({
             })}
           </ul>
         )}
-        <label htmlFor="composer" className="sr-only">
+        <label htmlFor={composerId} className="sr-only">
           {home ? dict.chat.homePlaceholder : dict.chat.placeholder}
         </label>
         <textarea
-          id="composer"
+          id={composerId}
           ref={textareaRef}
           rows={1}
           autoFocus={autoFocus}
