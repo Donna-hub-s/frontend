@@ -322,20 +322,20 @@ async function unevaluatedFormulas(blob: Blob): Promise<Map<string, [number, num
   return found;
 }
 
-function cellFormatter(lang: Locale) {
+export function cellFormatter(lang: Locale) {
   const number = new Intl.NumberFormat(lang, { maximumFractionDigits: 10 });
   const date = new Intl.DateTimeFormat(lang, { dateStyle: "medium" });
   return (value: unknown): string => {
     if (value === null || value === undefined) return "";
     if (value instanceof Date) return date.format(value);
     if (typeof value === "number") return number.format(value);
-    if (typeof value === "boolean") return value ? "VRAI" : "FAUX";
+    if (typeof value === "boolean") return value ? (lang === "en" ? "TRUE" : "VRAI") : (lang === "en" ? "FALSE" : "FAUX");
     return String(value);
   };
 }
 
 /** CSV/TSV : séparateur deviné sur la première ligne, guillemets doublés gérés. */
-function parseDelimited(text: string): string[][] {
+export function parseDelimited(text: string): string[][] {
   const firstLine = text.slice(0, text.indexOf("\n") >>> 0);
   const counts = [",", ";", "\t"].map((sep) => [sep, firstLine.split(sep).length] as const);
   const separator = counts.sort((a, b) => b[1] - a[1])[0][0];
