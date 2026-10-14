@@ -129,3 +129,30 @@ describe("PendingItem — liaison d'un dossier du NAS en attente", () => {
     expect(labels).not.toContain(fr.workspace.panel.approve);
   });
 });
+
+describe("PendingItem — écriture proposée dans la mémoire d'un projet", () => {
+  const proposal = (op: string, fact: string, previous: string | null): PendingActionOut => ({
+    id: "f1",
+    kind: "project_fact",
+    summary: "Résumé",
+    status: "awaiting",
+    created_at: new Date().toISOString(),
+    fact_proposal: { op, project_id: "p1", project_name: "Audit", fact, previous },
+  });
+
+  it("montre le projet, le texte à écrire et celui qu'il remplace", () => {
+    mount(proposal("update", "Clôture au 30 avril.", "Clôture au 31 mars."));
+    expect(host.textContent).toContain("Dans la mémoire partagée du projet « Audit »");
+    expect(host.textContent).toContain("« Clôture au 30 avril. »");
+    expect(host.textContent).toContain("Remplace :");
+    expect(host.textContent).toContain("« Clôture au 31 mars. »");
+    expect(host.textContent).toContain(fr.workspace.panel.kinds.project_fact);
+  });
+
+  it("pour un oubli, montre le fait concerné et n'invente aucun nouveau texte", () => {
+    mount(proposal("delete", "", "Ancien IBAN"));
+    expect(host.textContent).toContain(fr.workspace.chat.factOps.delete);
+    expect(host.textContent).toContain("Fait concerné :");
+    expect(host.textContent).toContain("« Ancien IBAN »");
+  });
+});

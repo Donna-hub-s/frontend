@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { startChatRun, uid, visibleSteps, type RunInput } from "@/lib/chat-run";
 import { nextSiblings, selectMessageBranch } from "@/lib/branches";
-import { useProjectCapacityWs, type AppNotification, type DocumentStatusUpdate, type ReminderDue } from "@/lib/use-project-ws";
+import { useProjectCapacityWs, type AppNotification, type DocumentStatusUpdate, type MemoryChange, type ReminderDue } from "@/lib/use-project-ws";
 import type { SkillSettings } from "@/lib/skills";
 import { installSessionGuard } from "@/lib/session-guard";
 import type { Locale } from "@/i18n/config";
@@ -142,6 +142,8 @@ type WorkspaceValue = {
    * direct par le websocket dès qu'une ingestion change d'état — voir
    * project-detail.tsx::FilesCard, qui patche sa liste locale sur cette base. */
   documentStatuses: Record<string, DocumentStatusUpdate>;
+  /** Compteur par projet, incrémenté à chaque écriture de DONNA dans sa mémoire partagée : la carte « Mémoire » se relit quand il change. */
+  memoryTicks: Record<string, number>;
 };
 
 const WorkspaceContext = createContext<WorkspaceValue | null>(null);
@@ -363,6 +365,7 @@ export function WorkspaceProvider({
   }, []);
 
   const [documentStatuses, setDocumentStatuses] = useState<Record<string, DocumentStatusUpdate>>({});
+  const [memoryTicks, setMemoryTicks] = useState<Record<string, number>>({});
 
   const [skills, setSkills] = useState<SkillOut[] | null>(null);
   const [skillSettings, setSkillSettings] = useState<SkillSettings>({});
@@ -506,6 +509,7 @@ export function WorkspaceProvider({
     ),
     handleReminder,
     handleNotification,
+    useCallback(({ projectId }: MemoryChange) => setMemoryTicks((ticks) => ({ ...ticks, [projectId]: (ticks[projectId] ?? 0) + 1 })), []),
   );
 
   // Refs synchronisées après rendu : lues par les callbacks de flux, hors cycle de rendu.
@@ -806,6 +810,7 @@ export function WorkspaceProvider({
       refreshSkills,
       setSkillEnabled,
       documentStatuses,
+      memoryTicks,
     }),
     [
       conversations,
@@ -844,6 +849,7 @@ export function WorkspaceProvider({
       refreshSkills,
       setSkillEnabled,
       documentStatuses,
+      memoryTicks,
     ],
   );
 

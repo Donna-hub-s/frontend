@@ -14,6 +14,8 @@ export type PrepStep = {
   name?: string;
   instructions?: boolean;
   facts?: number;
+  /** Faits de la mémoire du projet non chargés faute de place dans la limite relue à chaque message (voir quotas.py). */
+  omitted?: number;
 };
 
 export type StreamEvent =

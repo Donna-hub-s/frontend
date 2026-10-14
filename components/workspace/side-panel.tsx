@@ -14,6 +14,7 @@ import { EmailAttachmentList } from "./email-attachments";
 import { estimateText, formatUsd } from "@/lib/research";
 import { WorkflowDraft } from "./workflow-draft";
 import { NasLinkDraft } from "./nas-link-draft";
+import { FactProposalDraft } from "./fact-proposal-draft";
 import { useThreadsState, useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
@@ -73,7 +74,10 @@ export const stepDetail = (dict: WorkspaceDict, step: Step): { text: string; war
       return { text: [data.name, parts.join(" · ")].filter(Boolean).join(" — "), warn: false };
     }
     case "memory":
-      return { text: data.scope === "project" ? fill(t.memoryProjectFacts, { n: data.facts, name: data.name ?? "" }) : fill(t.memoryFacts, { n: data.facts }), warn: false };
+      return {
+        text: data.scope === "project" ? fill(t.memoryProjectFacts, { n: data.facts, name: data.name ?? "" }) + (data.omitted ? ` — ${fill(t.memoryOmitted, { n: data.omitted })}` : "") : fill(t.memoryFacts, { n: data.facts }),
+        warn: !!data.omitted,
+      };
     case "convfiles": {
       const shown = data.names.slice(0, 3).join(", ");
       const more = data.names.length > 3 ? ` +${data.names.length - 3}` : "";
@@ -220,6 +224,7 @@ export function PendingItem({ lang, dict, action }: { lang: Locale; dict: Worksp
       {action.email && <EmailAttachmentList actionId={action.id} attachments={action.email.attachments} openable labels={dict.chat} />}
       {action.workflow && <WorkflowDraft draft={action.workflow} labels={dict.chat} agentLabels={dict.workflowAgents} />}
       {action.nas && <NasLinkDraft draft={action.nas} labels={dict.chat} />}
+      {action.fact_proposal && <FactProposalDraft draft={action.fact_proposal} labels={dict.chat} />}
       {action.research && (
         // Même détail que ActionCard (fil de discussion) avant approbation — une fois confirmée, l'action
         // quitte cette liste (voir decideAction) : pas besoin d'y suivre la progression, seulement l'estimation.

@@ -32,8 +32,12 @@ export type AppNotification = {
   body: string;
 };
 
+/** DONNA vient d'écrire (retenir, corriger, oublier) dans la mémoire PARTAGÉE d'un projet (backend/app/chat/src/project_memory.py) : la carte « Mémoire » du projet se relit. */
+export type MemoryChange = { projectId: string };
+
 export type UserChannelEvent =
   | { kind: "capacity"; update: CapacityUpdate }
+  | { kind: "memory"; change: MemoryChange }
   | { kind: "document"; update: DocumentStatusUpdate }
   | { kind: "reminder"; reminder: ReminderDue }
   | { kind: "notification"; notification: AppNotification };
@@ -73,6 +77,12 @@ export function parseUserChannelMessage(raw: string): UserChannelEvent[] {
       });
     }
     return events;
+  }
+
+  if (message.action === "MEMORY_FACT_SAVED" || message.action === "MEMORY_FACT_UPDATED" || message.action === "MEMORY_FACT_FORGOTTEN") {
+    // Seule la mémoire d'un PROJET intéresse la carte du projet ; un fait personnel n'y figure pas.
+    const projectId = text(payload.project_id);
+    return payload.scope === "project" && projectId ? [{ kind: "memory", change: { projectId } }] : [];
   }
 
   if (message.action === "REMINDER_DUE") {

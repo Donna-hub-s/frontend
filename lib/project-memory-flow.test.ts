@@ -59,3 +59,38 @@ describe("libellés", () => {
     }
   });
 });
+
+describe("appels de mémoire qui deviennent des propositions", async () => {
+  const { isProposalCall } = await import("./chat-run");
+  const FACT_ID = "11111111-2222-3333-4444-555555555555";
+
+  it("un appel de mémoire direct n'est pas une proposition, même si son résultat porte un identifiant de fait", () => {
+    expect(isProposalCall("remember_fact", `Fait enregistré dans la mémoire du projet [${FACT_ID}] : tous les membres le verront.`)).toBe(false);
+    expect(isProposalCall("remember_fact", "Fait enregistré.")).toBe(false);
+    expect(isProposalCall("forget_fact", "Fait oublié : retiré de la mémoire du projet (l'historique garde la trace).")).toBe(false);
+  });
+
+  it("sous la politique d'approbation, le résultat porte « (action <id>) » : c'est une proposition à valider", () => {
+    for (const name of ["remember_fact", "update_fact", "forget_fact"]) {
+      expect(isProposalCall(name, `Écriture dans la mémoire du projet PROPOSÉE (action ${FACT_ID}) : la politique du projet veut l'accord de l'utilisateur.`)).toBe(true);
+    }
+  });
+
+  it("les outils de proposition habituels le restent, et un autre outil ne le devient jamais", () => {
+    expect(isProposalCall("propose_email", "Brouillon préparé")).toBe(true);
+    expect(isProposalCall("search_documents", `(action ${FACT_ID})`)).toBe(false);
+  });
+});
+
+describe("mémoire coupée par la limite relue à chaque message", () => {
+  it("l'étape le dit et passe en alerte, au lieu de laisser croire que tout est chargé", () => {
+    const step = applyPrepStep([], { key: "memory", status: "done", facts: 10, scope: "project", name: "Audit", omitted: 4 }, 1)[0] as Step;
+    expect(step.data).toEqual({ kind: "memory", facts: 10, scope: "project", name: "Audit", omitted: 4 });
+    expect(stepDetail(fr.workspace, step)).toEqual({ text: "Mémoire du projet « Audit » : 10 fait(s) — 4 plus ancien(s) non chargé(s) : limite atteinte", warn: true });
+  });
+
+  it("n'ajoute rien quand tout est chargé", () => {
+    const step = applyPrepStep([], { key: "memory", status: "done", facts: 10, scope: "project", name: "Audit", omitted: 0 }, 1)[0] as Step;
+    expect(stepDetail(fr.workspace, step)).toEqual({ text: "Mémoire du projet « Audit » : 10 fait(s)", warn: false });
+  });
+});

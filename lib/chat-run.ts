@@ -30,7 +30,7 @@ const prepData = (step: PrepStep): StepData | undefined => {
     case "project":
       return { kind: "project", name: step.name ?? "", instructions: !!step.instructions, facts: step.facts ?? 0 };
     case "memory":
-      return { kind: "memory", facts: step.facts ?? 0, ...(step.scope === "project" ? { scope: "project" as const, name: step.name ?? "" } : {}) };
+      return { kind: "memory", facts: step.facts ?? 0, ...(step.scope === "project" ? { scope: "project" as const, name: step.name ?? "", ...(step.omitted ? { omitted: step.omitted } : {}) } : {}) };
     case "conversation_files":
       return { kind: "convfiles", names: step.names ?? [], pending: step.pending ?? 0 };
     default:
@@ -57,6 +57,13 @@ export function applyPrepStep(steps: Step[], event: PrepStep, now = Date.now()):
 
 /** Outils qui créent une action en attente de confirmation humaine. */
 export const PROPOSALS = new Set(["propose_email", "propose_calendar_event", "propose_drive_upload", "propose_workflow", "propose_research", "propose_nas_link"]);
+
+/** Outils de mémoire : directs d'ordinaire, mais sous la politique « approbation » d'un projet leur résultat est une PROPOSITION (« (action <id>) »). */
+export const MEMORY_WRITES = new Set(["remember_fact", "update_fact", "forget_fact"]);
+
+/** Cet appel d'outil a-t-il créé une action à valider ? Un appel de mémoire direct porte un identifiant de FAIT dans son résultat, pas « (action … ) ». */
+export const isProposalCall = (name: string, result: string): boolean =>
+  PROPOSALS.has(name) || (MEMORY_WRITES.has(name) && /\(action [0-9a-f]{8}-[0-9a-f-]{27}\)/i.test(result));
 
 export type ErrorKind = NonNullable<ChatMessage["error"]>;
 
@@ -250,7 +257,7 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
           setSteps([...finishSteps(), { id: uid(), key: event.name, status: "running", at: Date.now() }]);
         } else if (event.type === "tool_call") {
           answering = false;
-          if (PROPOSALS.has(event.call.name)) proposed = true;
+          if (isProposalCall(event.call.name, event.call.result)) proposed = true;
           if (event.call.name === "ask_user") asked = true;
           const index = steps.findLastIndex((s) => s.key === event.call.name && s.status === "running");
           setSteps(

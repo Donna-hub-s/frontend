@@ -5,21 +5,33 @@ import { useState } from "react";
 import type { Locale } from "@/i18n/config";
 
 /** Sous-ensemble commun aux dictionnaires `invite` (projet) et `workspaceInvite` (espace). */
-type AcceptLabels = { accept: string; accepting: string; acceptError: string; accepted: string; goToApp: string };
+type AcceptLabels = {
+  accept: string;
+  accepting: string;
+  acceptError: string;
+  accepted: string;
+  goToApp: string;
+  /** Invitation de projet seulement : le compte est connecté dans un autre espace que celui du projet. */
+  wrongSpace?: string;
+  joinSpace?: string;
+};
 
 export function AcceptInviteButton({
   lang,
   token,
   labels,
   endpoint = "/api/donna/chat/projects/invites/accept",
+  spaceInviteHref,
 }: {
   lang: Locale;
   token: string;
   labels: AcceptLabels;
   /** Route d'acceptation — projet par défaut ; espace : /api/donna/auth/invites/accept. */
   endpoint?: string;
+  /** Lien « rejoindre l'espace » d'abord, quand l'invitation de projet en porte un (voir project_routes.create_invite). */
+  spaceInviteHref?: string;
 }) {
-  const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
+  const [state, setState] = useState<"idle" | "busy" | "done" | "error" | "wrongSpace">("idle");
 
   const accept = async () => {
     setState("busy");
@@ -28,7 +40,8 @@ export function AcceptInviteButton({
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ token }),
     }).catch(() => null);
-    setState(response?.ok ? "done" : "error");
+    // 403 : le compte n'est pas dans l'espace du projet — autre chose qu'une panne, et on sait quoi faire.
+    setState(response?.ok ? "done" : response?.status === 403 && labels.wrongSpace ? "wrongSpace" : "error");
   };
 
   if (state === "done") {
@@ -56,6 +69,16 @@ export function AcceptInviteButton({
         {state === "busy" ? labels.accepting : labels.accept}
       </button>
       {state === "error" && <p className="text-secondary text-danger">{labels.acceptError}</p>}
+      {state === "wrongSpace" && (
+        <div className="flex flex-col gap-2">
+          <p role="alert" className="text-secondary text-danger text-pretty">{labels.wrongSpace}</p>
+          {spaceInviteHref && labels.joinSpace && (
+            <Link href={spaceInviteHref} className="text-label font-medium text-brand no-underline hover:underline">
+              {labels.joinSpace}
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }

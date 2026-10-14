@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { BACKEND_URL } from "./backend";
 import { COOKIES } from "./session-cookies";
 import type { NasLinkDraft } from "./nas";
+import type { ProjectFactProposal } from "./project-memory";
 import type { ResearchDraft } from "./research";
 
 /**
@@ -245,6 +246,8 @@ export type PendingActionOut = {
   research?: ResearchDraft | null;
   /** Dossier du NAS à lier (kind « nas_link ») : dossier, projet et ce qui sera indexé. */
   nas?: NasLinkDraft | null;
+  /** Écriture proposée dans la mémoire d'un projet (kind « project_fact ») : retenir, corriger ou oublier un fait. */
+  fact_proposal?: ProjectFactProposal | null;
 };
 
 /** GET /app/chat/memory/reminders (backend/app/chat/src/schemas.py::ReminderOut). */
@@ -347,6 +350,12 @@ export type ProjectInviteOut = {
   expires_at: string;
   created_at: string;
   token: string | null;
+  /** La personne invitée est-elle dans l'espace ? member · space_invite_pending · not_member · unknown (voir lib/project-invites.ts). */
+  space_status?: string | null;
+  /** Invitation d'espace créée en même temps (le responsable de l'espace a invité quelqu'un qui n'en était pas membre). */
+  space_invite_token?: string | null;
+  /** Sortie de la création seulement : l'email est-il parti ? Faux = copier le lien. */
+  email_sent?: boolean | null;
 };
 
 export type ProjectFactOut = {
@@ -359,6 +368,8 @@ export type ProjectFactOut = {
   updated_at: string | null;
   /** Dernière voie d'écriture : « donna » = retenu par DONNA au nom d'un membre ; « user » (ou absent) = écrit à la main. */
   via?: string;
+  /** false : trop ancien pour tenir dans la limite relue à chaque message — le modèle ne le voit pas (voir quotas.py). */
+  in_context?: boolean;
 };
 
 /** backend/app/chat/src/schemas.py::ProjectDocumentOut. */

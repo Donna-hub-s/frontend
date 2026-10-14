@@ -8,7 +8,7 @@ import { DonnaMark } from "@/components/brand/donna-mark";
 import { DonnaOrb, type OrbState } from "@/components/brand/donna-orb";
 import { FileLink } from "./file-viewer";
 import { actionIdFrom } from "@/lib/chat-stream";
-import { EMPTY_MENTIONS, PROPOSALS, uid, visibleSteps } from "@/lib/chat-run";
+import { EMPTY_MENTIONS, MEMORY_WRITES, PROPOSALS, isProposalCall, uid, visibleSteps } from "@/lib/chat-run";
 import { inlineImageNames, isImageName } from "@/lib/file-links";
 import { readableExcerpt } from "@/lib/source-excerpt";
 import { visibleSources } from "@/lib/sources";
@@ -35,6 +35,7 @@ import { useNow } from "@/lib/use-now";
 import { Bot } from "lucide-react";
 import { WorkflowDraft } from "./workflow-draft";
 import { NasLinkDraft } from "./nas-link-draft";
+import { FactProposalDraft } from "./fact-proposal-draft";
 import { useConversationContext } from "@/lib/use-conversation-context";
 import { GoogleDriveIcon } from "./brand-icons";
 import { ContextMenu } from "./context-menu";
@@ -712,7 +713,7 @@ export function AssistantMessage({
   const tools = message.tools ?? [];
   // `findLast` : si le modèle a posé plusieurs cartes dans le même tour, la dernière fait foi.
   const card = cardOf(tools.findLast((t) => t.name === "ask_user"));
-  const proposals = tools.filter((t) => PROPOSALS.has(t.name));
+  const proposals = tools.filter((t) => isProposalCall(t.name, t.result));
   const files = useMemo(() => message.attachments.map((file) => ({ name: file.original_name, url: fileHref(file.file_url) })), [message.attachments]);
   // Images produites (graphique, schéma…) : montrées en ligne (sauf si le texte les affiche déjà), en plus de leur carte
   // « Fichiers ». SVG exclu (scripts possibles).
@@ -1069,6 +1070,8 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
   const isWorkflow = call.name === "propose_workflow";
   const isResearch = call.name === "propose_research";
   const isNasLink = call.name === "propose_nas_link";
+  const isFactProposal = MEMORY_WRITES.has(call.name);
+  const factProposal = listed?.fact_proposal ?? fetched?.fact_proposal ?? null;
   const research = listed?.research ?? fetched?.research ?? null;
   const nas = listed?.nas ?? fetched?.nas ?? null;
   const nasLinked = isNasLink && (decision === "confirm" || fetched?.status === "executed");
@@ -1110,7 +1113,7 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
     <div className={`rounded-panel border p-4 ${awaiting ? "border-attention/40 bg-attention-soft" : "border-border bg-ivoire-50"}`}>
       <div className="flex items-center justify-between gap-3 text-meta">
         <span className="font-medium text-ink">
-          {isEmail ? dict.chat.draftEmail : isDriveUpload ? dict.chat.draftDriveUpload : isWorkflow ? dict.chat.draftWorkflow : isResearch ? dict.chat.draftResearch : isNasLink ? dict.chat.draftNasLink : dict.chat.draftEvent}
+          {isEmail ? dict.chat.draftEmail : isDriveUpload ? dict.chat.draftDriveUpload : isWorkflow ? dict.chat.draftWorkflow : isResearch ? dict.chat.draftResearch : isNasLink ? dict.chat.draftNasLink : isFactProposal ? dict.chat.draftFactProposal : dict.chat.draftEvent}
         </span>
         {decision ? (
           <span className={`inline-flex items-center gap-1 ${decision === "confirm" ? "text-success-ink" : "text-ink-3"}`}>
@@ -1169,6 +1172,8 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
             />
           )}
         </>
+      ) : isFactProposal ? (
+        factProposal ? <FactProposalDraft draft={factProposal} labels={dict.chat} /> : <p className="mt-3 text-label font-medium text-ink">{text(args.fact)}</p>
       ) : isNasLink ? (
         <>
           {nas ? <NasLinkDraft draft={nas} labels={dict.chat} /> : <p className="mt-3 text-label font-medium text-ink">{text(args.path)}</p>}

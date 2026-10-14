@@ -86,7 +86,7 @@ export type StepData =
   | { kind: "rerank"; count: number | null; failed?: boolean }
   | { kind: "documents"; names: string[] }
   | { kind: "project"; name: string; instructions: boolean; facts: number }
-  | { kind: "memory"; facts: number; scope?: "project"; name?: string }
+  | { kind: "memory"; facts: number; scope?: "project"; name?: string; omitted?: number }
   | { kind: "files"; files: AttachedFileOut[] }
   | { kind: "convfiles"; names: string[]; pending: number };
 

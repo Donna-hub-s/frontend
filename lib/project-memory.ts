@@ -18,6 +18,15 @@ export type FactVersion = {
   via?: string;
 };
 
+/** Écriture dans la mémoire d'un projet proposée par DONNA (action « project_fact ») — backend/app/chat/src/schemas.py::ProjectFactProposalOut. */
+export type ProjectFactProposal = {
+  op: "create" | "update" | "delete" | string;
+  project_id: string;
+  project_name: string;
+  fact: string;
+  previous: string | null;
+};
+
 type Person = { user_id: string; email: string | null };
 type Stamped = { created_by: string; created_at: string; version?: number; updated_by?: string | null; updated_at?: string | null };
 
