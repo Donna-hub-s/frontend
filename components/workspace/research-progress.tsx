@@ -105,7 +105,7 @@ export function ResearchProgress({
 
   if (run.status === "done") {
     return (
-      <div className="mt-3 flex flex-col gap-2">
+      <div className="mt-3 flex flex-col gap-2" role="status" aria-live="polite">
         <p className="flex items-center gap-1.5 text-label font-medium text-success-ink">
           <CheckIcon size={14} />
           {labels.researchDone}
@@ -129,10 +129,12 @@ export function ResearchProgress({
   }
 
   return (
-    <p className="mt-3 flex items-center gap-1.5 text-label text-ink-3">
-      <CloseIcon size={14} />
-      {run.status === "cancelled" ? labels.researchCancelled : run.status === "interrupted" ? labels.researchInterrupted : labels.researchFailed}
-      {run.error && run.status === "failed" && <span className="text-meta">· {run.error}</span>}
-    </p>
+    <div role="status" aria-live="polite">
+      <p className="mt-3 flex items-center gap-1.5 text-label text-ink-3">
+        <CloseIcon size={14} />
+        {run.status === "cancelled" ? labels.researchCancelled : run.status === "interrupted" ? labels.researchInterrupted : labels.researchFailed}
+        {run.error && run.status === "failed" && <span className="text-meta">· {run.error}</span>}
+      </p>
+    </div>
   );
 }

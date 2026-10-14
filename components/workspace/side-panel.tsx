@@ -123,7 +123,7 @@ export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: Work
   const now = useNow(activity.steps.some((step) => step.status === "running"));
 
   return (
-    <aside aria-label={panel.label} className="scrollbar-none hidden w-[20rem] shrink-0 flex-col gap-4 overflow-y-auto bg-page p-4 xl:flex [body[data-canvas-open]_&]:hidden [body[data-file-preview-open]_&]:hidden">
+    <aside aria-label={panel.label} className="scrollbar-none hidden w-[20rem] shrink-0 flex-col gap-4 overflow-y-auto bg-page p-4 xl:flex [body[data-sheet-open]_&]:hidden">
       <section className="rounded-panel bg-surface">
         <header className="flex items-center justify-between border-b border-border px-4 py-3.5">
           <h2 className="text-panel-title font-medium text-ink">{panel.activity}</h2>

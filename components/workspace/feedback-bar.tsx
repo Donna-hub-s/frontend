@@ -75,7 +75,7 @@ export function FeedbackBar({
       <div className="flex items-center gap-1">
         {thumb("up", labels.feedbackGood, ThumbUpIcon)}
         {thumb("down", labels.feedbackBad, ThumbDownIcon)}
-        <span role="status" className={`ml-1 text-meta ${status === "error" ? "text-danger" : "text-ink-3"}`}>
+        <span role="status" aria-live="polite" className={`ml-1 text-meta ${status === "error" ? "text-danger" : "text-ink-3"}`}>
           {status === "thanks" ? labels.feedbackThanks : status === "error" ? labels.feedbackError : ""}
         </span>
       </div>

@@ -107,9 +107,8 @@ export function WorkspaceShell({
           {children}
         </main>
         <SidePanel lang={lang} dict={dict} connectors={connectors} />
-        {/* Docké dans la MÊME ligne que la barre latérale/le panneau d'activité (même gabarit que
-            CanvasHost : plein écran sous `lg`, partage la largeur au-dessus) — avant, une fenêtre
-            modale globale qui recouvrait tout, sans rapport avec le reste de la mise en page. */}
+        {/* Dans la rangée flex : le volet d'aperçu partage la largeur en colonne sur grand écran
+            (comme le volet Document) et se superpose en plein écran sous lg. */}
         <FileViewer lang={lang} labels={dict.viewer} />
       </div>
       <SearchPalette lang={lang} labels={dict.sidebar} />

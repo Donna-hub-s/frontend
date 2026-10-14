@@ -3,9 +3,9 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import type { Locale } from "@/i18n/config";
-import { DialogHeader } from "./dialog";
 import { DownloadIcon, FileIcon } from "./icons";
 import { Markdown } from "./markdown";
+import { Sheet, SheetHeader } from "./sheet";
 import { useWorkspace, type FilePreview } from "./workspace-provider";
 
 type Labels = Dictionary["workspace"]["viewer"];
@@ -59,28 +59,13 @@ type Content =
 
 type State = { status: "loading" } | { status: "error"; reason: "load" | "tooLarge" | "parse" } | { status: "ready"; content: Content };
 
-/** Panneau d'aperçu : PDF, images, Word, Excel, CSV, Markdown et texte, sans quitter DONNA.
- * Docké à droite (même gabarit que CanvasHost/CanvasPanel : plein écran sous `lg`, partage la
- * largeur avec la conversation au-dessus) — avant, une fenêtre modale qui recouvrait tout l'écran. */
+/** Volet d'aperçu : PDF, images, Word, Excel, CSV, Markdown et texte, sans quitter DONNA. */
 export function FileViewer({ lang, labels }: { lang: Locale; labels: Labels }) {
   const { preview, setPreview } = useWorkspace();
-
-  useEffect(() => {
-    if (preview) document.body.dataset.filePreviewOpen = "true";
-    else delete document.body.dataset.filePreviewOpen;
-    return () => {
-      delete document.body.dataset.filePreviewOpen;
-    };
-  }, [preview]);
-
-  if (!preview) return null;
   return (
-    <aside
-      aria-label={preview.name || labels.title}
-      className="fixed inset-0 z-40 flex flex-col bg-surface lg:static lg:inset-auto lg:z-auto lg:w-[46%] lg:max-w-[46rem] lg:min-w-[24rem] lg:border-l lg:border-border"
-    >
-      <ViewerBody key={preview.url} lang={lang} labels={labels} file={preview} onClose={() => setPreview(null)} />
-    </aside>
+    <Sheet open={preview !== null} onClose={() => setPreview(null)} label={preview?.name ?? labels.title}>
+      {preview && <ViewerBody key={preview.url} lang={lang} labels={labels} file={preview} onClose={() => setPreview(null)} />}
+    </Sheet>
   );
 }
 
@@ -124,7 +109,7 @@ function ViewerBody({ lang, labels, file, onClose }: { lang: Locale; labels: Lab
 
   return (
     <>
-      <DialogHeader title={file.name} subtitle={labels.kinds[kind]} closeLabel={labels.close} onClose={onClose}>
+      <SheetHeader title={file.name} subtitle={labels.kinds[kind]} closeLabel={labels.close} onClose={onClose}>
         <a
           href={file.url}
           download={file.name}
@@ -133,7 +118,7 @@ function ViewerBody({ lang, labels, file, onClose }: { lang: Locale; labels: Lab
           <DownloadIcon size={15} />
           {labels.download}
         </a>
-      </DialogHeader>
+      </SheetHeader>
       <div className="min-h-0 flex-1 overflow-auto bg-page">
         {state.status === "loading" && <p className="p-8 text-center text-secondary text-ink-3">{labels.loading}</p>}
         {state.status === "error" && (
@@ -337,20 +322,20 @@ async function unevaluatedFormulas(blob: Blob): Promise<Map<string, [number, num
   return found;
 }
 
-function cellFormatter(lang: Locale) {
+export function cellFormatter(lang: Locale) {
   const number = new Intl.NumberFormat(lang, { maximumFractionDigits: 10 });
   const date = new Intl.DateTimeFormat(lang, { dateStyle: "medium" });
   return (value: unknown): string => {
     if (value === null || value === undefined) return "";
     if (value instanceof Date) return date.format(value);
     if (typeof value === "number") return number.format(value);
-    if (typeof value === "boolean") return value ? "VRAI" : "FAUX";
+    if (typeof value === "boolean") return value ? (lang === "en" ? "TRUE" : "VRAI") : (lang === "en" ? "FALSE" : "FAUX");
     return String(value);
   };
 }
 
 /** CSV/TSV : séparateur deviné sur la première ligne, guillemets doublés gérés. */
-function parseDelimited(text: string): string[][] {
+export function parseDelimited(text: string): string[][] {
   const firstLine = text.slice(0, text.indexOf("\n") >>> 0);
   const counts = [",", ";", "\t"].map((sep) => [sep, firstLine.split(sep).length] as const);
   const separator = counts.sort((a, b) => b[1] - a[1])[0][0];

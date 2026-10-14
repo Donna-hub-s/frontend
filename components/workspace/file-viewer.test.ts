@@ -1,83 +1,94 @@
-// @vitest-environment jsdom
-// FileViewer s'ouvrait avant dans une fenêtre modale (<dialog>) qui recouvrait tout l'écran —
-// désormais un panneau docké (même gabarit que le canvas), jamais un <dialog>.
-import { act, createElement } from "react";
-import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import fr from "@/app/[lang]/dictionaries/fr.json";
-import { FileViewer } from "./file-viewer";
-import { useWorkspace, WorkspaceProvider } from "./workspace-provider";
+import { describe, expect, it } from "vitest";
+import { cellFormatter, parseDelimited, previewKind, sanitizeHtml } from "./file-viewer";
 
-(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
-
-let host: HTMLElement;
-let root: Root;
-
-beforeEach(() => {
-  host = document.createElement("div");
-  document.body.append(host);
-  root = createRoot(host);
-  // ViewerBody charge le fichier au montage (fetch(file.url)) : jamais de vrai réseau en test,
-  // même patron que side-panel.test.ts.
-  vi.stubGlobal("fetch", vi.fn());
+describe("file-viewer previewKind", () => {
+  it("identifies known extensions correctly", () => {
+    expect(previewKind("document.pdf")).toBe("pdf");
+    expect(previewKind("photo.png")).toBe("image");
+    expect(previewKind("photo.JPEG")).toBe("image");
+    expect(previewKind("report.docx")).toBe("docx");
+    expect(previewKind("sheet.xlsx")).toBe("xlsx");
+    expect(previewKind("data.csv")).toBe("csv");
+    expect(previewKind("README.md")).toBe("markdown");
+    expect(previewKind("notes.txt")).toBe("text");
+    expect(previewKind("archive.zip")).toBe("other");
+    expect(previewKind("noextension")).toBe("other");
+  });
 });
 
-afterEach(() => {
-  act(() => root.unmount());
-  host.remove();
-  delete document.body.dataset.filePreviewOpen;
-  vi.unstubAllGlobals();
+describe("file-viewer cellFormatter", () => {
+  it("formats null and undefined as empty string", () => {
+    const fmtFr = cellFormatter("fr");
+    expect(fmtFr(null)).toBe("");
+    expect(fmtFr(undefined)).toBe("");
+  });
+
+  it("formats booleans according to locale", () => {
+    const fmtFr = cellFormatter("fr");
+    const fmtEn = cellFormatter("en");
+
+    expect(fmtFr(true)).toBe("VRAI");
+    expect(fmtFr(false)).toBe("FAUX");
+
+    expect(fmtEn(true)).toBe("TRUE");
+    expect(fmtEn(false)).toBe("FALSE");
+  });
+
+  it("formats numbers and dates", () => {
+    const fmtFr = cellFormatter("fr");
+    const formatted = fmtFr(1234.56);
+    expect(formatted).toMatch(/1[\s\u00a0\u202f]234,56/);
+
+    const date = new Date(2025, 0, 15);
+    expect(fmtFr(date)).toContain("2025");
+  });
 });
 
-/** Ouvre/ferme l'aperçu depuis l'extérieur, comme le ferait un vrai FileLink/search-palette. */
-function Driver() {
-  const { setPreview } = useWorkspace();
-  return createElement(
-    "div",
-    null,
-    createElement("button", { type: "button", "data-testid": "open", onClick: () => setPreview({ url: "/api/donna/files/x", name: "contrat.pdf" }) }),
-    createElement("button", { type: "button", "data-testid": "close", onClick: () => setPreview(null) }),
-  );
-}
-
-const mount = () => {
-  act(() => {
-    root.render(
-      // eslint-disable-next-line react/no-children-prop -- voir workspace-provider.test.ts
-      createElement(WorkspaceProvider, {
-        initialConversations: [],
-        initialPending: [],
-        initialProjects: [],
-        children: [createElement(Driver, { key: "driver" }), createElement(FileViewer, { key: "viewer", lang: "fr", labels: fr.workspace.viewer })],
-      }),
-    );
-  });
-};
-const click = (testId: string) => act(() => (host.querySelector(`[data-testid="${testId}"]`) as HTMLButtonElement).click());
-
-describe("FileViewer — panneau docké (plus une fenêtre modale)", () => {
-  it("n'affiche rien tant qu'aucun fichier n'est en aperçu", () => {
-    mount();
-    expect(host.querySelector("aside")).toBeNull();
-    expect(host.querySelector("dialog")).toBeNull();
+describe("file-viewer parseDelimited", () => {
+  it("parses comma-separated values", () => {
+    const csv = "Name,Age,City\nAlice,30,Paris\nBob,25,Lyon";
+    const rows = parseDelimited(csv);
+    expect(rows).toEqual([
+      ["Name", "Age", "City"],
+      ["Alice", "30", "Paris"],
+      ["Bob", "25", "Lyon"],
+    ]);
   });
 
-  it("affiche un <aside> (jamais un <dialog>) une fois un aperçu ouvert", () => {
-    mount();
-    click("open");
-    const aside = host.querySelector("aside");
-    expect(aside).toBeTruthy();
-    expect(aside?.getAttribute("aria-label")).toBe("contrat.pdf");
-    expect(host.querySelector("dialog")).toBeNull();
+  it("parses semicolon-separated values and escaped quotes", () => {
+    const csv = 'Name;Comment\nAlice;"Hello ""World"""\nBob;Simple';
+    const rows = parseDelimited(csv);
+    expect(rows).toEqual([
+      ["Name", "Comment"],
+      ["Alice", 'Hello "World"'],
+      ["Bob", "Simple"],
+    ]);
+  });
+});
+
+describe("file-viewer sanitizeHtml", () => {
+  it("allows safe tags and attributes", () => {
+    const html = '<p>Hello <strong>World</strong> <a href="https://example.com">Link</a></p>';
+    const sanitized = sanitizeHtml(html);
+    expect(sanitized).toContain("<p>Hello <strong>World</strong>");
+    expect(sanitized).toContain('href="https://example.com"');
+    expect(sanitized).toContain('target="_blank"');
+    expect(sanitized).toContain('rel="noopener noreferrer nofollow"');
   });
 
-  it("pose document.body.dataset.filePreviewOpen pendant l'aperçu, le retire à la fermeture", () => {
-    mount();
-    expect(document.body.dataset.filePreviewOpen).toBeUndefined();
-    click("open");
-    expect(document.body.dataset.filePreviewOpen).toBe("true");
-    click("close");
-    expect(document.body.dataset.filePreviewOpen).toBeUndefined();
-    expect(host.querySelector("aside")).toBeNull();
+  it("strips active content like script and iframe", () => {
+    const html = '<div><script>alert("xss")</script><p>Safe text</p><iframe src="http://evil.com"></iframe></div>';
+    const sanitized = sanitizeHtml(html);
+    expect(sanitized).not.toContain("<script>");
+    expect(sanitized).not.toContain("alert");
+    expect(sanitized).not.toContain("<iframe");
+    expect(sanitized).toContain("<p>Safe text</p>");
+  });
+
+  it("removes unsafe javascript: href links", () => {
+    const html = '<a href="javascript:alert(1)">Click me</a>';
+    const sanitized = sanitizeHtml(html);
+    expect(sanitized).not.toContain("javascript:");
+    expect(sanitized).toContain("Click me");
   });
 });
