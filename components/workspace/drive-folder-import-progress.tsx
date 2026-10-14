@@ -115,7 +115,7 @@ export function DriveFolderImportProgress({
     : labels.failed;
 
   return (
-    <div className="flex flex-col gap-2 rounded-card border border-border bg-surface p-3">
+    <div className="flex flex-col gap-2 rounded-card border border-border bg-surface p-3" role="status" aria-live="polite">
       <p className={`flex items-center gap-1.5 text-label font-medium ${succeeded ? "text-success-ink" : "text-ink-3"}`}>
         {succeeded ? <CheckIcon size={14} /> : <CloseIcon size={14} />}
         {statusLabel}
