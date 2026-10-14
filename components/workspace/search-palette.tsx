@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import { fileHref, type DocumentSearchOut, type SearchHitOut } from "@/lib/workspace-types";
 import { ArrowReturnIcon, ChatIcon, ComposeIcon, FileIcon, SearchIcon } from "./icons";
 import { useWorkspace } from "./workspace-provider";
@@ -91,6 +92,8 @@ export function SearchPalette({ lang, labels }: { lang: Locale; labels: Labels }
   const [remote, setRemote] = useState<{ query: string; hits: SearchHitOut[] } | null>(null);
   const [remoteDocs, setRemoteDocs] = useState<{ query: string; result: DocumentSearchOut | null } | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const paletteRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(paletteRef, true);
   const listId = useId();
 
   // Raccourci global.
@@ -200,6 +203,7 @@ export function SearchPalette({ lang, labels }: { lang: Locale; labels: Labels }
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-ink/25 px-4 pt-[12vh]" onMouseDown={close}>
       <div
+        ref={paletteRef}
         role="dialog"
         aria-modal="true"
         aria-label={labels.searchLabel}

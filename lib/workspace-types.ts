@@ -86,11 +86,14 @@ export type StepData =
   | { kind: "rerank"; count: number | null; failed?: boolean }
   | { kind: "documents"; names: string[] }
   | { kind: "project"; name: string; instructions: boolean; facts: number }
-  | { kind: "memory"; facts: number }
+  | { kind: "memory"; facts: number; scope?: "project"; name?: string; omitted?: number }
   | { kind: "files"; files: AttachedFileOut[] }
   | { kind: "convfiles"; names: string[]; pending: number };
 
 export type ToolCall = { name: string; arguments: Record<string, unknown>; result: string };
+
+/** backend/app/chat/src/schemas.py::QuestionAnswersOut — ce que l'utilisateur a coché sur une carte. */
+export type QuestionAnswersOut = { asked_message_id?: string | null; answers: Record<string, string[]>; free_text?: string | null };
 
 /** Document personnel (hors-projet) — backend/app/rag/src/schemas.py::DocumentOut,
  * GET /app/rag/documents (menu @ du composer, voir conversation.tsx). */
@@ -123,12 +126,17 @@ export type ChatMessage = {
   attachments: AttachmentOut[];
   /** Fichiers joints par l'utilisateur, en cours d'envoi (noms seulement). */
   localFiles?: string[];
+  /** Réponses à la carte de questions de la réponse précédente (messages de l'utilisateur) : ce qui
+   * a été coché, pour redessiner la carte répondue après un rechargement — voir lib/questions.ts. */
+  answers?: QuestionAnswersOut;
   steps?: Step[];
   tools?: ToolCall[];
   sources?: SourceOut[];
   /** Lecture de la base documentaire de ce tour (extraits injectés, aucun résultat, ou panne). */
   rag?: RagInfoOut;
   memory?: string[];
+  /** « project » : les faits retenus l'ont été pour la mémoire PARTAGÉE du projet de la conversation (pas la personnelle). */
+  memoryScope?: "project";
   status?: "streaming" | "done" | "stopped" | "error";
   /** Identifiant du message côté serveur (absent tant qu'il n'est pas enregistré) : nécessaire pour le noter. */
   serverId?: string;
@@ -183,6 +191,8 @@ export const toChatMessages = (messages: MessageOut[]): ChatMessage[] =>
         // Pas d'horodatage individuel conservé : toutes reprennent celui du message.
         steps: tools?.length ? tools.map((tool, i) => ({ id: `h${index}-step-${i}`, key: tool.name, status: "done" as const, at })) : undefined,
         status: "done" as const,
+        // Ce qui avait été coché sur la carte de questions à laquelle ce message répond.
+        answers: m.answers ?? undefined,
         siblingIds: (m.sibling_ids?.length ?? 0) > 1 ? m.sibling_ids : undefined,
         siblingIndex: m.sibling_index,
       };

@@ -8,6 +8,7 @@ import { parseBackendDate, type ProjectOut } from "@/lib/workspace-types";
 import { ChevronIcon, PlusIcon, SearchIcon } from "./icons";
 import { NewProjectDialog } from "./project-list";
 import { ProjectIcon } from "./project-icon";
+import { WorkspaceProjects } from "./workspace-projects";
 import { useWorkspace } from "./workspace-provider";
 
 type Labels = Dictionary["workspace"]["projects"];
@@ -180,6 +181,10 @@ export function ProjectsIndex({ lang, labels }: { lang: Locale; labels: Labels }
             ))}
           </aside>
         </div>
+      </div>
+
+      <div className="mx-auto max-w-[68rem] px-4 pb-8 md:px-8">
+        <WorkspaceProjects lang={lang} labels={labels} />
       </div>
 
       {creating && <NewProjectDialog lang={lang} labels={labels} onClose={() => setCreating(false)} />}

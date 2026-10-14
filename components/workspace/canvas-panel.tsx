@@ -1,13 +1,20 @@
 "use client";
 
 import { Check, Clock, Download, Eye, FileText, PencilLine, Plus, Printer, Trash2, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { canvasActivity, canvasUrls, EXPORT_FORMATS, type CanvasMeta, type CanvasVersionMeta, type CanvasExportFormat, type SaveStatus } from "@/lib/canvas";
+import { hasMermaidBlock, inlineMermaid } from "@/lib/canvas-preview";
+import {
+  PANEL_MIN_WIDTH, panelWideServerSnapshot, panelWideSnapshot, panelWidthServerSnapshot, panelWidthSnapshot,
+  setPanelWidth, subscribePanelWidth,
+} from "@/lib/panel-width";
 import { diffLines, diffStats, foldUnchanged } from "@/lib/diff";
 import { useCanvas, type CanvasController } from "@/lib/use-canvas";
 import type { ChatMessage } from "@/lib/workspace-types";
 import { CanvasEditor } from "./canvas-editor";
+import { renderMermaidSvg } from "./mermaid-diagram";
+import { useWorkspace } from "./workspace-provider";
 import { Sheet, SheetHeader } from "./sheet";
 
 type Labels = Dictionary["workspace"]["canvas"];
@@ -38,11 +45,23 @@ export function CanvasHost({
   const canvas = useCanvas(conversationId, activity.key, activity.canvasId);
   const [open, setOpen] = useState(false);
   const [lastSeen, setLastSeen] = useState(activity.key);
+  const { preview } = useWorkspace();
+  const previewOpen = preview !== null;
+  const [lastPreviewOpen, setLastPreviewOpen] = useState(previewOpen);
 
   // DONNA vient de créer ou modifier le document : on l'ouvre (ajustement d'état pendant le rendu, voir la doc React).
   if (activity.key !== lastSeen) {
     setLastSeen(activity.key);
     if (activity.count > 0) setOpen(true);
+  }
+
+  // Un seul panneau docké à la fois : un aperçu de fichier qui s'ouvre ferme le canvas (jamais
+  // l'inverse — ouvrir le canvas pendant qu'un aperçu est déjà affiché resterait surprenant).
+  // Même patron d'ajustement d'état pendant le rendu que ci-dessus, pas un useEffect (évite les
+  // rendus en cascade).
+  if (previewOpen !== lastPreviewOpen) {
+    setLastPreviewOpen(previewOpen);
+    if (previewOpen) setOpen(false);
   }
 
   const count = canvas.list?.length ?? 0;
@@ -92,8 +111,11 @@ function CanvasPanel({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const active = list?.find((item) => item.id === activeId) ?? null;
 
+  const width = usePanelWidth();
+
   return (
-    <Sheet open onClose={onClose} label={labels.panelLabel}>
+    <Sheet open onClose={onClose} label={labels.panelLabel} style={width.style}>
+      <ResizeHandle width={width} label={labels.resize} />
       <SheetHeader
         leading={
           list && list.length > 1 ? (
@@ -227,6 +249,7 @@ function CanvasPanel({
               <DocumentPreview
                 canvasId={editor.doc.id}
                 version={editor.doc.version}
+                content={editor.content}
                 title={editor.title || labels.panelLabel}
                 printLabel={labels.printPdf}
               />
@@ -248,9 +271,49 @@ function CanvasPanel({
  * cadre autorise `allow-same-origin` SANS `allow-scripts` : c'est ce qui permet à la page de déclencher l'impression
  * (un PDF au rendu exact), sans jamais donner au document le moindre droit dans l'application. Le CSP du document
  * (`default-src 'none'`) refuse de son côté tout script, toute image et toute police distante.
+ *
+ * SEULE exception à « le serveur rend tout » : les diagrammes ```mermaid```, que seul du JavaScript sait dessiner.
+ * Ils sont dessinés dans CETTE page, et seul leur SVG est posé dans le document avant affichage (voir
+ * `lib/canvas-preview.ts`) ; le cadre, lui, ne gagne aucune permission. Un document sans diagramme ne paie rien :
+ * il reste chargé par `src`, exactement comme avant.
  */
-function DocumentPreview({ canvasId, version, title, printLabel }: { canvasId: string; version: number; title: string; printLabel: string }) {
+function DocumentPreview({ canvasId, version, content, title, printLabel }: { canvasId: string; version: number; content: string; title: string; printLabel: string }) {
   const frame = useRef<HTMLIFrameElement | null>(null);
+  const withDiagrams = hasMermaidBlock(content);
+  // `null` = aucun dessin à poser, le cadre charge l'aperçu du serveur (c'est aussi le repli si le rendu échoue).
+  const [inlined, setInlined] = useState<string | null>(null);
+  const [drawing, setDrawing] = useState(withDiagrams);
+
+  // Document ou version changés : on repart du dessin, sans attendre un rendu de plus (ajustement d'état
+  // pendant le rendu, même patron que CanvasHost ci-dessus — pas un useEffect, qui cascaderait).
+  const source = `${canvasId}:${version}:${withDiagrams}`;
+  const [lastSource, setLastSource] = useState(source);
+  if (source !== lastSource) {
+    setLastSource(source);
+    setInlined(null);
+    setDrawing(withDiagrams);
+  }
+
+  useEffect(() => {
+    if (!withDiagrams) return;
+    let cancelled = false;
+    (async () => {
+      let html: string | null = null;
+      try {
+        const response = await fetch(canvasUrls.render(canvasId));
+        if (response.ok) html = await inlineMermaid(await response.text(), (source, index) => renderMermaidSvg(source, `canvas${index}`));
+      } catch {
+        // Document illisible ou moteur indisponible : l'aperçu du serveur reste affiché, diagrammes en blocs de code.
+      }
+      if (cancelled) return;
+      setInlined(html);
+      setDrawing(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [canvasId, version, withDiagrams]);
+
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-center justify-end border-b border-border px-3 py-1">
@@ -263,17 +326,94 @@ function DocumentPreview({ canvasId, version, title, printLabel }: { canvasId: s
           {printLabel}
         </button>
       </div>
-      {/* La version est la clé : le cadre se recharge quand le document est enregistré (DONNA peut l'écrire aussi). */}
-      <iframe
-        key={`${canvasId}:${version}`}
-        ref={frame}
-        title={title}
-        sandbox="allow-same-origin allow-popups-to-escape-sandbox"
-        src={canvasUrls.render(canvasId)}
-        data-testid="canvas-preview-frame"
-        className="min-h-0 flex-1 border-0"
-      />
+      {drawing ? (
+        <div className="m-4 min-h-0 flex-1 animate-pulse rounded-card bg-active" aria-hidden />
+      ) : (
+        /* La version est la clé : le cadre se recharge quand le document est enregistré (DONNA peut l'écrire aussi).
+           La source l'est aussi — passer de `src` à `srcDoc` sur un même cadre laisserait l'ancienne page. */
+        <iframe
+          key={`${canvasId}:${version}:${inlined === null ? "server" : "inline"}`}
+          ref={frame}
+          title={title}
+          sandbox="allow-same-origin allow-popups-to-escape-sandbox"
+          {...(inlined === null ? { src: canvasUrls.render(canvasId) } : { srcDoc: inlined })}
+          data-testid="canvas-preview-frame"
+          className="min-h-0 flex-1 border-0"
+        />
+      )}
     </div>
+  );
+}
+
+/* ── Largeur réglable ───────────────────────────────────────────────────────── */
+
+/** Pas du clavier : une poignée doit pouvoir se régler sans souris. */
+const WIDTH_STEP = 32;
+
+type PanelWidth = ReturnType<typeof usePanelWidth>;
+
+/**
+ * La largeur du panneau, tirée à la souris ou au clavier et retenue par le navigateur.
+ *
+ * Appliquée en style en ligne pour laisser le `lg:w-[46%]` par défaut tant que rien n'a été réglé —
+ * et seulement au-dessus de `lg` : sous ce seuil le panneau est en plein écran, une largeur n'y veut
+ * rien dire (et la garder y rendrait la conversation inatteignable).
+ */
+function usePanelWidth() {
+  const width = useSyncExternalStore(subscribePanelWidth, panelWidthSnapshot, panelWidthServerSnapshot);
+  const wide = useSyncExternalStore(subscribePanelWidth, panelWideSnapshot, panelWideServerSnapshot);
+
+  return {
+    // `maxWidth`/`minWidth` : la largeur choisie l'emporte sur les bornes de la classe par défaut.
+    style: wide && width !== null ? { width: `${width}px`, maxWidth: `${width}px`, minWidth: `${width}px` } : undefined,
+    /** Pendant un glissement : la largeur voulue, mesurée depuis le bord droit de la fenêtre. */
+    dragTo: (fromRight: number) => setPanelWidth(fromRight),
+    /** Jamais réglée encore : on part de la largeur que le panneau occupe réellement à l'écran.
+     * La largeur de départ est relue du store, PAS de `width` : deux touches dans la même tâche
+     * liraient sinon la même valeur de fermeture et le second appui ne ferait rien. */
+    step: (direction: 1 | -1, element: HTMLElement | null) =>
+      setPanelWidth((panelWidthSnapshot() ?? element?.getBoundingClientRect().width ?? PANEL_MIN_WIDTH) + direction * WIDTH_STEP),
+  };
+}
+
+/** Poignée de redimensionnement sur le bord gauche du panneau (au-dessus de `lg` seulement). */
+function ResizeHandle({ width, label }: { width: PanelWidth; label: string }) {
+  const [dragging, setDragging] = useState(false);
+
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label={label}
+      tabIndex={0}
+      onKeyDown={(event) => {
+        // Le panneau est à droite : « gauche » l'élargit, « droite » le rétrécit.
+        const direction = event.key === "ArrowLeft" ? 1 : event.key === "ArrowRight" ? -1 : 0;
+        if (!direction) return;
+        event.preventDefault();
+        width.step(direction, event.currentTarget.parentElement);
+      }}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        setDragging(true);
+      }}
+      onPointerMove={(event) => {
+        if (!dragging) return;
+        // Mesuré depuis le bord DROIT de la fenêtre : indépendant de la largeur de la barre latérale,
+        // qui peut se rétracter pendant qu'on tire.
+        width.dragTo(window.innerWidth - event.clientX);
+      }}
+      onPointerUp={(event) => {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+        setDragging(false);
+      }}
+      onPointerCancel={() => setDragging(false)}
+      className={`absolute inset-y-0 left-0 z-10 hidden w-1.5 cursor-col-resize touch-none lg:block ${
+        dragging ? "bg-brand/40" : "hover:bg-brand/25"
+      } focus-visible:bg-brand/40 focus-visible:outline-none`}
+    />
   );
 }
 

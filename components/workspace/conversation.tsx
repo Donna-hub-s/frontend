@@ -8,26 +8,17 @@ import { DonnaMark } from "@/components/brand/donna-mark";
 import { DonnaOrb, type OrbState } from "@/components/brand/donna-orb";
 import { FileLink } from "./file-viewer";
 import { actionIdFrom } from "@/lib/chat-stream";
-import { EMPTY_MENTIONS, PROPOSALS, uid, visibleSteps } from "@/lib/chat-run";
+import { EMPTY_MENTIONS, MEMORY_WRITES, PROPOSALS, isProposalCall, uid, visibleSteps } from "@/lib/chat-run";
 import { inlineImageNames, isImageName } from "@/lib/file-links";
 import { readableExcerpt } from "@/lib/source-excerpt";
 import { visibleSources } from "@/lib/sources";
 import { useStickToBottom } from "@/lib/use-stick-to-bottom";
-import {
-  fileHref,
-  type ChatMessage,
-  type Mention,
-  type MentionKind,
-  type MentionSelection,
-  type AccessibleDocumentOut,
-  type PendingActionOut,
-  type SourceOut,
-  type ToolCall,
-} from "@/lib/workspace-types";
+import { type AccessibleDocumentOut, type ChatMessage, fileHref, type Mention, type MentionKind, type MentionSelection, type PendingActionOut, type QuestionAnswersOut, type SourceOut, type Step, type ToolCall } from "@/lib/workspace-types";
 import { CheckIcon, ChevronIcon, CloseIcon, FileIcon, FolderIcon, GlobeIcon, MicIcon, PaperclipIcon, PencilIcon, SendIcon, SpeakerIcon, StopIcon } from "./icons";
 import { Markdown, type MarkdownFile } from "./markdown";
 import { FeedbackBar } from "./feedback-bar";
 import { RegenerateButton, VersionNav } from "./version-nav";
+import { answerPreview, cardOf, hasAnything, NO, YES, type Answers, type Question, type QuestionCard } from "@/lib/questions";
 import { LinkCard, linkCardData } from "./link-card";
 import { CanvasHost } from "./canvas-panel";
 import { HomeScreen, HomeShortcuts } from "./home-screen";
@@ -43,6 +34,8 @@ import { useProjectAgents } from "@/lib/use-project-agents";
 import { useNow } from "@/lib/use-now";
 import { Bot } from "lucide-react";
 import { WorkflowDraft } from "./workflow-draft";
+import { NasLinkDraft } from "./nas-link-draft";
+import { FactProposalDraft } from "./fact-proposal-draft";
 import { useConversationContext } from "@/lib/use-conversation-context";
 import { GoogleDriveIcon } from "./brand-icons";
 import { ContextMenu } from "./context-menu";
@@ -51,7 +44,7 @@ import { SkillsMenu } from "./skills-menu";
 import { DrivePicker } from "./drive-picker";
 import { ElapsedBadge } from "./elapsed-badge";
 import { StepDot, stepDetail, stepLabel } from "./side-panel";
-import { useWorkspace } from "./workspace-provider";
+import { useThreadsState, useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
 
@@ -101,8 +94,8 @@ export function Conversation({
     dropMessages,
     patchMessage,
     regenerate,
+    answerQuestion,
     selectBranch,
-    threads,
     registerThread,
     releaseThread,
     resolveThreadKey,
@@ -112,6 +105,7 @@ export function Conversation({
     setProjectDraft,
     conversations,
   } = useWorkspace();
+  const { threads } = useThreadsState();
   // Fil du provider : l'identifiant de conversation, ou un identifiant local
   // stable tant que le backend ne l'a pas créée. Le fil survit au démontage,
   // donc un flux continue quand l'utilisateur ouvre une autre conversation.
@@ -200,6 +194,16 @@ export function Conversation({
   const retry = (index: number) => {
     const question = messages[index - 1];
     if (!question || question.role !== "user") return;
+    const convId = thread?.conversationId ?? conversationId;
+    // La question est DÉJÀ enregistrée : le serveur la commite avant d'appeler le modèle, exprès, pour que
+    // son texte ne soit pas perdu quand le modèle échoue (chat_routes.py). On lui accroche donc une
+    // réponse. La renvoyer en créait une deuxième — trois « Réessayer » laissaient trois fois la même
+    // question dans la conversation, visibles au rechargement de la page.
+    if (question.serverId && convId && messages[index]) {
+      void regenerate(threadKey, convId, messages[index], question.serverId);
+      return;
+    }
+    // Question jamais parvenue au serveur (coupure avant l'enregistrement) : il n'y a rien à régénérer.
     dropMessages(threadKey, [index, index - 1]);
     void send(question.content, []);
   };
@@ -210,8 +214,15 @@ export function Conversation({
   const editAndResend = (index: number, text: string) => {
     const target = messages[index];
     const trimmed = text.trim();
-    if (!target?.serverId || !trimmed || trimmed === target.content) {
+    if (!target?.serverId || !trimmed) {
       setEditingId(null);
+      return;
+    }
+    if (trimmed === target.content) {
+      setEditingId(null);
+      // Texte inchangé : rien à réécrire. Mais sur une question qui attend encore sa réponse,
+      // « Enregistrer » veut dire « renvoie-la » — le bouton ne faisait sinon rien du tout.
+      if (index === messages.length - 1) void askForAnswer(target);
       return;
     }
     // Tout ce qui suit (y compris l'ancienne réponse) disparaît de l'AFFICHAGE : la branche
@@ -231,6 +242,41 @@ export function Conversation({
       lang,
       fallbackTitle: trimmed || dict.meta.newTitle,
     });
+  };
+
+  /** Réponses à une carte de questions : un seul message pour toute la carte. Le TEXTE visible est
+   * une prévisualisation — le serveur valide les choix et compose le texte qu'il enregistre, qui
+   * remplace celui-ci dès qu'il arrive (voir lib/questions.ts). */
+  const answerCard = async (askedMessageId: string, card: QuestionCard, answers: Answers, freeText: string): Promise<boolean> => {
+    const convId = thread?.conversationId ?? conversationId;
+    if (!convId || busy) return false;
+    const preview = answerPreview(card, answers, freeText, {
+      yes: dict.chat.questionYes, no: dict.chat.questionNo, note: dict.chat.questionNote,
+    });
+    if (!preview) return false;
+    await sendRun({
+      key: threadKey,
+      message: preview,
+      files: [],
+      webSearch: false,
+      mentions: EMPTY_MENTIONS,
+      conversationId: convId,
+      projectId,
+      agentId: agentProjectId ? (selectedAgentId ?? "") : undefined,
+      questionAnswers: { asked_message_id: askedMessageId, answers, free_text: freeText || undefined, lang },
+      lang,
+      fallbackTitle: preview.slice(0, 60),
+    });
+    return true;
+  };
+
+  /** Question restée sans réponse (le modèle avait échoué) : on en demande une, sans la renvoyer.
+   * Après un rechargement, c'est le seul geste disponible — la bulle de réponse ratée n'a jamais
+   * existé côté serveur, donc ni « Réessayer » ni « Régénérer » ne s'affichent plus. */
+  const askForAnswer = (message: ChatMessage): Promise<boolean> => {
+    const convId = thread?.conversationId ?? conversationId;
+    if (!message.serverId || !convId) return Promise.resolve(false);
+    return answerQuestion(threadKey, convId, message);
   };
 
   const regenerateAnswer = (index: number): Promise<boolean> => {
@@ -353,6 +399,8 @@ export function Conversation({
                   onCancelEdit={() => setEditingId(null)}
                   onSaveEdit={(text) => editAndResend(index, text)}
                   onSelectVersion={selectVersion}
+                  // Dernier message du fil ET de rôle « user » : sa réponse n'est jamais venue.
+                  onAskForAnswer={index === messages.length - 1 && !busy && m.serverId ? () => askForAnswer(m) : undefined}
                 />
               ) : (
                 <AssistantMessage
@@ -363,8 +411,14 @@ export function Conversation({
                   last={index === messages.length - 1}
                   busy={busy}
                   conversationId={liveConversationId}
-                  onAnswer={(text) => void send(text, [])}
                   onRetry={() => retry(index)}
+                  // Les réponses vivent sur le message SUIVANT : c'est lui qui porte ce qui a été
+                  // coché. Sans ce rapprochement, la carte réapparaît vierge au-dessus de sa
+                  // propre réponse après un rechargement.
+                  answered={messages[index + 1]?.answers}
+                  onAnswerCard={(card, answers, freeText) =>
+                    m.serverId ? answerCard(m.serverId, card, answers, freeText) : Promise.resolve(false)
+                  }
                   onFeedback={(feedback) => patchMessage(threadKey, m.id, { feedback })}
                   onRegenerate={() => regenerateAnswer(index)}
                   onSelectVersion={selectVersion}
@@ -478,6 +532,7 @@ function UserMessage({
   onCancelEdit,
   onSaveEdit,
   onSelectVersion,
+  onAskForAnswer,
 }: {
   lang: Locale;
   message: ChatMessage;
@@ -495,6 +550,8 @@ function UserMessage({
   onCancelEdit: () => void;
   onSaveEdit: (text: string) => void;
   onSelectVersion: (messageId: string) => Promise<boolean>;
+  /** Fourni seulement si ce message est le dernier du fil : sa réponse n'est jamais arrivée. */
+  onAskForAnswer?: () => Promise<boolean>;
 }) {
   const chip = "inline-flex items-center gap-1.5 rounded-badge bg-surface px-2 py-1 text-meta text-ink-2";
   const hasFiles = Boolean(message.localFiles?.length || message.attachments.length);
@@ -600,6 +657,9 @@ function UserMessage({
               <PencilIcon size={13} />
             </button>
           )}
+          {!editing && onAskForAnswer && (
+            <RegenerateButton onRegenerate={onAskForAnswer} label={chat.answerQuestion} errorLabel={chat.answerQuestionError} />
+          )}
           {!editing && (message.siblingIds?.length ?? 0) > 1 && (
             <VersionNav siblingIds={message.siblingIds!} siblingIndex={message.siblingIndex ?? 0} onSelect={onSelectVersion} labels={chat} />
           )}
@@ -620,15 +680,16 @@ const renderFile = (file: MarkdownFile, label: ReactNode, variant: "link" | "ima
   </FileLink>
 );
 
-function AssistantMessage({
+export function AssistantMessage({
   lang,
   dict,
   message,
   last,
   busy,
   conversationId,
-  onAnswer,
   onRetry,
+  answered,
+  onAnswerCard,
   onFeedback,
   onRegenerate,
   onSelectVersion,
@@ -640,8 +701,10 @@ function AssistantMessage({
   busy: boolean;
   /** Pour l'aperçu d'un lien cité par DONNA (voir Markdown/LinkCard). */
   conversationId: string | null;
-  onAnswer: (text: string) => void;
   onRetry: () => void;
+  /** Réponses déjà données à la carte de questions de ce message (portées par le message suivant). */
+  answered?: QuestionAnswersOut;
+  onAnswerCard: (card: QuestionCard, answers: Answers, freeText: string) => Promise<boolean>;
   onFeedback: (feedback: "up" | "down" | null) => void;
   onRegenerate: () => Promise<boolean>;
   onSelectVersion: (messageId: string) => Promise<boolean>;
@@ -649,8 +712,9 @@ function AssistantMessage({
   const { chat } = dict;
   const streaming = message.status === "streaming";
   const tools = message.tools ?? [];
-  const question = tools.findLast((t) => t.name === "ask_user");
-  const proposals = tools.filter((t) => PROPOSALS.has(t.name));
+  // `findLast` : si le modèle a posé plusieurs cartes dans le même tour, la dernière fait foi.
+  const card = cardOf(tools.findLast((t) => t.name === "ask_user"));
+  const proposals = tools.filter((t) => isProposalCall(t.name, t.result));
   const files = useMemo(() => message.attachments.map((file) => ({ name: file.original_name, url: fileHref(file.file_url) })), [message.attachments]);
   // Images produites (graphique, schéma…) : montrées en ligne (sauf si le texte les affiche déjà), en plus de leur carte
   // « Fichiers ». SVG exclu (scripts possibles).
@@ -674,8 +738,16 @@ function AssistantMessage({
       <div className="flex min-w-0 flex-1 flex-col gap-3">
         {visibleSteps(message.steps ?? []).length > 0 && <StepsCard lang={lang} dict={dict} message={message} />}
 
+        {/* Annonce de PHASE pour les lecteurs d'écran, pas du contenu qui mute à chaque jeton : le texte de ce
+            span reste constant pendant tout le flux (aucune nouvelle annonce tant que rien ne change réellement),
+            il ne passe à "Terminé" qu'une fois — contrairement à aria-live posé sur message.content, qui ferait
+            annoncer la réponse en boucle à chaque delta (voir frontendAnalyse.md §6). */}
+        <span className="sr-only" aria-live="polite">
+          {streaming ? chat.working : message.status === "done" ? chat.done : ""}
+        </span>
+
         {message.content ? (
-          <div aria-live={streaming ? "polite" : undefined}>
+          <div>
             <Markdown files={files} renderFile={renderFile} streaming={streaming} conversationId={conversationId} reading>
               {message.content}
             </Markdown>
@@ -687,8 +759,16 @@ function AssistantMessage({
           <ActionCard key={call.result} lang={lang} dict={dict} call={call} />
         ))}
 
-        {question && (
-          <QuestionCard dict={dict} call={question} disabled={busy || !last} onAnswer={onAnswer} />
+        {card && (
+          <QuestionCard
+            dict={dict}
+            card={card}
+            answered={answered}
+            // Une carte plus ancienne reste LISIBLE mais n'est plus répondable : un « Oui » envoyé
+            // à une question de l'avant-veille partirait sans son contexte.
+            disabled={busy || !last}
+            onSubmit={(answers, freeText) => onAnswerCard(card, answers, freeText)}
+          />
         )}
 
         {images.length > 0 && (
@@ -730,7 +810,7 @@ function AssistantMessage({
           <p className="inline-flex items-start gap-1.5 text-secondary text-ink-2">
             <CheckIcon size={15} className="mt-px shrink-0 text-success" />
             <span>
-              {chat.memory} : {message.memory.length} faits enregistrés · {message.memory.join(" · ")}
+              {message.memoryScope === "project" ? chat.memoryProject : chat.memory} : {message.memory.length} faits enregistrés · {message.memory.join(" · ")}
             </span>
           </p>
         )}
@@ -877,7 +957,24 @@ function liveOrbState(message: ChatMessage): OrbState {
 }
 
 /** Étapes réelles du traitement (événements du flux), repliables une fois terminé. */
-function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict; message: ChatMessage }) {
+// Étapes de préparation déjà couvertes par stepDetail (clé ≠ nom d'outil) — voir side-panel.tsx::stepDetail.
+const PREP_STEP_KEYS = new Set(["rag", "rerank", "documents", "project", "memory", "conversation_files", "read", "answer", "files"]);
+// Outils déjà présentés en détail ailleurs (ActionCard pour les propositions, QuestionCard pour ask_user) :
+// pas besoin d'un second aperçu sous l'étape, ce serait redondant.
+const DETAILED_ELSEWHERE = new Set([...PROPOSALS, "ask_user"]);
+
+/** Aperçu tronqué du résultat d'un appel d'outil SANS présentation dédiée (ni étape de préparation, ni
+ * ActionCard/QuestionCard) — sinon une étape comme `search_documents` finie n'affichait qu'une coche, sans
+ * dire ce qu'elle a trouvé. Les appels sont consommés dans l'ordre (même nom d'outil → appels successifs). */
+function toolStepPreview(step: Step, tools: ToolCall[], consumed: Map<string, number>): string | null {
+  if (PREP_STEP_KEYS.has(step.key) || DETAILED_ELSEWHERE.has(step.key)) return null;
+  const index = consumed.get(step.key) ?? 0;
+  consumed.set(step.key, index + 1);
+  const call = tools.filter((t) => t.name === step.key)[index];
+  return call?.result ? readableExcerpt(call.result, 160) : null;
+}
+
+export function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict; message: ChatMessage }) {
   const streaming = message.status === "streaming";
   const [open, setOpen] = useState(true);
   const steps = visibleSteps(message.steps ?? []);
@@ -885,6 +982,7 @@ function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict;
   // Durée de l'étape en cours (muette sous quelques secondes, voir lib/elapsed.ts) : une étape de deux secondes
   // et une de deux minutes n'avaient jusqu'ici que leur heure de début pour les distinguer.
   const now = useNow(steps.some((step) => step.status === "running"));
+  const consumed = new Map<string, number>();
 
   return (
     <div className="rounded-panel bg-surface shadow-card">
@@ -906,6 +1004,7 @@ function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict;
         <ol className="flex flex-col gap-2 border-t border-border px-4 py-3">
           {steps.map((step) => {
             const detail = stepDetail(dict, step);
+            const preview = !detail && step.status === "done" ? toolStepPreview(step, message.tools ?? [], consumed) : null;
             return (
               <li key={step.id} className="flex items-start gap-2.5 text-secondary">
                 <span className="mt-0.5 flex">
@@ -914,6 +1013,7 @@ function StepsCard({ lang, dict, message }: { lang: Locale; dict: WorkspaceDict;
                 <span className={`flex-1 ${step.status === "done" ? "text-ink-2" : "text-ink"}`}>
                   {stepLabel(dict, step.key)}
                   {detail && <span className={`block text-meta text-pretty ${detail.warn ? "text-danger" : "text-ink-3"}`}>{detail.text}</span>}
+                  {preview && <span className="block text-meta text-pretty text-ink-3">{preview}</span>}
                 </span>
                 {step.status === "running" && <ElapsedBadge startedAt={step.at} now={now} units={dict.chat.elapsed} />}
                 <Time lang={lang} at={step.at} />
@@ -930,7 +1030,8 @@ const text = (value: unknown) => (typeof value === "string" ? value : "");
 
 /** Brouillon proposé par DONNA (email ou agenda) : rien ne part sans validation. */
 function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; call: ToolCall }) {
-  const { pending, decisions, decideAction, selectBranch, activeKey, threads } = useWorkspace();
+  const { pending, decisions, decideAction, selectBranch, activeKey } = useWorkspace();
+  const { threads } = useThreadsState();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const [fetched, setFetched] = useState<PendingActionOut | null>(null);
@@ -969,7 +1070,12 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
   const isDriveUpload = call.name === "propose_drive_upload";
   const isWorkflow = call.name === "propose_workflow";
   const isResearch = call.name === "propose_research";
+  const isNasLink = call.name === "propose_nas_link";
+  const isFactProposal = MEMORY_WRITES.has(call.name);
+  const factProposal = listed?.fact_proposal ?? fetched?.fact_proposal ?? null;
   const research = listed?.research ?? fetched?.research ?? null;
+  const nas = listed?.nas ?? fetched?.nas ?? null;
+  const nasLinked = isNasLink && (decision === "confirm" || fetched?.status === "executed");
   // Une recherche approuvée (à l'instant, ou avant un rechargement) se suit ; le rapport rejoint la conversation tout seul.
   const researchStarted = isResearch && (decision === "confirm" || fetched?.status === "executed");
 
@@ -1008,7 +1114,7 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
     <div className={`rounded-panel border p-4 ${awaiting ? "border-attention/40 bg-attention-soft" : "border-border bg-ivoire-50"}`}>
       <div className="flex items-center justify-between gap-3 text-meta">
         <span className="font-medium text-ink">
-          {isEmail ? dict.chat.draftEmail : isDriveUpload ? dict.chat.draftDriveUpload : isWorkflow ? dict.chat.draftWorkflow : isResearch ? dict.chat.draftResearch : dict.chat.draftEvent}
+          {isEmail ? dict.chat.draftEmail : isDriveUpload ? dict.chat.draftDriveUpload : isWorkflow ? dict.chat.draftWorkflow : isResearch ? dict.chat.draftResearch : isNasLink ? dict.chat.draftNasLink : isFactProposal ? dict.chat.draftFactProposal : dict.chat.draftEvent}
         </span>
         {decision ? (
           <span className={`inline-flex items-center gap-1 ${decision === "confirm" ? "text-success-ink" : "text-ink-3"}`}>
@@ -1067,6 +1173,17 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
             />
           )}
         </>
+      ) : isFactProposal ? (
+        factProposal ? <FactProposalDraft draft={factProposal} labels={dict.chat} /> : <p className="mt-3 text-label font-medium text-ink">{text(args.fact)}</p>
+      ) : isNasLink ? (
+        <>
+          {nas ? <NasLinkDraft draft={nas} labels={dict.chat} /> : <p className="mt-3 text-label font-medium text-ink">{text(args.path)}</p>}
+          {nasLinked && nas && (
+            <Link href={`/${lang}/app/projects/${encodeURIComponent(nas.project_id)}`} className="mt-3 inline-block text-label font-medium text-brand no-underline hover:underline">
+              {dict.chat.nasLinkOpenProject}
+            </Link>
+          )}
+        </>
       ) : isDriveUpload ? (
         <>
           <p className="mt-3 text-label font-medium text-ink">{text(args.filename)}</p>
@@ -1092,7 +1209,7 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
             onClick={() => void decide("confirm")}
             className="rounded-button bg-brand-fill px-3.5 py-2 text-label font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60"
           >
-            {isResearch ? dict.chat.researchStart : dict.panel.approve}
+            {isResearch ? dict.chat.researchStart : isNasLink ? dict.chat.nasLinkStart : dict.panel.approve}
           </button>
           <button
             type="button"
@@ -1108,37 +1225,138 @@ function ActionCard({ lang, dict, call }: { lang: Locale; dict: WorkspaceDict; c
   );
 }
 
+/**
+ * La carte de questions d'une réponse (`ask_user`). Une ou plusieurs questions typées — oui/non,
+ * choix unique, choix multiple — plus un champ de précision libre, répondues ENSEMBLE : un seul
+ * message part, donc un seul tour de modèle.
+ *
+ * Deux états. **Répondue** (`answered` fourni) : plus aucun contrôle, on relit ce qui a été coché —
+ * c'est ce qui rend le fil cohérent après un rechargement, où la carte réapparaissait vierge
+ * au-dessus de sa propre réponse. **À répondre** : les contrôles, et un envoi qui n'est possible
+ * que si quelque chose a été choisi ou écrit (une carte n'oblige à rien, mais un message vide n'a
+ * aucun sens).
+ *
+ * Le serveur reste l'autorité : il valide chaque choix contre la carte qu'il a réellement posée et
+ * compose lui-même le texte du message (questions.py). Ici, rien d'autre que de la saisie.
+ */
 function QuestionCard({
   dict,
-  call,
+  card,
+  answered,
   disabled,
-  onAnswer,
+  onSubmit,
 }: {
   dict: WorkspaceDict;
-  call: ToolCall;
+  card: QuestionCard;
+  /** Réponses déjà données (message suivant) : la carte devient une relecture. */
+  answered?: QuestionAnswersOut;
   disabled: boolean;
-  onAnswer: (text: string) => void;
+  onSubmit: (answers: Answers, freeText: string) => Promise<boolean>;
 }) {
-  const options = Array.isArray(call.arguments.options) ? (call.arguments.options as unknown[]).map(String) : [];
+  const { chat } = dict;
+  const [answers, setAnswers] = useState<Answers>({});
+  const [freeText, setFreeText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const labelOf = (question: Question, value: string) =>
+    question.type === "yes_no" ? (value === YES ? chat.questionYes : chat.questionNo) : value;
+  const choicesOf = (question: Question) => (question.type === "yes_no" ? [YES, NO] : question.options);
+
+  const toggle = (question: Question, value: string) =>
+    setAnswers((current) => {
+      const picked = current[question.id] ?? [];
+      if (question.type === "multi") {
+        return { ...current, [question.id]: picked.includes(value) ? picked.filter((v) => v !== value) : [...picked, value] };
+      }
+      // Choix unique : recliquer le même le retire (sinon on ne peut plus « dé-répondre »).
+      return { ...current, [question.id]: picked[0] === value ? [] : [value] };
+    });
+
+  const send = async () => {
+    if (busy || !hasAnything(answers, freeText)) return;
+    setBusy(true);
+    setFailed(false);
+    const ok = await onSubmit(answers, freeText.trim());
+    setBusy(false);
+    if (!ok) setFailed(true);
+  };
+
+  const readOnly = Boolean(answered) || disabled;
+  const shown: Answers = answered?.answers ?? answers;
+
   return (
     <div className="rounded-panel border border-rose-300/60 bg-surface p-4">
-      <p className="text-meta text-brand">{dict.chat.questionLabel}</p>
-      <p className="mt-1 text-message text-ink">{text(call.arguments.question)}</p>
-      {options.length > 0 && (
-        <div role="group" aria-label={dict.chat.optionsLabel} className="mt-3 flex flex-wrap gap-2">
-          {options.map((option) => (
+      <p className="text-meta text-brand">{answered ? chat.questionAnswered : chat.questionLabel}</p>
+      <div className="mt-2 flex flex-col gap-3">
+        {card.questions.map((question) => {
+          const picked = shown[question.id] ?? [];
+          return (
+            <fieldset key={question.id} className="border-0 p-0">
+              <legend className="text-message text-ink">{question.question}</legend>
+              <div role="group" aria-label={chat.optionsLabel} className="mt-2 flex flex-wrap gap-2">
+                {choicesOf(question).map((value) => {
+                  const on = picked.includes(value);
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      // `aria-pressed` plutôt que des vraies cases : le contrôle est un bouton, et
+                      // son état coché/décoché doit être annoncé comme tel.
+                      aria-pressed={on}
+                      disabled={readOnly}
+                      onClick={() => toggle(question, value)}
+                      className={`rounded-full border px-3 py-1.5 text-label transition-colors ${
+                        on ? "border-brand bg-brand/10 font-medium text-brand-strong" : "border-border bg-surface text-ink"
+                      } ${readOnly ? "disabled:opacity-100" : "hover:border-brand/40"} ${readOnly && !on ? "opacity-45" : ""}`}
+                    >
+                      {labelOf(question, value)}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+          );
+        })}
+
+        {answered ? (
+          answered.free_text && (
+            <p className="text-secondary text-ink-2">
+              <span className="text-meta text-ink-3">{chat.questionNote} : </span>
+              {answered.free_text}
+            </p>
+          )
+        ) : (
+          card.allowFreeText && (
+            <label className="flex flex-col gap-1">
+              <span className="text-meta text-ink-3">{chat.questionFreeText}</span>
+              <textarea
+                value={freeText}
+                rows={2}
+                disabled={disabled}
+                maxLength={2000}
+                placeholder={chat.questionFreeTextPlaceholder}
+                onChange={(event) => setFreeText(event.target.value)}
+                className="w-full resize-none rounded-button border border-border bg-surface px-3 py-2 text-label text-ink outline-none focus:border-brand disabled:opacity-50"
+              />
+            </label>
+          )
+        )}
+
+        {!answered && (
+          <div className="flex items-center gap-3">
             <button
-              key={option}
               type="button"
-              disabled={disabled}
-              onClick={() => onAnswer(option)}
-              className="rounded-full border border-border bg-surface px-3 py-1.5 text-label text-ink hover:border-brand/40 hover:bg-surface disabled:opacity-50"
+              disabled={disabled || busy || !hasAnything(answers, freeText)}
+              onClick={() => void send()}
+              className="w-fit rounded-button bg-brand-fill px-3 py-1.5 text-label font-medium text-white hover:bg-brand-fill-strong disabled:opacity-40"
             >
-              {option}
+              {chat.questionSend}
             </button>
-          ))}
-        </div>
-      )}
+            {failed && <span role="status" className="text-meta text-danger">{chat.questionSendError}</span>}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -55,7 +55,7 @@ export async function postJson<T>(url: string, body: unknown, ip?: string | null
 }
 
 /** Aperçu public d'une invitation projet (pas d'auth requise, comme oauth/providers). */
-export type ProjectInvitePreview = { project_name: string; email: string; role: string; status: string };
+export type ProjectInvitePreview = { project_name: string; email: string; role: string; status: string; space_invite_token?: string | null };
 
 export async function getInvitePreview(token: string): Promise<ProjectInvitePreview | null> {
   try {

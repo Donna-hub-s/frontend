@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { DonnaLockup } from "@/components/brand/donna-mark";
@@ -13,7 +13,7 @@ import { groupByDate, groupByProject } from "@/lib/sidebar-grouping";
 import type { ConversationOut } from "@/lib/workspace-types";
 import { ChatIcon, CheckIcon, ChevronIcon, CloseIcon, ComposeIcon, FolderIcon, LogoutIcon, MoreIcon, SearchIcon, SettingsIcon } from "./icons";
 import { ConversationHoverPreview, type PreviewAnchor, useHoverPreview } from "./conversation-hover-preview";
-import { BarChart3, FolderOpen, Workflow as WorkflowGlyph } from "lucide-react";
+import { BarChart3, FolderOpen, PanelLeftClose, PanelLeftOpen, Workflow as WorkflowGlyph } from "lucide-react";
 import { ProjectSidebarSection } from "./project-list";
 import { useWorkspace } from "./workspace-provider";
 
@@ -31,6 +31,42 @@ const useShortcutLabel = () =>
 /** Vrai après hydratation : le regroupement par date dépend du fuseau du navigateur. */
 const useMounted = () => useSyncExternalStore(noopSubscribe, () => true, () => false);
 
+/** Un lien de la navigation principale. Rétractée, la barre n'en garde que l'icône — le libellé part en
+ * infobulle ET reste lisible par un lecteur d'écran (`sr-only`), jamais simplement supprimé. */
+function NavLink({
+  href,
+  icon,
+  label,
+  active,
+  collapsed,
+  badge,
+  onNavigate,
+}: {
+  href: string;
+  icon: ReactNode;
+  label: string;
+  active: boolean;
+  collapsed: boolean;
+  badge?: ReactNode;
+  onNavigate: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      title={collapsed ? label : undefined}
+      className={`flex h-9 items-center gap-2.5 rounded-nav text-label no-underline transition-colors duration-(--duration-fast) ${
+        collapsed ? "lg:justify-center lg:px-0" : ""
+      } px-2.5 ${active ? "bg-active font-medium text-ink" : "text-ink-2 hover:bg-active/70 hover:text-ink"}`}
+    >
+      {icon}
+      <span className={collapsed ? "lg:sr-only" : undefined}>{label}</span>
+      {badge}
+    </Link>
+  );
+}
+
 export function Sidebar({
   lang,
   labels,
@@ -38,6 +74,8 @@ export function Sidebar({
   languageLabel,
   account,
   open,
+  collapsed,
+  onToggleCollapsed,
   onClose,
 }: {
   lang: Locale;
@@ -46,6 +84,10 @@ export function Sidebar({
   languageLabel: string;
   account: Account;
   open: boolean;
+  /** Rétractée en rail d'icônes — au-dessus de `lg` seulement : sous `lg`, la barre est un tiroir
+   * qu'on ouvre et ferme, un rail n'y aurait aucun sens. */
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
   onClose: () => void;
 }) {
   const { conversations, projects, pending } = useWorkspace();
@@ -85,16 +127,29 @@ export function Sidebar({
       />
       <aside
         aria-label={labels.label}
-        className={`fixed inset-y-0 left-0 z-40 flex w-[17.5rem] flex-col border-r border-border bg-sidebar transition-transform duration-(--duration-enter) ease-(--ease-enter) lg:static lg:translate-x-0 ${
-          open ? "translate-x-0 shadow-float" : "-translate-x-full"
-        }`}
+        data-collapsed={collapsed ? "true" : undefined}
+        className={`fixed inset-y-0 left-0 z-40 flex w-[17.5rem] flex-col border-r border-border bg-sidebar transition-transform duration-(--duration-enter) ease-(--ease-enter) lg:static lg:translate-x-0 lg:transition-[width] ${
+          collapsed ? "lg:w-[4.25rem]" : "lg:w-[17.5rem]"
+        } ${open ? "translate-x-0 shadow-float" : "-translate-x-full"}`}
       >
-        <div className="flex items-center justify-between gap-2 px-4 pt-5 pb-4">
-          <Link href={`/${lang}/app`} className="no-underline" onClick={onClose}>
+        <div className={`flex items-center gap-2 pt-5 pb-4 ${collapsed ? "lg:flex-col lg:gap-2 lg:px-2" : "justify-between px-4"}`}>
+          <Link href={`/${lang}/app`} className={`no-underline ${collapsed ? "lg:hidden" : ""}`} onClick={onClose}>
             {/* Sans « powered by xcore » : dans l'application, c'est SON assistante — l'attribution reste sur les pages d'entrée. */}
             <DonnaLockup size={30} signature={false} />
           </Link>
-          <div className="flex items-center gap-1">
+          <div className={`flex items-center gap-1 ${collapsed ? "lg:flex-col" : ""}`}>
+            {/* Le bouton qui rétracte : au-dessus de `lg` seulement, là où la barre est fixe (sous `lg`,
+                c'est un tiroir — la croix ci-dessous le ferme). */}
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              aria-label={collapsed ? labels.expand : labels.collapse}
+              title={collapsed ? labels.expand : labels.collapse}
+              aria-expanded={!collapsed}
+              className="hidden size-9 items-center justify-center rounded-button text-ink-2 hover:bg-active hover:text-brand-strong lg:flex"
+            >
+              {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            </button>
             <Link
               href={`/${lang}/app`}
               onClick={onClose}
@@ -115,72 +170,79 @@ export function Sidebar({
           </div>
         </div>
 
-        <div className="px-4">
+        <div className={collapsed ? "px-4 lg:px-2" : "px-4"}>
           <button
             type="button"
             onClick={() => setSearchOpen(true)}
             aria-label={labels.searchLabel}
             aria-keyshortcuts="Control+K Meta+K"
-            className="flex h-10 w-full items-center gap-2.5 rounded-button border border-border bg-surface px-3 text-left text-label text-ink-3 hover:border-ink-3/40 hover:text-ink-2"
+            title={collapsed ? labels.search : undefined}
+            className={`flex h-10 w-full items-center gap-2.5 rounded-button border border-border bg-surface text-left text-label text-ink-3 hover:border-ink-3/40 hover:text-ink-2 ${
+              collapsed ? "lg:justify-center lg:px-0" : "px-3"
+            }`}
           >
             <SearchIcon size={17} />
-            <span className="flex-1">{labels.search}</span>
-            <kbd className="rounded-badge border border-border bg-surface px-1.5 font-sans text-meta text-ink-3" suppressHydrationWarning>
+            <span className={`flex-1 ${collapsed ? "lg:hidden" : ""}`}>{labels.search}</span>
+            <kbd
+              className={`rounded-badge border border-border bg-surface px-1.5 font-sans text-meta text-ink-3 ${collapsed ? "lg:hidden" : ""}`}
+              suppressHydrationWarning
+            >
               {shortcut}
             </kbd>
           </button>
         </div>
 
         <nav aria-label={labels.conversations} className="scrollbar-none mt-5 flex-1 overflow-y-auto px-2 pb-4">
-          <Link
-            href={`/${lang}/app/approvals`}
-            onClick={onClose}
-            aria-current={approvalsActive ? "page" : undefined}
-            className={`mb-3 flex h-9 items-center gap-2.5 rounded-nav px-2.5 text-label no-underline transition-colors duration-(--duration-fast) ${
-              approvalsActive ? "bg-active font-medium text-ink" : "text-ink-2 hover:bg-active/70 hover:text-ink"
-            }`}
-          >
-            <CheckIcon size={16} className={pending.length ? "text-attention" : "text-ink-3"} />
-            {labels.approvals}
-            {pending.length > 0 && (
-              <span className="ml-auto rounded-badge bg-attention-fill px-1.5 py-px text-[10px] leading-4 font-semibold text-white tabular-nums">
-                {pending.length}
-              </span>
-            )}
-          </Link>
-          <Link
-            href={`/${lang}/app/workflows`}
-            onClick={onClose}
-            aria-current={workflowsActive ? "page" : undefined}
-            className={`mb-3 flex h-9 items-center gap-2.5 rounded-nav px-2.5 text-label no-underline transition-colors duration-(--duration-fast) ${
-              workflowsActive ? "bg-active font-medium text-ink" : "text-ink-2 hover:bg-active/70 hover:text-ink"
-            }`}
-          >
-            <WorkflowGlyph size={16} className="text-ink-3" />
-            {labels.workflows}
-          </Link>
-          <Link
-            href={`/${lang}/app/deliverables`}
-            onClick={onClose}
-            aria-current={deliverablesActive ? "page" : undefined}
-            className={`mb-3 flex h-9 items-center gap-2.5 rounded-nav px-2.5 text-label no-underline transition-colors duration-(--duration-fast) ${
-              deliverablesActive ? "bg-active font-medium text-ink" : "text-ink-2 hover:bg-active/70 hover:text-ink"
-            }`}
-          >
-            <FolderOpen size={16} className="text-ink-3" />
-            {labels.deliverables}
-          </Link>
-          <Link
-            href={`/${lang}/app/usage`}
-            onClick={onClose}
-            aria-current={usageActive ? "page" : undefined}
-            className={`mb-3 flex h-9 items-center gap-2.5 rounded-nav px-2.5 text-label no-underline transition-colors duration-(--duration-fast) ${
-              usageActive ? "bg-active font-medium text-ink" : "text-ink-2 hover:bg-active/70 hover:text-ink"
-            }`}
-          >
-            <BarChart3 size={16} className="text-ink-3" />
-            {labels.usage}
-          </Link>
+          {/* Groupe resserré (`gap-px`) : quatre destinations voisines, pas quatre sections — elles étaient
+              séparées d'une marge de 12 px chacune, ce qui les faisait lire comme sans rapport entre elles. */}
+          <div className="mb-3 flex flex-col gap-px">
+            <NavLink
+              href={`/${lang}/app/approvals`}
+              onNavigate={onClose}
+              active={approvalsActive}
+              collapsed={collapsed}
+              label={labels.approvals}
+              icon={<CheckIcon size={16} className={pending.length ? "text-attention" : "text-ink-3"} />}
+              badge={
+                pending.length > 0 ? (
+                  <span
+                    className={`rounded-badge bg-attention-fill px-1.5 py-px text-micro leading-4 font-semibold text-white tabular-nums ${
+                      collapsed ? "lg:sr-only" : "ml-auto"
+                    }`}
+                  >
+                    {pending.length}
+                  </span>
+                ) : undefined
+              }
+            />
+            <NavLink
+              href={`/${lang}/app/workflows`}
+              onNavigate={onClose}
+              active={workflowsActive}
+              collapsed={collapsed}
+              label={labels.workflows}
+              icon={<WorkflowGlyph size={16} className="text-ink-3" />}
+            />
+            <NavLink
+              href={`/${lang}/app/deliverables`}
+              onNavigate={onClose}
+              active={deliverablesActive}
+              collapsed={collapsed}
+              label={labels.deliverables}
+              icon={<FolderOpen size={16} className="text-ink-3" />}
+            />
+            <NavLink
+              href={`/${lang}/app/usage`}
+              onNavigate={onClose}
+              active={usageActive}
+              collapsed={collapsed}
+              label={labels.usage}
+              icon={<BarChart3 size={16} className="text-ink-3" />}
+            />
+          </div>
+          {/* Projets et conversations n'ont pas de forme « icône seule » : rétractée, la barre est un rail de
+              navigation, et un clic sur n'importe laquelle de ses icônes la rouvre là où il faut. */}
+          <div className={collapsed ? "lg:hidden" : undefined}>
           <ProjectSidebarSection
             lang={lang}
             labels={labels}
@@ -193,7 +255,7 @@ export function Sidebar({
               {labels.conversations}
               {/* Nombre total de fils en attente, toutes conversations. */}
               {unreadCount > 0 && (
-                <span className="rounded-badge bg-brand-fill px-1.5 py-px text-[10px] leading-4 font-semibold text-white tabular-nums">
+                <span className="rounded-badge bg-brand-fill px-1.5 py-px text-micro leading-4 font-semibold text-white tabular-nums">
                   {unreadCount}
                   <span className="sr-only">{labels.unread}</span>
                 </span>
@@ -206,7 +268,7 @@ export function Sidebar({
                   type="button"
                   onClick={() => setGrouping(mode)}
                   aria-pressed={grouping === mode}
-                  className={`rounded-[5px] px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                  className={`rounded-[5px] px-1.5 py-0.5 text-micro font-medium transition-colors ${
                     grouping === mode ? "bg-surface text-ink shadow-sm" : "text-ink-3 hover:text-ink-2"
                   }`}
                 >
@@ -243,9 +305,10 @@ export function Sidebar({
           ) : (
             <ConversationList lang={lang} items={conversations} activeId={activeId} labels={labels} projectLabels={projectLabels} onNavigate={onClose} />
           )}
+          </div>
         </nav>
 
-        <AccountMenu lang={lang} labels={labels} languageLabel={languageLabel} account={account} />
+        <AccountMenu lang={lang} labels={labels} languageLabel={languageLabel} account={account} collapsed={collapsed} />
       </aside>
     </>
   );
@@ -587,7 +650,7 @@ function ConversationItem({
   );
 }
 
-function AccountMenu({ lang, labels, languageLabel, account }: { lang: Locale; labels: Labels; languageLabel: string; account: Account }) {
+function AccountMenu({ lang, labels, languageLabel, account, collapsed }: { lang: Locale; labels: Labels; languageLabel: string; account: Account; collapsed: boolean }) {
   const { setSettingsOpen } = useWorkspace();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -605,9 +668,14 @@ function AccountMenu({ lang, labels, languageLabel, account }: { lang: Locale; l
   }, [open]);
 
   return (
-    <div ref={ref} className="relative border-t border-border p-3">
+    <div ref={ref} className={`relative border-t border-border p-3 ${collapsed ? "lg:px-2" : ""}`}>
       {open && (
-        <div className="absolute right-3 bottom-full left-3 mb-1 rounded-card bg-surface p-2 shadow-float">
+        // Rétractée, le menu ne tient plus dans la largeur du rail : il s'en échappe vers la droite.
+        <div
+          className={`absolute bottom-full mb-1 rounded-card bg-surface p-2 shadow-float ${
+            collapsed ? "right-3 left-3 lg:left-2 lg:w-60 lg:max-w-[calc(100vw-5rem)]" : "right-3 left-3"
+          }`}
+        >
           <p className="truncate px-2 pt-1 text-meta text-ink-3">{account.email}</p>
           <div className="mt-2 flex items-center justify-between px-1">
             <span className="text-secondary text-ink-2">{languageLabel}</span>
@@ -640,16 +708,17 @@ function AccountMenu({ lang, labels, languageLabel, account }: { lang: Locale; l
         aria-expanded={open}
         aria-label={labels.account}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 rounded-nav p-1.5 text-left hover:bg-active"
+        title={collapsed ? account.name : undefined}
+        className={`flex w-full items-center gap-3 rounded-nav p-1.5 text-left hover:bg-active ${collapsed ? "lg:justify-center lg:gap-0" : ""}`}
       >
         <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-peche-100 text-label font-medium text-brand-strong">
           {account.initials}
         </span>
-        <span className="flex min-w-0 flex-1 flex-col">
+        <span className={`flex min-w-0 flex-1 flex-col ${collapsed ? "lg:sr-only" : ""}`}>
           <span className="truncate text-label font-medium text-ink">{account.name}</span>
           <span className="truncate text-meta text-ink-3">{account.workspace ?? labels.owner}</span>
         </span>
-        <ChevronIcon size={16} className={`text-ink-3 transition-transform ${open ? "rotate-180" : ""}`} />
+        <ChevronIcon size={16} className={`text-ink-3 transition-transform ${collapsed ? "lg:hidden" : ""} ${open ? "rotate-180" : ""}`} />
       </button>
     </div>
   );

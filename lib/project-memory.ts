@@ -14,6 +14,17 @@ export type FactVersion = {
   redacted?: boolean;
   /** Texte effacé par la politique de rétention : la trace (qui, quand) reste, le contenu non. */
   purged?: boolean;
+  /** « donna » : retenu, corrigé ou oublié par DONNA au nom de `changed_by` ; « user » (ou absent) : écrit à la main. */
+  via?: string;
+};
+
+/** Écriture dans la mémoire d'un projet proposée par DONNA (action « project_fact ») — backend/app/chat/src/schemas.py::ProjectFactProposalOut. */
+export type ProjectFactProposal = {
+  op: "create" | "update" | "delete" | string;
+  project_id: string;
+  project_name: string;
+  fact: string;
+  previous: string | null;
 };
 
 type Person = { user_id: string; email: string | null };

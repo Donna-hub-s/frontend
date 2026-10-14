@@ -47,3 +47,12 @@ next-env.d.ts
 
 # Superdesign — fichiers temporaires (HTML importé manuellement)
 /.superdesign/tmp/
+
+# npm run perf (scripts/measure-web-vitals.mjs) — rapports horodatés, jamais commités
+/perf-reports/
+
+# npm run test:e2e (Playwright)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

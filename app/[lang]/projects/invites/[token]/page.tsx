@@ -52,7 +52,14 @@ export default async function InvitePage({ params }: PageProps<"/[lang]/projects
   } else if ((claims.email ?? "").trim().toLowerCase() !== preview.email.trim().toLowerCase()) {
     body = <p className="text-message text-danger text-pretty">{t.wrongEmail.replace("{email}", preview.email)}</p>;
   } else {
-    body = <AcceptInviteButton lang={lang} token={token} labels={t} />;
+    body = (
+      <AcceptInviteButton
+        lang={lang}
+        token={token}
+        labels={t}
+        spaceInviteHref={preview.space_invite_token ? `/${lang}/invitation?token=${encodeURIComponent(preview.space_invite_token)}` : undefined}
+      />
+    );
   }
 
   return (

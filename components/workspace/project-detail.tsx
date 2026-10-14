@@ -25,6 +25,11 @@ import { ChatIcon, ChevronIcon, FileIcon, FolderIcon, LockIcon, MoreIcon, Pencil
 import { GoogleDriveIcon } from "./brand-icons";
 import { DrivePicker, type ExistingDocument } from "./drive-picker";
 import { DriveFolderImportProgress } from "./drive-folder-import-progress";
+import { NasSection } from "./nas-section";
+import { MemoryPolicyBlock } from "./memory-policy-block";
+import { MemoryQuotaBlock } from "./memory-quota-block";
+import { ContextWindowCard } from "./context-window-card";
+import { inviteErrorKind, projectInviteLink, spaceInviteLink, spaceStatusKey, type InviteErrorKind } from "@/lib/project-invites";
 import { startDriveFolderImport, type DriveFolderImportRun } from "@/lib/drive-folder-import";
 import { AgentsCard } from "./agents-manager";
 import { ProjectIcon, ProjectIconPicker } from "./project-icon";
@@ -113,7 +118,7 @@ export function ProjectDetail({
   currentUserId: string;
 }) {
   const labels = dict.projects;
-  const { projects, upsertProject, removeProject } = useWorkspace();
+  const { projects, upsertProject, removeProject, memoryTicks } = useWorkspace();
   const router = useRouter();
   const isOwner = project.my_role === "owner";
   const canEdit = project.my_role !== "viewer";
@@ -203,6 +208,14 @@ export function ProjectDetail({
               contextChunksLimit={liveProject.context_chunks_limit}
             />
             <MemoryCard labels={labels} projectId={project.id} initialFacts={initialFacts} canEdit={canEdit} members={members} currentUserId={currentUserId} />
+            {/* Relue quand ce qui la compose change : consignes, mémoire (poussée en temps réel), nombre de documents. */}
+            <ContextWindowCard
+              lang={lang}
+              labels={labels}
+              projectId={project.id}
+              conversations={initialConversations}
+              refreshKey={`${memoryTicks[project.id] ?? 0}:${liveProject.updated_at}:${liveProject.document_count}`}
+            />
           </aside>
         </div>
       </div>
@@ -298,12 +311,12 @@ function MemberStack({ members }: { members: ProjectMemberOut[] }) {
   return (
     <span aria-hidden className="flex -space-x-1.5">
       {shown.map((member) => (
-        <span key={member.user_id} className="flex size-6 items-center justify-center rounded-full bg-peche-100 text-[0.625rem] font-medium text-brand-strong ring-2 ring-white">
+        <span key={member.user_id} className="flex size-6 items-center justify-center rounded-full bg-peche-100 text-micro font-medium text-brand-strong ring-2 ring-white">
           {initialsOf(member)}
         </span>
       ))}
       {members.length > shown.length && (
-        <span className="flex size-6 items-center justify-center rounded-full bg-active text-[0.625rem] font-medium text-ink-2 ring-2 ring-white">+{members.length - shown.length}</span>
+        <span className="flex size-6 items-center justify-center rounded-full bg-active text-micro font-medium text-ink-2 ring-2 ring-white">+{members.length - shown.length}</span>
       )}
       {!members.length && (
         <span className="flex size-6 items-center justify-center rounded-full bg-active text-ink-3 ring-2 ring-white">
@@ -874,6 +887,9 @@ function FilesCard({
           </div>
         )}
 
+        {/* Dossiers du NAS liés au projet : la section ne s'affiche que si le serveur dit que le connecteur existe pour cet espace. */}
+        <NasSection lang={lang} labels={labels} projectId={projectId} canEdit={canEdit} onSynced={() => void refreshDocuments()} />
+
         <DrivePicker
           lang={lang}
           labels={driveLabels}
@@ -994,6 +1010,22 @@ function MemoryCard({
     if (ok && data) setFacts(data);
     return ok && data ? data : null;
   };
+
+  // DONNA vient d'écrire dans la mémoire de ce projet (événement websocket, voir lib/user-channel.ts) : la liste se relit — sauf pendant
+  // qu'on corrige un fait, pour ne pas écraser la saisie ; la jauge, elle, se relit toujours.
+  const { memoryTicks } = useWorkspace();
+  const memoryTick = memoryTicks[projectId] ?? 0;
+  const editingRef = useRef<string | null>(null);
+  useEffect(() => {
+    editingRef.current = editingId;
+  }, [editingId]);
+  useEffect(() => {
+    if (memoryTick === 0 || editingRef.current) return;
+    void (async () => {
+      const { ok, data } = await api<ProjectFactOut[]>(`/${projectId}/memory/facts`);
+      if (ok && data) setFacts(data);
+    })();
+  }, [memoryTick, projectId]);
 
   const openHistory = async (factIdOrNull: string | null) => {
     const scope = factIdOrNull ?? "all";
@@ -1139,6 +1171,9 @@ function MemoryCard({
         </form>
       )}
 
+      {!canEdit && <p className="px-4 pb-2 text-meta text-ink-3 text-pretty">{labels.memoryViewerHint}</p>}
+      <MemoryPolicyBlock labels={labels} projectId={projectId} />
+      <MemoryQuotaBlock labels={labels} projectId={projectId} refreshKey={memoryTick} />
       {facts.length ? (
         <ul className="flex flex-col border-t border-border py-1">
           {facts.map((fact) => (
@@ -1216,6 +1251,8 @@ function MemoryCard({
               )}
               <p className="flex flex-wrap items-center gap-x-2 pl-3 text-meta text-ink-3">
                 <span>{stampOf(fact)}</span>
+                {fact.via === "donna" && <span className="rounded-badge bg-peche-100 px-1.5 py-0.5 font-medium text-brand-strong">{labels.factByDonna}</span>}
+                {fact.in_context === false && <span title={labels.factOutOfContextHint} className="rounded-badge bg-fill px-1.5 py-0.5 font-medium text-ink-2">{labels.factOutOfContext}</span>}
                 {fact.version > 1 && (
                   <button type="button" onClick={() => void openHistory(fact.id)} aria-pressed={history?.scope === fact.id} className="underline-offset-2 hover:text-brand hover:underline aria-pressed:text-brand">
                     {labels.factHistory}
@@ -1245,7 +1282,7 @@ function MemoryCard({
               {history.rows.map((row) => (
                 <li key={`${row.fact_id}-${row.version}`} className="flex flex-col gap-0.5">
                   <span className="text-meta text-ink-3">
-                    {{ create: labels.historyCreate, update: labels.historyUpdate, delete: labels.historyDelete }[row.action]} · {who(row.changed_by)} · {when(row.changed_at)}
+                    {{ create: labels.historyCreate, update: labels.historyUpdate, delete: labels.historyDelete }[row.action]} · {who(row.changed_by)}{row.via === "donna" ? ` (${labels.factByDonnaShort})` : ""} · {when(row.changed_at)}
                   </span>
                   {row.redacted || row.purged ? (
                     <span className="text-meta italic text-ink-3">{row.purged ? labels.historyPurged : labels.historyHidden}</span>
@@ -1271,12 +1308,14 @@ function MemoryCard({
 
 /* ── Partage : invitations et membres ────────────────────────────────────────── */
 
-function InviteForm({ labels, projectId, initialInvites }: { labels: Labels; projectId: string; initialInvites: ProjectInviteOut[] }) {
+export function InviteForm({ labels, projectId, initialInvites }: { labels: Labels; projectId: string; initialInvites: ProjectInviteOut[] }) {
   const [invites, setInvites] = useState(initialInvites);
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<ProjectRole>("editor");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<InviteErrorKind | null>(null);
+  // L'invitation existe mais l'email n'est pas parti : le propriétaire doit copier le lien — jamais avalé en silence.
+  const [mailNotSent, setMailNotSent] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const emailId = useId();
   const roleId = useId();
@@ -1285,8 +1324,9 @@ function InviteForm({ labels, projectId, initialInvites }: { labels: Labels; pro
     const trimmed = email.trim();
     if (!trimmed) return;
     setBusy(true);
-    setError(false);
-    const { ok, data } = await api<ProjectInviteOut>(`/${projectId}/invites`, {
+    setError(null);
+    setMailNotSent(false);
+    const { ok, data, status } = await api<ProjectInviteOut>(`/${projectId}/invites`, {
       method: "POST",
       body: JSON.stringify({ email: trimmed, role }),
     });
@@ -1294,7 +1334,8 @@ function InviteForm({ labels, projectId, initialInvites }: { labels: Labels; pro
     if (ok && data) {
       setInvites((list) => [data, ...list]);
       setEmail("");
-    } else setError(true);
+      setMailNotSent(data.email_sent === false);
+    } else setError(inviteErrorKind(status));
   };
 
   const revoke = async (inviteId: string) => {
@@ -1302,12 +1343,14 @@ function InviteForm({ labels, projectId, initialInvites }: { labels: Labels; pro
     if (ok) setInvites((list) => list.filter((i) => i.id !== inviteId));
   };
 
-  const copyLink = async (invite: ProjectInviteOut) => {
-    if (!invite.token) return;
+  const copyLink = async (invite: ProjectInviteOut, kind: "project" | "space" = "project") => {
+    const token = kind === "space" ? invite.space_invite_token : invite.token;
+    if (!token) return;
     try {
-      await navigator.clipboard.writeText(`${window.location.origin}/projects/invites/${invite.token}`);
-      setCopiedId(invite.id);
-      window.setTimeout(() => setCopiedId((id) => (id === invite.id ? null : id)), 2000);
+      await navigator.clipboard.writeText(kind === "space" ? spaceInviteLink(window.location.origin, token) : projectInviteLink(window.location.origin, token));
+      const marker = `${invite.id}:${kind}`;
+      setCopiedId(marker);
+      window.setTimeout(() => setCopiedId((id) => (id === marker ? null : id)), 2000);
     } catch {
       // Presse-papiers indisponible (permissions navigateur) : pas bloquant.
     }
@@ -1341,13 +1384,22 @@ function InviteForm({ labels, projectId, initialInvites }: { labels: Labels; pro
           <select id={roleId} value={role} onChange={(e) => setRole(e.target.value as ProjectRole)} className="h-10 flex-1 rounded-button sm:flex-none border border-border bg-surface px-2 text-label text-ink">
             <option value="editor">{labels.roleEditor}</option>
             <option value="viewer">{labels.roleViewer}</option>
-            <option value="owner">{labels.roleOwner}</option>
           </select>
           <button type="submit" disabled={busy || !email.trim()} className={`h-10 shrink-0 ${primaryButton} py-0`}>
             {busy ? labels.inviteSending : labels.invite}
           </button>
         </div>
-        {error && <p className="text-secondary text-danger">{labels.inviteSendError}</p>}
+        <p className="text-meta text-ink-3 text-pretty">{labels.inviteSpaceHint}</p>
+        {error && (
+          <p role="alert" className="text-secondary text-danger text-pretty">
+            {(labels.inviteErrors as Record<string, string>)[error] ?? labels.inviteSendError}
+          </p>
+        )}
+        {mailNotSent && (
+          <p role="status" className="text-secondary text-attention text-pretty">
+            {labels.inviteMailNotSent}
+          </p>
+        )}
       </form>
 
       {invites.length > 0 && (
@@ -1364,10 +1416,18 @@ function InviteForm({ labels, projectId, initialInvites }: { labels: Labels; pro
                   <span className="text-meta text-ink-3">
                     {roleLabel(labels, invite.role)}, {labels.inviteExpiresAt.toLowerCase()} {new Date(invite.expires_at).toLocaleDateString()}
                   </span>
+                  <span className={`text-meta ${spaceStatusKey(invite.space_status) === "member" ? "text-success-ink" : "text-attention"}`}>
+                    {(labels.inviteSpaceStatus as Record<string, string>)[spaceStatusKey(invite.space_status)]}
+                  </span>
                 </span>
                 {invite.token && (
                   <button type="button" onClick={() => void copyLink(invite)} className="rounded-badge px-2 py-1 text-meta font-medium text-brand hover:bg-active">
-                    {copiedId === invite.id ? labels.inviteLinkCopied : labels.inviteCopyLink}
+                    {copiedId === `${invite.id}:project` ? labels.inviteLinkCopied : labels.inviteCopyLink}
+                  </button>
+                )}
+                {invite.space_invite_token && (
+                  <button type="button" onClick={() => void copyLink(invite, "space")} className="rounded-badge px-2 py-1 text-meta font-medium text-brand hover:bg-active">
+                    {copiedId === `${invite.id}:space` ? labels.inviteLinkCopied : labels.inviteCopySpaceLink}
                   </button>
                 )}
                 <button type="button" onClick={() => void revoke(invite.id)} className="rounded-badge px-2 py-1 text-meta font-medium text-ink-3 hover:bg-danger/[0.06] hover:text-danger">

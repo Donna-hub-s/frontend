@@ -14,9 +14,18 @@ import { hasMath, normalizeMath } from "@/lib/markdown-math";
 import { codeLanguage, nodeText } from "@/lib/markdown-text";
 import { CheckIcon, CopyIcon } from "./icons";
 import { InlineLink, isBareUrlLink, LinkCard, linkCardData } from "./link-card";
+import { MermaidDiagram } from "./mermaid-diagram";
 
 /** Textes des boutons du rendu (fournis une fois par l'espace de travail ; anglais par défaut). */
-export type MarkdownLabels = { copy: string; copied: string; linkOpen: string; linkCancel: string; linkConfirmHint: string; linkPreviewError: string };
+export type MarkdownLabels = {
+  copy: string;
+  copied: string;
+  linkOpen: string;
+  linkCancel: string;
+  linkConfirmHint: string;
+  linkPreviewError: string;
+  mermaidInvalid: string;
+};
 const MarkdownLabelsContext = createContext<MarkdownLabels>({
   copy: "Copy",
   copied: "Copied",
@@ -24,6 +33,7 @@ const MarkdownLabelsContext = createContext<MarkdownLabels>({
   linkCancel: "Cancel",
   linkConfirmHint: "You're about to leave DONNA for an external site.",
   linkPreviewError: "Preview unavailable.",
+  mermaidInvalid: "This diagram could not be drawn — source text below.",
 });
 export const MarkdownLabelsProvider = MarkdownLabelsContext.Provider;
 
@@ -116,7 +126,6 @@ const components: Components = {
     ) : (
       <code className="rounded-badge bg-active px-1.5 py-0.5 font-mono text-[0.8125rem]">{children}</code>
     ),
-  pre: ({ children, node }) => <CodeBlock node={node}>{children}</CodeBlock>,
   table: ({ children }) => (
     <div className="my-3 overflow-x-auto rounded-card border border-border">
       <table className="w-full border-collapse text-left text-label">{children}</table>
@@ -194,6 +203,15 @@ export function Markdown({
   const merged = useMemo<Components>(
     () => ({
       ...components,
+      pre: ({ children, node }) => {
+        // Jamais pendant le flux : un diagramme à moitié écrit échoue à l'analyse plutôt que de se dessiner
+        // peu à peu, et le redessiner à chaque jeton serait coûteux (même logique que le code/les formules
+        // juste au-dessus, voir withCode/withMath).
+        if (!streaming && codeLanguage(node) === "mermaid") {
+          return <MermaidDiagram source={nodeText(node).replace(/\n$/, "")} labels={{ invalid: labels.mermaidInvalid }} />;
+        }
+        return <CodeBlock node={node}>{children}</CodeBlock>;
+      },
       p: ({ children: label, node }) => {
         const href = bareUrlHref(node);
         const card = linkCardData(href);
@@ -234,7 +252,7 @@ export function Markdown({
         return <span>{label}</span>;
       },
     }),
-    [files, renderFile, conversationId, labels],
+    [files, renderFile, conversationId, labels, streaming],
   );
   return (
     <div className={`text-ink [overflow-wrap:anywhere] ${reading ? "text-reading" : "text-message"}`}>

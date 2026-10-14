@@ -2,6 +2,8 @@ import "server-only";
 import { cookies } from "next/headers";
 import { BACKEND_URL } from "./backend";
 import { COOKIES } from "./session-cookies";
+import type { NasLinkDraft } from "./nas";
+import type { ProjectFactProposal } from "./project-memory";
 import type { ResearchDraft } from "./research";
 
 /**
@@ -131,6 +133,9 @@ export type MessageOut = {
   // sans ça une conversation rechargée (F5, réouverture) ne montre plus que
   // le texte brut de ces réponses (voir ANALYSE_COMPLETE.md §3.2).
   tool_calls?: ToolCallOut[] | null;
+  // Réponses à la carte de questions de la réponse précédente (backend : MessageOut.answers) —
+  // sans elles, un rechargement ne montre plus QUE le texte composé, pas ce qui a été coché.
+  answers?: { asked_message_id?: string | null; answers: Record<string, string[]>; free_text?: string | null } | null;
   // Versions de ce message (édition d'un message utilisateur, régénération d'une
   // réponse) — backend/app/chat/src/schemas.py::MessageOut.sibling_ids/sibling_index.
   // Un seul élément (ou absent) = une seule version, rien à afficher.
@@ -239,6 +244,10 @@ export type PendingActionOut = {
   workflow?: WorkflowDraftOut | null;
   /** Recherche approfondie proposée (kind « research ») : sujet, estimation de coût et plafond. */
   research?: ResearchDraft | null;
+  /** Dossier du NAS à lier (kind « nas_link ») : dossier, projet et ce qui sera indexé. */
+  nas?: NasLinkDraft | null;
+  /** Écriture proposée dans la mémoire d'un projet (kind « project_fact ») : retenir, corriger ou oublier un fait. */
+  fact_proposal?: ProjectFactProposal | null;
 };
 
 /** GET /app/chat/memory/reminders (backend/app/chat/src/schemas.py::ReminderOut). */
@@ -341,6 +350,12 @@ export type ProjectInviteOut = {
   expires_at: string;
   created_at: string;
   token: string | null;
+  /** La personne invitée est-elle dans l'espace ? member · space_invite_pending · not_member · unknown (voir lib/project-invites.ts). */
+  space_status?: string | null;
+  /** Invitation d'espace créée en même temps (le responsable de l'espace a invité quelqu'un qui n'en était pas membre). */
+  space_invite_token?: string | null;
+  /** Sortie de la création seulement : l'email est-il parti ? Faux = copier le lien. */
+  email_sent?: boolean | null;
 };
 
 export type ProjectFactOut = {
@@ -351,6 +366,10 @@ export type ProjectFactOut = {
   version: number;
   updated_by: string | null;
   updated_at: string | null;
+  /** Dernière voie d'écriture : « donna » = retenu par DONNA au nom d'un membre ; « user » (ou absent) = écrit à la main. */
+  via?: string;
+  /** false : trop ancien pour tenir dans la limite relue à chaque message — le modèle ne le voit pas (voir quotas.py). */
+  in_context?: boolean;
 };
 
 /** backend/app/chat/src/schemas.py::ProjectDocumentOut. */

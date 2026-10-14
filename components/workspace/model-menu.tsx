@@ -6,6 +6,7 @@ import type { Dictionary } from "@/app/[lang]/dictionaries";
 import type { Locale } from "@/i18n/config";
 import { writeModelChoice } from "@/lib/model-choice";
 import { EFFORTS, estimatedCost, formatCost, groupByTier, resolveChoice, selectModel, type Effort, type Tier } from "@/lib/models";
+import { useFocusTrap } from "@/lib/use-focus-trap";
 import { useModelChoice, useModels } from "@/lib/use-model-choice";
 import type { ModelOut } from "@/lib/workspace-types";
 
@@ -22,6 +23,8 @@ export function ModelMenu({ lang, labels, below = false }: { lang: Locale; label
   const choice = useModelChoice();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(menuRef, open);
   const models = data?.models ?? null;
   const active = resolveChoice(choice, models);
 
@@ -67,7 +70,7 @@ export function ModelMenu({ lang, labels, below = false }: { lang: Locale; label
       </button>
 
       {open && (
-        <div role="dialog" aria-label={labels.title} className={`absolute ${below ? "top-full mt-2 max-h-[min(34rem,calc(100dvh_-_24rem))]" : "bottom-full mb-2 max-h-[min(34rem,70dvh)]"} inset-x-0 z-30 sm:inset-x-auto sm:left-0 flex sm:w-[24rem] flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-float`}>
+        <div ref={menuRef} role="dialog" aria-label={labels.title} className={`absolute ${below ? "top-full mt-2 max-h-[min(34rem,calc(100dvh_-_24rem))]" : "bottom-full mb-2 max-h-[min(34rem,70dvh)]"} inset-x-0 z-30 sm:inset-x-auto sm:left-0 flex sm:w-[24rem] flex-col overflow-hidden rounded-panel border border-border bg-surface shadow-float`}>
           <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto p-2">
             <p className="px-2 pt-1 pb-1.5 text-meta text-ink-3">{labels.hint}</p>
             <Row selected={!active} onSelect={() => writeModelChoice(null)} title={labels.defaultModel} detail={data?.default_provider} />
@@ -144,7 +147,7 @@ function Row({
         {badges.some(Boolean) && (
           <span className="mt-0.5 flex flex-wrap gap-1">
             {badges.filter(Boolean).map((badge) => (
-              <span key={badge} className="rounded-badge bg-fill px-1.5 text-[10px] leading-4 text-ink-2">
+              <span key={badge} className="rounded-badge bg-fill px-1.5 text-micro leading-4 text-ink-2">
                 {badge}
               </span>
             ))}

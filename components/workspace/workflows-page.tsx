@@ -10,7 +10,7 @@ import { briefingRequest, formatToolArguments, isFinished, isValidTime, needsApp
 import { parseBackendDate, type WorkflowOut, type WorkflowRunOut } from "@/lib/workspace-types";
 import { Dialog, DialogHeader } from "./dialog";
 import { ChevronIcon, PlusIcon } from "./icons";
-import { WorkflowAgents } from "./workflow-agents";
+import { WorkflowAgents, WorkflowStepList } from "./workflow-agents";
 
 type Labels = Dictionary["workspace"]["workflows"];
 type AgentLabels = Dictionary["workspace"]["workflowAgents"];
@@ -246,15 +246,7 @@ function WorkflowCard({
         </p>
       )}
 
-      {detailsOpen && workflow.lines.length > 0 && (
-        <ol className="mt-3 flex list-decimal flex-col gap-1 pl-5 text-secondary leading-5 text-ink-2 marker:text-ink-3">
-          {workflow.lines.slice(1).map((line, index) => (
-            <li key={index} className="text-pretty">
-              {line}
-            </li>
-          ))}
-        </ol>
-      )}
+      {detailsOpen && <WorkflowStepList steps={workflow.lines.slice(1)} className="mt-3" />}
 
       {detailsOpen && <WorkflowAgents refs={agentRefsOf(workflow.definition)} labels={agentLabels} />}
 
@@ -351,7 +343,7 @@ const RUN_TONE: Record<string, string> = {
   skipped: "text-ink-3",
 };
 
-function RunRow({ lang, labels, run, defaultOpen }: { lang: Locale; labels: Labels; run: WorkflowRunOut; defaultOpen: boolean }) {
+export function RunRow({ lang, labels, run, defaultOpen }: { lang: Locale; labels: Labels; run: WorkflowRunOut; defaultOpen: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   const id = useId();
   const at = parseBackendDate(run.started_at);
@@ -376,7 +368,13 @@ function RunRow({ lang, labels, run, defaultOpen }: { lang: Locale; labels: Labe
       </button>
       {open && (
         <div id={id} className="mt-2 flex flex-col gap-1.5">
-          {run.error && <p className="text-secondary text-danger text-pretty">{run.error}</p>}
+          {run.error && (
+            // Même bandeau que les erreurs du chat (conversation.tsx) — avant, un <p> au ton danger isolé,
+            // pas le même traitement visuel que le reste de l'interface.
+            <div role="alert" className="flex items-center gap-3 rounded-card bg-danger/[0.06] px-3.5 py-2.5 text-label text-danger">
+              <span className="text-pretty">{run.error}</span>
+            </div>
+          )}
           {run.steps.map((step) => (
             <div key={step.position} className="text-secondary">
               <span className="font-medium text-ink-2">{step.step_id}</span>{" "}
@@ -384,7 +382,11 @@ function RunRow({ lang, labels, run, defaultOpen }: { lang: Locale; labels: Labe
                 {labels.stepStatus[step.status as keyof Labels["stepStatus"]] ?? step.status}
               </span>
               {(step.error || step.output) && (
-                <p className="mt-0.5 line-clamp-4 whitespace-pre-wrap text-meta text-ink-3">{step.error ?? step.output}</p>
+                // Avant : step.error ET step.output rendus dans la MÊME couleur neutre — une étape en échec se
+                // confondait visuellement avec une sortie normale.
+                <p className={`mt-0.5 line-clamp-4 whitespace-pre-wrap text-meta ${step.error ? "text-danger" : "text-ink-3"}`}>
+                  {step.error ?? step.output}
+                </p>
               )}
               {step.detail && step.detail.length > 0 && (
                 <details className="mt-1 text-meta text-ink-3">

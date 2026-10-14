@@ -11,8 +11,11 @@ import { useNow } from "@/lib/use-now";
 import { parseBackendDate, type ConnectorsOut, type PendingActionOut, type Step } from "@/lib/workspace-types";
 import { ElapsedBadge } from "./elapsed-badge";
 import { EmailAttachmentList } from "./email-attachments";
+import { estimateText, formatUsd } from "@/lib/research";
 import { WorkflowDraft } from "./workflow-draft";
-import { useWorkspace } from "./workspace-provider";
+import { NasLinkDraft } from "./nas-link-draft";
+import { FactProposalDraft } from "./fact-proposal-draft";
+import { useThreadsState, useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
 
@@ -71,7 +74,10 @@ export const stepDetail = (dict: WorkspaceDict, step: Step): { text: string; war
       return { text: [data.name, parts.join(" · ")].filter(Boolean).join(" — "), warn: false };
     }
     case "memory":
-      return { text: fill(t.memoryFacts, { n: data.facts }), warn: false };
+      return {
+        text: data.scope === "project" ? fill(t.memoryProjectFacts, { n: data.facts, name: data.name ?? "" }) + (data.omitted ? ` — ${fill(t.memoryOmitted, { n: data.omitted })}` : "") : fill(t.memoryFacts, { n: data.facts }),
+        warn: !!data.omitted,
+      };
     case "convfiles": {
       const shown = data.names.slice(0, 3).join(", ");
       const more = data.names.length > 3 ? ` +${data.names.length - 3}` : "";
@@ -93,7 +99,7 @@ const timeFormat = (lang: Locale) => new Intl.DateTimeFormat(lang, { hour: "2-di
 export function StepDot({ status, warn = false }: { status: Step["status"]; warn?: boolean }) {
   if (warn) {
     return (
-      <span aria-hidden className="flex size-4 shrink-0 items-center justify-center rounded-full bg-danger-fill text-[10px] leading-none font-bold text-white">
+      <span aria-hidden className="flex size-4 shrink-0 items-center justify-center rounded-full bg-danger-fill text-micro leading-none font-bold text-white">
         !
       </span>
     );
@@ -110,7 +116,8 @@ export function StepDot({ status, warn = false }: { status: Step["status"]; warn
 }
 
 export function SidePanel({ lang, dict, connectors }: { lang: Locale; dict: WorkspaceDict; connectors: ConnectorsOut | null }) {
-  const { activity, pending } = useWorkspace();
+  const { pending } = useWorkspace();
+  const { activity } = useThreadsState();
   const { panel } = dict;
   // Une seule horloge pour la liste, arrêtée dès que plus rien ne tourne (voir lib/use-now.ts).
   const now = useNow(activity.steps.some((step) => step.status === "running"));
@@ -216,6 +223,22 @@ export function PendingItem({ lang, dict, action }: { lang: Locale; dict: Worksp
       <p className="mt-2 text-label text-ink text-pretty">{action.summary}</p>
       {action.email && <EmailAttachmentList actionId={action.id} attachments={action.email.attachments} openable labels={dict.chat} />}
       {action.workflow && <WorkflowDraft draft={action.workflow} labels={dict.chat} agentLabels={dict.workflowAgents} />}
+      {action.nas && <NasLinkDraft draft={action.nas} labels={dict.chat} />}
+      {action.fact_proposal && <FactProposalDraft draft={action.fact_proposal} labels={dict.chat} />}
+      {action.research && (
+        // Même détail que ActionCard (fil de discussion) avant approbation — une fois confirmée, l'action
+        // quitte cette liste (voir decideAction) : pas besoin d'y suivre la progression, seulement l'estimation.
+        <>
+          <p className="mt-1 text-meta text-ink-3">
+            {dict.chat.researchDepth[action.research.depth as keyof typeof dict.chat.researchDepth] ?? action.research.depth}
+          </p>
+          <p className="mt-1 text-secondary text-ink-2 text-pretty">
+            {dict.chat.researchEstimateLine
+              .replace("{estimate}", estimateText(action.research.cost_usd, { unknown: dict.chat.researchUnknown, free: dict.chat.researchFree }, lang))
+              .replace("{cap}", formatUsd(action.research.cap_usd, lang))}
+          </p>
+        </>
+      )}
       {failed && <p className="mt-2 text-secondary text-danger">{panel.actionError}</p>}
       <div className="mt-3 flex gap-2">
         <button
@@ -224,7 +247,7 @@ export function PendingItem({ lang, dict, action }: { lang: Locale; dict: Worksp
           onClick={() => void decide("confirm")}
           className="rounded-button bg-brand-fill px-3 py-1.5 text-secondary font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60"
         >
-          {panel.approve}
+          {action.research ? dict.chat.researchStart : action.nas ? dict.chat.nasLinkStart : panel.approve}
         </button>
         <button
           type="button"

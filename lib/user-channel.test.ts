@@ -65,3 +65,20 @@ describe("parseUserChannelMessage", () => {
     expect(parseUserChannelMessage("null")).toEqual([]);
   });
 });
+
+describe("mémoire d'un projet écrite par DONNA", () => {
+  it("décode les trois écritures (retenir, corriger, oublier) quand elles visent un projet", () => {
+    for (const action of ["MEMORY_FACT_SAVED", "MEMORY_FACT_UPDATED", "MEMORY_FACT_FORGOTTEN"]) {
+      expect(parseUserChannelMessage(frame(action, { scope: "project", project_id: "p1", fact_id: "f1", conversation_id: "c1" }))).toEqual([
+        { kind: "memory", change: { projectId: "p1" } },
+      ]);
+    }
+  });
+
+  it("ignore un fait personnel ou un message sans projet : la carte du projet n'a rien à relire", () => {
+    expect(parseUserChannelMessage(frame("MEMORY_FACT_SAVED", { fact: "Aime le thé" }))).toEqual([]);
+    expect(parseUserChannelMessage(frame("MEMORY_FACT_SAVED", { scope: "personal", project_id: "p1" }))).toEqual([]);
+    expect(parseUserChannelMessage(frame("MEMORY_FACT_SAVED", { scope: "project" }))).toEqual([]);
+    expect(parseUserChannelMessage(frame("MEMORY_FACT_SAVED", { scope: "project", project_id: "" }))).toEqual([]);
+  });
+});

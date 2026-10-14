@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { CloseIcon } from "./icons";
 
 /**
@@ -25,12 +25,15 @@ export function Sheet({
   onClose,
   label,
   className = "",
+  style,
   children,
 }: {
   open: boolean;
   onClose: () => void;
   label: string;
   className?: string;
+  /** Largeur réglée par l'utilisateur (voir lib/panel-width.ts) : l'emporte sur les bornes par défaut. */
+  style?: CSSProperties;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLElement>(null);
@@ -68,7 +71,9 @@ export function Sheet({
         role="dialog"
         aria-label={label}
         tabIndex={-1}
-        className={`fixed inset-0 z-40 flex flex-col overflow-hidden bg-surface outline-none lg:static lg:inset-auto lg:z-auto lg:w-[46%] lg:max-w-[46rem] lg:min-w-[24rem] lg:border-l lg:border-border ${className}`}
+        style={style}
+        // `lg:relative` (et non `static`) : repère de la poignée de redimensionnement, sans rien changer au flux.
+        className={`fixed inset-0 z-40 flex flex-col overflow-hidden bg-surface outline-none lg:relative lg:inset-auto lg:z-auto lg:w-[46%] lg:max-w-[46rem] lg:min-w-[24rem] lg:border-l lg:border-border ${className}`}
       >
         {children}
       </aside>

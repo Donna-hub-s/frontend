@@ -39,48 +39,53 @@ export function documentLanguage(): LanguageSupport {
   return markdown({ base: markdownLanguage, codeLanguages: FENCED_LANGUAGES, htmlTagLanguage: embeddedHtml() });
 }
 
-/** Thème : les mêmes jetons que le reste de l'application (`app/globals.css`), pas une palette à côté. */
+/** Thème : les mêmes jetons que le reste de l'application (`app/globals.css`), pas une palette à côté.
+ * `backgroundColor` était en dur en blanc (`#fff`) — jamais remarqué en clair (c'est déjà la couleur de
+ * `--color-surface`), mais en sombre ça posait un texte clair sur un fond resté blanc : illisible. */
 const theme = EditorView.theme({
   // Le panneau a une hauteur fixe (le <textarea> le faisait défiler) : l'éditeur est donc contraint, et c'est le
   // DÉFILEUR de CodeMirror qui scrolle. Sans cet `overflow`, un document long déborderait du cadre — le conteneur
   // masquant le débordement, le texte deviendrait inaccessible.
-  "&": { color: "var(--color-ink)", backgroundColor: "#fff", height: "100%", overflow: "hidden" },
+  "&": { color: "var(--color-ink)", backgroundColor: "var(--color-surface)", height: "100%", overflow: "hidden" },
   "&.cm-focused": { outline: "none" },
   ".cm-scroller": { fontFamily: "var(--font-mono)", fontSize: "0.9375rem", lineHeight: "1.75rem", overflow: "auto" },
   ".cm-content": { padding: "1rem 1.25rem", minHeight: "100%", caretColor: "var(--color-ink)" },
   ".cm-gutters": { display: "none" },
   ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--color-ink)", borderLeftWidth: "2px" },
   // La sélection reste lisible sans masquer le texte (une opacité trop forte sur un texte déjà coloré).
-  ".cm-selectionBackground, .cm-content ::selection": { backgroundColor: "rgb(124 48 64 / 0.14)" },
+  ".cm-selectionBackground, .cm-content ::selection": { backgroundColor: "color-mix(in srgb, var(--color-brand) 14%, transparent)" },
   ".cm-activeLine": { backgroundColor: "transparent" },
-  ".cm-selectionMatch": { backgroundColor: "rgb(127 121 120 / 0.22)" },
+  ".cm-selectionMatch": { backgroundColor: "color-mix(in srgb, var(--color-ink-3) 22%, transparent)" },
 });
 
 /**
  * Coloration : les titres reprennent la couleur d'accent du document rendu par le serveur (`document_render.py`,
- * `a { color: #7c3040 }`) pour que le texte tapé et son rendu se ressemblent. Le balisage reste discret — c'est un texte qu'on MODIFIE, pas du code qu'on
- * admire, et un document trop coloré devient illisible à relire.
+ * `a { color: #7c3040 }`, soit `--color-brand`) pour que le texte tapé et son rendu se ressemblent. Le balisage
+ * reste discret — c'est un texte qu'on MODIFIE, pas du code qu'on admire, et un document trop coloré devient
+ * illisible à relire. Mêmes jetons `--syntax-*` que la coloration des réponses (`.donna-code` dans
+ * `app/globals.css`) — étaient en dur ici (jamais remarqué en clair, mais sans variante sombre : illisible en
+ * thème sombre, les teintes calées sur un fond clair tombant sous 2:1).
  */
 const highlight = HighlightStyle.define([
-  { tag: [t.heading1, t.heading2, t.heading3, t.heading4, t.heading5, t.heading6], color: "#7c3040", fontWeight: "600" },
+  { tag: [t.heading1, t.heading2, t.heading3, t.heading4, t.heading5, t.heading6], color: "var(--color-brand)", fontWeight: "600" },
   { tag: [t.strong], fontWeight: "600" },
   { tag: [t.emphasis], fontStyle: "italic" },
   { tag: [t.strikethrough], textDecoration: "line-through" },
-  { tag: [t.link, t.url], color: "#1d4f91", textDecoration: "underline" },
-  { tag: [t.quote], color: "#6c6868", fontStyle: "italic" },
-  { tag: [t.monospace], color: "#1c6470" },
-  { tag: [t.processingInstruction, t.meta], color: "#7f7978" },
-  { tag: [t.comment, t.lineComment, t.blockComment], color: "#5f5a5a", fontStyle: "italic" },
-  { tag: [t.keyword, t.modifier, t.operatorKeyword, t.controlKeyword, t.definitionKeyword], color: "#7c3040", fontWeight: "600" },
-  { tag: [t.string, t.special(t.string), t.regexp], color: "#1f6a3b" },
-  { tag: [t.number, t.bool, t.null, t.atom], color: "#8a4a06" },
-  { tag: [t.variableName, t.propertyName], color: "#1c6470" },
-  { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "#1d4f91" },
-  { tag: [t.typeName, t.className, t.namespace], color: "#6a3a99" },
-  { tag: [t.tagName], color: "#7c3040" },
-  { tag: [t.attributeName], color: "#1c6470" },
-  { tag: [t.attributeValue], color: "#1f6a3b" },
-  { tag: [t.invalid], color: "#c81424", textDecoration: "underline" },
+  { tag: [t.link, t.url], color: "var(--syntax-title)", textDecoration: "underline" },
+  { tag: [t.quote], color: "var(--color-ink-2)", fontStyle: "italic" },
+  { tag: [t.monospace], color: "var(--syntax-attr)" },
+  { tag: [t.processingInstruction, t.meta], color: "var(--color-ink-3)" },
+  { tag: [t.comment, t.lineComment, t.blockComment], color: "var(--syntax-comment)", fontStyle: "italic" },
+  { tag: [t.keyword, t.modifier, t.operatorKeyword, t.controlKeyword, t.definitionKeyword], color: "var(--color-brand)", fontWeight: "600" },
+  { tag: [t.string, t.special(t.string), t.regexp], color: "var(--syntax-string)" },
+  { tag: [t.number, t.bool, t.null, t.atom], color: "var(--syntax-number)" },
+  { tag: [t.variableName, t.propertyName], color: "var(--syntax-attr)" },
+  { tag: [t.function(t.variableName), t.function(t.propertyName)], color: "var(--syntax-title)" },
+  { tag: [t.typeName, t.className, t.namespace], color: "var(--syntax-type)" },
+  { tag: [t.tagName], color: "var(--color-brand)" },
+  { tag: [t.attributeName], color: "var(--syntax-attr)" },
+  { tag: [t.attributeValue], color: "var(--syntax-string)" },
+  { tag: [t.invalid], color: "var(--color-danger)", textDecoration: "underline" },
 ]);
 
 /** Extensions de l'éditeur. `onDocChange` est le seul point de sortie vers React. */
