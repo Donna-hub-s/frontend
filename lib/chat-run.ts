@@ -30,7 +30,7 @@ const prepData = (step: PrepStep): StepData | undefined => {
     case "project":
       return { kind: "project", name: step.name ?? "", instructions: !!step.instructions, facts: step.facts ?? 0 };
     case "memory":
-      return { kind: "memory", facts: step.facts ?? 0 };
+      return { kind: "memory", facts: step.facts ?? 0, ...(step.scope === "project" ? { scope: "project" as const, name: step.name ?? "" } : {}) };
     case "conversation_files":
       return { kind: "convfiles", names: step.names ?? [], pending: step.pending ?? 0 };
     default:
@@ -56,7 +56,7 @@ export function applyPrepStep(steps: Step[], event: PrepStep, now = Date.now()):
 }
 
 /** Outils qui créent une action en attente de confirmation humaine. */
-export const PROPOSALS = new Set(["propose_email", "propose_calendar_event", "propose_drive_upload", "propose_workflow", "propose_research"]);
+export const PROPOSALS = new Set(["propose_email", "propose_calendar_event", "propose_drive_upload", "propose_workflow", "propose_research", "propose_nas_link"]);
 
 export type ErrorKind = NonNullable<ChatMessage["error"]>;
 
@@ -85,8 +85,10 @@ export type RunCallbacks = {
   /** Étape terminée (réponse complète, ou question posée). */
   settled: (kind: "response" | "question") => void;
   /** Identifiant serveur du message UTILISATEUR de ce tour (absent en régénération :
-   * il existait déjà) — voir ChatResponse.user_message_id / l'événement SSE "done". */
-  patchUser: (serverId: string | undefined) => void;
+   * il existait déjà) — voir ChatResponse.user_message_id / l'événement SSE "done".
+   * `content` : le texte que le serveur a enregistré, quand il l'a composé lui-même
+   * (réponse à une carte de questions) — il remplace alors la bulle optimiste. */
+  patchUser: (serverId: string | undefined, content?: string) => void;
 };
 
 export type RunOutcome = { conversationId: string | null; proposed: boolean };
@@ -105,6 +107,9 @@ export type RunInput = {  message: string;
   /** Régénère la réponse de DONNA visée (nouvelle version sœur) ; `message` est alors
    * ignoré par le serveur (le texte original est rejoué) — voir branches.py. */
   regenerateMessageId?: string;
+  /** Réponses à une carte de questions posée par la réponse précédente. Le serveur les valide contre
+   * la carte réellement posée et compose LUI-MÊME le texte du message (voir lib/questions.ts). */
+  questionAnswers?: { asked_message_id: string; answers: Record<string, string[]>; free_text?: string; lang: string };
   /** Mode vocal : la réponse sera lue à voix haute (le serveur ajoute une consigne de style à ce tour seulement). */
   voice?: boolean;
   signal: AbortSignal;
@@ -118,7 +123,7 @@ export type RunInput = {  message: string;
  * action a été proposée — le backend y ajoute alors la confirmation à valider.
  */
 export async function startChatRun(input: RunInput): Promise<RunOutcome> {
-  const { message, files, webSearch, mentions, projectId, agentId, editMessageId, regenerateMessageId, voice, signal, callbacks } = input;
+  const { message, files, webSearch, mentions, projectId, agentId, editMessageId, regenerateMessageId, questionAnswers, voice, signal, callbacks } = input;
   let conversationId = input.conversationId;
   const bind = (id: string) => {
     if (!id || conversationId) return;
@@ -171,6 +176,7 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
         rag?: RagInfoOut | null;
         file_report?: AttachedFileOut[];
         memory_notes: string[];
+        memory_scope?: string | null;
         attachments: AttachmentOut[];
         message_id?: string | null;
         user_message_id?: string | null;
@@ -189,7 +195,7 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
       const filesData: StepData = { kind: "files", files: data.file_report ?? [] };
       const filesDone = finishSteps().map((s) => (s.key === "files" && data.file_report?.length ? { ...s, data: filesData } : s));
       setSteps([...ragFirst, ...filesDone, { id: uid(), key: "answer", status: "done", at: Date.now() }], "done");
-      callbacks.patch({ content: data.reply, sources: data.sources, rag: data.rag ?? undefined, memory: data.memory_notes, attachments: data.attachments, tools, status: "done", serverId: data.message_id ?? undefined });
+      callbacks.patch({ content: data.reply, sources: data.sources, rag: data.rag ?? undefined, memory: data.memory_notes, memoryScope: data.memory_scope === "project" ? "project" : undefined, attachments: data.attachments, tools, status: "done", serverId: data.message_id ?? undefined });
       callbacks.settled(data.question ? "question" : "response");
     } else {
       const modelFields = modelRequestFields();
@@ -204,6 +210,7 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
           agent_id: agentId,
           edit_message_id: editMessageId,
           regenerate_message_id: regenerateMessageId,
+          question_answers: questionAnswers,
           web_search: webSearch,
           voice: voice || undefined,
           mentioned_project_id: mentions.projectId,
@@ -252,12 +259,19 @@ export async function startChatRun(input: RunInput): Promise<RunOutcome> {
               : [...finishSteps(), { id: uid(), key: event.call.name, status: "done", at: Date.now() }],
           );
           callbacks.patch((m) => ({ tools: [...(m.tools ?? []), event.call] }));
+        } else if (event.type === "userMessage") {
+          // Reçu avant la génération : si elle échoue, « Réessayer » saura régénérer CE message
+          // plutôt que d'en renvoyer un second (voir conversation.tsx::retry). Le texte vient avec,
+          // car le serveur le compose lui-même quand le tour répond à une carte de questions.
+          callbacks.patchUser(event.userMessageId, event.content);
         } else if (event.type === "error") {
-          throw Object.assign(new Error("stream"), { kind: "generic" as ErrorKind });
+          // Le serveur dit POURQUOI dans l'événement (message prévu pour l'utilisateur : refus du modèle, budget…), comme pour le
+          // corps d'un refus HTTP (readDetail). Le jeter donnait toujours « La réponse n'a pas abouti » — sans rien à chercher.
+          throw Object.assign(new Error("stream"), { kind: "generic" as ErrorKind, detail: event.message || undefined });
         } else if (event.type === "done") {
           finished = true;
           setSteps(finishSteps(), "done");
-          callbacks.patch({ sources: event.sources, memory: event.memory, attachments: event.attachments, status: "done", serverId: event.messageId });
+          callbacks.patch({ sources: event.sources, memory: event.memory, memoryScope: event.memoryScope, attachments: event.attachments, status: "done", serverId: event.messageId });
           callbacks.patchUser(event.userMessageId);
         }
       }

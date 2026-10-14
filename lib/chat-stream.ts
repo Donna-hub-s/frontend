@@ -24,8 +24,11 @@ export type StreamEvent =
   | { type: "sources"; sources: SourceOut[] }
   | { type: "tool_call"; call: ToolCall }
   | { type: "fallback" }
+  /** Le message de l'utilisateur vient d'être enregistré. Émis AVANT la génération : c'est ce qui permet
+   * d'accrocher un nouvel essai à ce message-là si le modèle échoue, au lieu d'en renvoyer un deuxième. */
+  | { type: "userMessage"; userMessageId: string; content?: string }
   | { type: "error"; message: string }
-  | { type: "done"; messageId?: string; userMessageId?: string; sources: SourceOut[]; memory: string[]; attachments: AttachmentOut[] };
+  | { type: "done"; messageId?: string; userMessageId?: string; sources: SourceOut[]; memory: string[]; memoryScope?: "project"; attachments: AttachmentOut[] };
 
 function parseBlock(block: string): StreamEvent | null {
   let name = "message";
@@ -63,6 +66,12 @@ function parseBlock(block: string): StreamEvent | null {
       };
     case "provider_fallback":
       return { type: "fallback" };
+    case "user_message":
+      return typeof payload.user_message_id === "string"
+        // `content` : le texte RÉELLEMENT enregistré. Il diffère de ce qui a été envoyé quand le tour
+        // répond à une carte de questions — c'est le serveur qui le compose (questions.py).
+        ? { type: "userMessage", userMessageId: payload.user_message_id, content: typeof payload.content === "string" ? payload.content : undefined }
+        : null;
     case "error":
       return { type: "error", message: String(payload.error ?? "") };
     case "done":
@@ -72,6 +81,7 @@ function parseBlock(block: string): StreamEvent | null {
         userMessageId: typeof payload.user_message_id === "string" ? payload.user_message_id : undefined,
         sources: (payload.sources as SourceOut[]) ?? [],
         memory: (payload.memory_notes as string[]) ?? [],
+        memoryScope: payload.memory_scope === "project" ? "project" : undefined,
         attachments: (payload.attachments as AttachmentOut[]) ?? [],
       };
     default:

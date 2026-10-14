@@ -14,6 +14,8 @@ export type FactVersion = {
   redacted?: boolean;
   /** Texte effacé par la politique de rétention : la trace (qui, quand) reste, le contenu non. */
   purged?: boolean;
+  /** « donna » : retenu, corrigé ou oublié par DONNA au nom de `changed_by` ; « user » (ou absent) : écrit à la main. */
+  via?: string;
 };
 
 type Person = { user_id: string; email: string | null };

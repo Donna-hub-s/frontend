@@ -25,6 +25,7 @@ import { ChatIcon, ChevronIcon, FileIcon, FolderIcon, LockIcon, MoreIcon, Pencil
 import { GoogleDriveIcon } from "./brand-icons";
 import { DrivePicker, type ExistingDocument } from "./drive-picker";
 import { DriveFolderImportProgress } from "./drive-folder-import-progress";
+import { NasSection } from "./nas-section";
 import { startDriveFolderImport, type DriveFolderImportRun } from "@/lib/drive-folder-import";
 import { AgentsCard } from "./agents-manager";
 import { ProjectIcon, ProjectIconPicker } from "./project-icon";
@@ -874,6 +875,9 @@ function FilesCard({
           </div>
         )}
 
+        {/* Dossiers du NAS liés au projet : la section ne s'affiche que si le serveur dit que le connecteur existe pour cet espace. */}
+        <NasSection lang={lang} labels={labels} projectId={projectId} canEdit={canEdit} onSynced={() => void refreshDocuments()} />
+
         <DrivePicker
           lang={lang}
           labels={driveLabels}
@@ -1139,6 +1143,7 @@ function MemoryCard({
         </form>
       )}
 
+      {!canEdit && <p className="px-4 pb-2 text-meta text-ink-3 text-pretty">{labels.memoryViewerHint}</p>}
       {facts.length ? (
         <ul className="flex flex-col border-t border-border py-1">
           {facts.map((fact) => (
@@ -1216,6 +1221,7 @@ function MemoryCard({
               )}
               <p className="flex flex-wrap items-center gap-x-2 pl-3 text-meta text-ink-3">
                 <span>{stampOf(fact)}</span>
+                {fact.via === "donna" && <span className="rounded-badge bg-peche-100 px-1.5 py-0.5 font-medium text-brand-strong">{labels.factByDonna}</span>}
                 {fact.version > 1 && (
                   <button type="button" onClick={() => void openHistory(fact.id)} aria-pressed={history?.scope === fact.id} className="underline-offset-2 hover:text-brand hover:underline aria-pressed:text-brand">
                     {labels.factHistory}
@@ -1245,7 +1251,7 @@ function MemoryCard({
               {history.rows.map((row) => (
                 <li key={`${row.fact_id}-${row.version}`} className="flex flex-col gap-0.5">
                   <span className="text-meta text-ink-3">
-                    {{ create: labels.historyCreate, update: labels.historyUpdate, delete: labels.historyDelete }[row.action]} · {who(row.changed_by)} · {when(row.changed_at)}
+                    {{ create: labels.historyCreate, update: labels.historyUpdate, delete: labels.historyDelete }[row.action]} · {who(row.changed_by)}{row.via === "donna" ? ` (${labels.factByDonnaShort})` : ""} · {when(row.changed_at)}
                   </span>
                   {row.redacted || row.purged ? (
                     <span className="text-meta italic text-ink-3">{row.purged ? labels.historyPurged : labels.historyHidden}</span>

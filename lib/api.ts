@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { BACKEND_URL } from "./backend";
 import { COOKIES } from "./session-cookies";
+import type { NasLinkDraft } from "./nas";
 import type { ResearchDraft } from "./research";
 
 /**
@@ -131,6 +132,9 @@ export type MessageOut = {
   // sans ça une conversation rechargée (F5, réouverture) ne montre plus que
   // le texte brut de ces réponses (voir ANALYSE_COMPLETE.md §3.2).
   tool_calls?: ToolCallOut[] | null;
+  // Réponses à la carte de questions de la réponse précédente (backend : MessageOut.answers) —
+  // sans elles, un rechargement ne montre plus QUE le texte composé, pas ce qui a été coché.
+  answers?: { asked_message_id?: string | null; answers: Record<string, string[]>; free_text?: string | null } | null;
   // Versions de ce message (édition d'un message utilisateur, régénération d'une
   // réponse) — backend/app/chat/src/schemas.py::MessageOut.sibling_ids/sibling_index.
   // Un seul élément (ou absent) = une seule version, rien à afficher.
@@ -239,6 +243,8 @@ export type PendingActionOut = {
   workflow?: WorkflowDraftOut | null;
   /** Recherche approfondie proposée (kind « research ») : sujet, estimation de coût et plafond. */
   research?: ResearchDraft | null;
+  /** Dossier du NAS à lier (kind « nas_link ») : dossier, projet et ce qui sera indexé. */
+  nas?: NasLinkDraft | null;
 };
 
 /** GET /app/chat/memory/reminders (backend/app/chat/src/schemas.py::ReminderOut). */
@@ -351,6 +357,8 @@ export type ProjectFactOut = {
   version: number;
   updated_by: string | null;
   updated_at: string | null;
+  /** Dernière voie d'écriture : « donna » = retenu par DONNA au nom d'un membre ; « user » (ou absent) = écrit à la main. */
+  via?: string;
 };
 
 /** backend/app/chat/src/schemas.py::ProjectDocumentOut. */

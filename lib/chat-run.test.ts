@@ -276,6 +276,21 @@ describe("startChatRun — refus du serveur et identifiant du message", () => {
     expect(message.errorDetail).toBeUndefined();
   });
 
+  it("une erreur annoncée DANS le flux montre la raison du serveur, pas seulement « n'a pas abouti »", async () => {
+    const reason = "Le modèle a rejeté la requête — l'équipe technique a été notifiée par les logs.";
+    const event = `event: error\ndata: ${JSON.stringify({ error: reason })}\n\n`;
+    const message = await run(sseResponse([startEvent("c1"), event]));
+    expect(message.status).toBe("error");
+    expect(message.error).toBe("generic");
+    expect(message.errorDetail).toBe(reason);
+  });
+
+  it("une erreur de flux sans texte garde le message générique", async () => {
+    const message = await run(sseResponse([startEvent("c1"), `event: error\ndata: ${JSON.stringify({})}\n\n`]));
+    expect(message.error).toBe("generic");
+    expect(message.errorDetail).toBeUndefined();
+  });
+
   it("les erreurs de session et de débit gardent leur propre message", async () => {
     expect((await run(new Response("{}", { status: 401 }))).error).toBe("session");
     expect((await run(new Response("{}", { status: 429 }))).error).toBe("tooMany");

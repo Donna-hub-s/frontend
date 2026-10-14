@@ -13,6 +13,7 @@ import { ElapsedBadge } from "./elapsed-badge";
 import { EmailAttachmentList } from "./email-attachments";
 import { estimateText, formatUsd } from "@/lib/research";
 import { WorkflowDraft } from "./workflow-draft";
+import { NasLinkDraft } from "./nas-link-draft";
 import { useThreadsState, useWorkspace } from "./workspace-provider";
 
 type WorkspaceDict = Dictionary["workspace"];
@@ -72,7 +73,7 @@ export const stepDetail = (dict: WorkspaceDict, step: Step): { text: string; war
       return { text: [data.name, parts.join(" · ")].filter(Boolean).join(" — "), warn: false };
     }
     case "memory":
-      return { text: fill(t.memoryFacts, { n: data.facts }), warn: false };
+      return { text: data.scope === "project" ? fill(t.memoryProjectFacts, { n: data.facts, name: data.name ?? "" }) : fill(t.memoryFacts, { n: data.facts }), warn: false };
     case "convfiles": {
       const shown = data.names.slice(0, 3).join(", ");
       const more = data.names.length > 3 ? ` +${data.names.length - 3}` : "";
@@ -218,6 +219,7 @@ export function PendingItem({ lang, dict, action }: { lang: Locale; dict: Worksp
       <p className="mt-2 text-label text-ink text-pretty">{action.summary}</p>
       {action.email && <EmailAttachmentList actionId={action.id} attachments={action.email.attachments} openable labels={dict.chat} />}
       {action.workflow && <WorkflowDraft draft={action.workflow} labels={dict.chat} agentLabels={dict.workflowAgents} />}
+      {action.nas && <NasLinkDraft draft={action.nas} labels={dict.chat} />}
       {action.research && (
         // Même détail que ActionCard (fil de discussion) avant approbation — une fois confirmée, l'action
         // quitte cette liste (voir decideAction) : pas besoin d'y suivre la progression, seulement l'estimation.
@@ -240,7 +242,7 @@ export function PendingItem({ lang, dict, action }: { lang: Locale; dict: Worksp
           onClick={() => void decide("confirm")}
           className="rounded-button bg-brand-fill px-3 py-1.5 text-secondary font-medium text-white hover:bg-brand-fill-strong disabled:opacity-60"
         >
-          {action.research ? dict.chat.researchStart : panel.approve}
+          {action.research ? dict.chat.researchStart : action.nas ? dict.chat.nasLinkStart : panel.approve}
         </button>
         <button
           type="button"

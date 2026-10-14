@@ -44,6 +44,16 @@
   --color-ink-2: #6c6868; /* 5,2:1 — texte secondaire */
   --color-ink-3: #7a7473; /* 4,4:1 sur la page, 4,1:1 sur le panneau latéral — placeholders, horodatages (≥ 12 px) */
 
+  /* ── Coloration syntaxique (code) ─────────────────────── */
+  /* Reprises telles quelles des `.hljs-*` ci-dessous (coloration des réponses) — partagées avec
+     l'éditeur du canvas (lib/canvas-editor.ts), qui les utilisait en dur sans variante sombre. */
+  --syntax-comment: #5f5a5a;
+  --syntax-string: #1f6a3b;
+  --syntax-number: #8a4a06;
+  --syntax-title: #1d4f91;
+  --syntax-type: #6a3a99;
+  --syntax-attr: #1c6470;
+
   /* ── États ────────────────────────────────────────────── */
   --color-success: #2f874e; /* icônes et pastilles */
   --color-success-ink: #23703f; /* 5,8:1 — texte « Connecté », « Réponse prête » */
@@ -160,6 +170,15 @@
   --color-ink: #f2ebe7;
   --color-ink-2: #bcb1ab;
   --color-ink-3: #978b85;
+
+  /* Coloration syntaxique : mêmes familles de teinte, remontées pour rester lisibles sur fond
+     sombre (même logique que les `.hljs-*` ci-dessous). */
+  --syntax-comment: #a0958f;
+  --syntax-string: #8ad3a4;
+  --syntax-number: #e3ad73;
+  --syntax-title: #90bbf0;
+  --syntax-type: #c8a6e8;
+  --syntax-attr: #7fcbd8;
 
   /* Le logo s'inverse sur fond sombre : ruban pêche, ombres rosées (palette « onDark » de donna-mark.tsx). */
   --mark-from: #fdfaf8;
@@ -639,7 +658,7 @@ dialog:not([open]) {
 }
 .donna-code .hljs-comment,
 .donna-code .hljs-quote {
-  color: #5f5a5a;
+  color: var(--syntax-comment);
   font-style: italic;
 }
 .donna-code .hljs-keyword,
@@ -653,71 +672,36 @@ dialog:not([open]) {
 .donna-code .hljs-regexp,
 .donna-code .hljs-addition,
 .donna-code .hljs-meta .hljs-string {
-  color: #1f6a3b;
+  color: var(--syntax-string);
 }
 .donna-code .hljs-number,
 .donna-code .hljs-literal,
 .donna-code .hljs-symbol,
 .donna-code .hljs-bullet {
-  color: #8a4a06;
+  color: var(--syntax-number);
 }
 .donna-code .hljs-title,
 .donna-code .hljs-title.function_,
 .donna-code .hljs-section {
-  color: #1d4f91;
+  color: var(--syntax-title);
 }
 .donna-code .hljs-built_in,
 .donna-code .hljs-type,
 .donna-code .hljs-title.class_ {
-  color: #6a3a99;
+  color: var(--syntax-type);
 }
 .donna-code .hljs-attr,
 .donna-code .hljs-attribute,
 .donna-code .hljs-variable,
 .donna-code .hljs-template-variable,
 .donna-code .hljs-property {
-  color: #1c6470;
+  color: var(--syntax-attr);
 }
 .donna-code .hljs-deletion {
   color: var(--color-danger);
 }
-/* En sombre, les teintes ci-dessus (calées sur un fond clair) tombent sous 2:1 :
-   on les remonte, en gardant les mêmes familles pour ne pas réapprendre à lire. */
-:root[data-theme="dark"] {
-  .donna-code .hljs-comment,
-  .donna-code .hljs-quote {
-    color: #a0958f;
-  }
-  .donna-code .hljs-string,
-  .donna-code .hljs-regexp,
-  .donna-code .hljs-addition,
-  .donna-code .hljs-meta .hljs-string {
-    color: #8ad3a4;
-  }
-  .donna-code .hljs-number,
-  .donna-code .hljs-literal,
-  .donna-code .hljs-symbol,
-  .donna-code .hljs-bullet {
-    color: #e3ad73;
-  }
-  .donna-code .hljs-title,
-  .donna-code .hljs-title.function_,
-  .donna-code .hljs-section {
-    color: #90bbf0;
-  }
-  .donna-code .hljs-built_in,
-  .donna-code .hljs-type,
-  .donna-code .hljs-title.class_ {
-    color: #c8a6e8;
-  }
-  .donna-code .hljs-attr,
-  .donna-code .hljs-attribute,
-  .donna-code .hljs-variable,
-  .donna-code .hljs-template-variable,
-  .donna-code .hljs-property {
-    color: #7fcbd8;
-  }
-}
+/* Plus de bloc `:root[data-theme="dark"]` séparé ici : les `--syntax-*` ci-dessus portent déjà
+   leur propre valeur sombre (même remontée de teinte qu'avant, juste nommée une fois). */
 
 .donna-code .hljs-emphasis {
   font-style: italic;

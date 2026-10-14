@@ -56,6 +56,9 @@ export type SendInput = {
   /** Message UTILISATEUR remplacé (nouvelle version sœur) — voir conversation.tsx::editAndResend.
    * `siblingIds` : ses versions déjà connues (vide si c'est la première édition). */
   editing?: { messageId: string; siblingIds: string[] };
+  /** Réponses à une carte de questions : le serveur les valide et compose le texte du message, qui
+   * remplace alors la bulle optimiste (voir lib/questions.ts). */
+  questionAnswers?: { asked_message_id: string; answers: Record<string, string[]>; free_text?: string; lang: string };
   /** Langue courante : l'URL est mise à jour dès que le backend crée la conversation. */
   lang: Locale;
   /** Titre provisoire affiché avant le titre généré par le backend. */
@@ -115,7 +118,10 @@ type WorkspaceValue = {
   /** Modifie un message d'un fil (par son id local) : sert, par exemple, à mémoriser mon pouce. */
   patchMessage: (key: string, messageId: string, patch: Partial<ChatMessage>) => void;
   /** Régénère la réponse `original` (même position, nouvelle version sœur côté serveur) — voir branches.py. */
-  regenerate: (key: string, conversationId: string, original: ChatMessage) => Promise<boolean>;
+  /** `targetId` : le message auquel accrocher la nouvelle réponse (défaut : la réponse régénérée elle-même). */
+  regenerate: (key: string, conversationId: string, original: ChatMessage, targetId?: string) => Promise<boolean>;
+  /** Demande une réponse à une question qui n'en a jamais reçu (échec du modèle), sans la renvoyer. */
+  answerQuestion: (key: string, conversationId: string, question: ChatMessage) => Promise<boolean>;
   /** Bascule la branche affichée sur celle qui passe par `messageId` (navigation ‹ i/n ›, ou juste après une édition/régénération). */
   selectBranch: (key: string, conversationId: string, messageId: string) => Promise<boolean>;
   stop: (key: string) => void;
@@ -533,7 +539,7 @@ export function WorkspaceProvider({
         busy: true,
         messages: [
           ...thread.messages,
-          { id: userId, role: "user", content: trimmed, createdAt: Date.now(), attachments: [], localFiles: files.map((f) => f.name) },
+          { id: userId, role: "user", content: trimmed, createdAt: Date.now(), attachments: [], localFiles: files.map((f) => f.name), answers: input.questionAnswers ? { asked_message_id: input.questionAnswers.asked_message_id, answers: input.questionAnswers.answers, free_text: input.questionAnswers.free_text ?? null } : undefined },
           { id: assistantId, role: "assistant", content: "", createdAt: Date.now(), attachments: [], steps: [], tools: [], status: "streaming" },
         ],
       }));
@@ -547,6 +553,7 @@ export function WorkspaceProvider({
         agentId,
         voice,
         editMessageId: editing?.messageId,
+        questionAnswers: input.questionAnswers,
         conversationId: input.conversationId,
         signal: controller.signal,
         callbacks: {
@@ -555,12 +562,19 @@ export function WorkspaceProvider({
               ...thread,
               messages: thread.messages.map((m) => (m.id === assistantId ? { ...m, ...(typeof p === "function" ? p(m) : p) } : m)),
             })),
-          patchUser: (serverId) =>
+          patchUser: (serverId, content) =>
             patchThread(key, (thread) => ({
               ...thread,
               messages: thread.messages.map((m) =>
                 m.id === userId
-                  ? { ...m, serverId, ...(editing && serverId ? nextSiblings(editing.siblingIds, editing.messageId, serverId) : {}) }
+                  ? {
+                      ...m,
+                      serverId,
+                      // Texte composé par le serveur (réponse à une carte de questions) : il remplace
+                      // la bulle optimiste, pour que l'écran et la base disent la même chose.
+                      ...(content !== undefined ? { content } : {}),
+                      ...(editing && serverId ? nextSiblings(editing.siblingIds, editing.messageId, serverId) : {}),
+                    }
                   : m,
               ),
             })),
@@ -622,9 +636,15 @@ export function WorkspaceProvider({
     [notify, patchThread, refreshConversations, refreshPending, upsertConversation],
   );
 
+  /**
+   * Nouvelle réponse dans la bulle `original`. `targetId` dit à QUOI le serveur l'accroche : par défaut la
+   * réponse elle-même (régénération ordinaire, nouvelle version sœur), mais c'est le message de
+   * l'utilisateur quand la réponse a échoué et n'existe donc pas côté serveur — voir conversation.tsx::retry.
+   */
   const regenerate = useCallback(
-    async (key: string, conversationId: string, original: ChatMessage): Promise<boolean> => {
-      if (runs.current.has(key) || !original.serverId) return false;
+    async (key: string, conversationId: string, original: ChatMessage, targetId?: string): Promise<boolean> => {
+      const target = targetId ?? original.serverId;
+      if (runs.current.has(key) || !target) return false;
       const controller = new AbortController();
       runs.current.set(key, controller);
       patchThread(key, (thread) => ({
@@ -646,7 +666,7 @@ export function WorkspaceProvider({
         files: [],
         webSearch: false,
         mentions: EMPTY_MENTIONS,
-        regenerateMessageId: original.serverId,
+        regenerateMessageId: target,
         conversationId,
         signal: controller.signal,
         callbacks: {
@@ -660,8 +680,10 @@ export function WorkspaceProvider({
                   terminal = partial.status;
                   return m;
                 }
-                return partial.serverId && partial.serverId !== original.serverId
-                  ? { ...m, ...partial, ...nextSiblings(original.siblingIds, original.serverId as string, partial.serverId) }
+                // Pas de version sœur quand la réponse d'origine n'a jamais existé côté serveur
+                // (elle avait échoué) : il n'y a rien à ranger à côté d'elle.
+                return partial.serverId && original.serverId && partial.serverId !== original.serverId
+                  ? { ...m, ...partial, ...nextSiblings(original.siblingIds, original.serverId, partial.serverId) }
                   : { ...m, ...partial };
               }),
             })),
@@ -696,6 +718,29 @@ export function WorkspaceProvider({
       }
     },
     [notify, patchThread, refreshPending],
+  );
+
+  /**
+   * Une question restée SANS réponse — le modèle avait échoué, et son texte est quand même enregistré
+   * (voir chat_routes.py) : on lui demande une réponse sans la renvoyer. Après un rechargement, c'est le
+   * seul geste qui reste : la bulle de réponse ratée, elle, n'a jamais existé côté serveur, donc ni
+   * « Réessayer » ni « Régénérer » ne s'affichent plus.
+   */
+  const answerQuestion = useCallback(
+    async (key: string, conversationId: string, question: ChatMessage): Promise<boolean> => {
+      if (runs.current.has(key) || !question.serverId) return false;
+      const placeholder: ChatMessage = {
+        id: uid(), role: "assistant", content: "", createdAt: Date.now(),
+        attachments: [], steps: [], tools: [], status: "streaming",
+      };
+      patchThread(key, (thread) => ({ ...thread, messages: [...thread.messages, placeholder] }));
+      const ok = await regenerate(key, conversationId, placeholder, question.serverId);
+      // Échec : `regenerate` restaure la bulle d'origine, qui ici est vide — on la retire plutôt que de
+      // laisser une réponse blanche sous la question.
+      if (!ok) patchThread(key, (thread) => ({ ...thread, messages: thread.messages.filter((m) => m.id !== placeholder.id) }));
+      return ok;
+    },
+    [patchThread, regenerate],
   );
 
   const selectBranch = useCallback(
@@ -749,6 +794,7 @@ export function WorkspaceProvider({
       dropMessages,
       patchMessage,
       regenerate,
+      answerQuestion,
       selectBranch,
       stop,
       notices,
@@ -786,6 +832,7 @@ export function WorkspaceProvider({
       dropMessages,
       patchMessage,
       regenerate,
+      answerQuestion,
       selectBranch,
       stop,
       notices,

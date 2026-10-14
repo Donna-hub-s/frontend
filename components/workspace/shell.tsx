@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Locale } from "@/i18n/config";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { DonnaLockup } from "@/components/brand/donna-mark";
+import { collapsedServerSnapshot, collapsedSnapshot, subscribeCollapsed, toggleCollapsed } from "@/lib/sidebar-collapsed";
 import type { ConnectorsOut, ConversationOut, PendingActionOut, ProjectOut } from "@/lib/workspace-types";
 import { ChevronIcon, MenuIcon } from "./icons";
 import { SearchPalette } from "./search-palette";
@@ -47,6 +48,8 @@ export function WorkspaceShell({
   children: ReactNode;
 }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Barre rétractée : réglage du navigateur, inconnu du rendu serveur (voir lib/sidebar-collapsed.ts).
+  const sidebarCollapsed = useSyncExternalStore(subscribeCollapsed, collapsedSnapshot, collapsedServerSnapshot);
 
   return (
     <ConnectorsProvider value={connectors}>
@@ -64,6 +67,7 @@ export function WorkspaceShell({
           linkCancel: dict.chat.linkCancel,
           linkConfirmHint: dict.chat.linkConfirmHint,
           linkPreviewError: dict.chat.linkPreviewError,
+          mermaidInvalid: dict.chat.mermaidInvalid,
         }}
       >
       {/* `relative` : repère des éléments `absolute` sans ancêtre positionné, notamment les `sr-only` du fil de discussion.
@@ -78,6 +82,8 @@ export function WorkspaceShell({
           languageLabel={languageLabel}
           account={account}
           open={sidebarOpen}
+          collapsed={sidebarCollapsed}
+          onToggleCollapsed={toggleCollapsed}
           onClose={() => setSidebarOpen(false)}
         />
         <main className="flex min-w-0 flex-1 flex-col">

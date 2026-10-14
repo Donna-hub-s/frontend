@@ -97,3 +97,35 @@ describe("PendingItem — détail d'une recherche approfondie en attente", () =>
     vi.unstubAllGlobals();
   });
 });
+
+describe("PendingItem — liaison d'un dossier du NAS en attente", () => {
+  const action: PendingActionOut = {
+    id: "n1",
+    kind: "nas_link",
+    summary: "Lier le dossier NAS « nas / Missions/Audit-2026 » au projet « Audit »",
+    status: "awaiting",
+    created_at: new Date().toISOString(),
+    nas: {
+      location: "nas / Missions/Audit-2026",
+      project_id: "p1",
+      project_name: "Audit",
+      auto_sync: true,
+      lines: ["Lecture seule : rien n'est modifié sur le NAS.", "≈ 124 document(s) indexable(s) (38,2 Mo)."],
+    },
+  };
+
+  it("montre le dossier, le projet et ce qui sera indexé avant l'accord", () => {
+    mount(action);
+    expect(host.textContent).toContain("nas / Missions/Audit-2026");
+    expect(host.textContent).toContain("Sera lié au projet « Audit »");
+    expect(host.textContent).toContain("≈ 124 document(s) indexable(s)");
+    expect(host.textContent).toContain(fr.workspace.panel.kinds.nas_link);
+  });
+
+  it("le bouton de validation dit « Lier le dossier », pas « Valider »", () => {
+    mount(action);
+    const labels = [...host.querySelectorAll("button")].map((b) => b.textContent);
+    expect(labels).toContain(fr.workspace.chat.nasLinkStart);
+    expect(labels).not.toContain(fr.workspace.panel.approve);
+  });
+});

@@ -159,6 +159,11 @@ function SettingsBody({
       display_name: draft.display_name.trim() || null,
       avatar_url: draft.avatar_url.trim() || null,
       timezone: draft.timezone.trim() || "UTC",
+      // Oublié ici (bug réel trouvé en vérifiant pourquoi le sombre ne survivait jamais à un
+      // rechargement) : le bouton clair/sombre/système applique tout de suite en local
+      // (applyTheme/storeTheme), mais sans ce champ le choix n'était JAMAIS envoyé au serveur —
+      // au rechargement suivant, ThemeSync relit le profil (resté "system") et écrase le choix.
+      theme: draft.theme,
       language: draft.language || null,
       preferred_tts_voice: draft.preferred_tts_voice.trim() || null,
       preferred_tts_speaker: draft.preferred_tts_speaker.trim() === "" ? null : Number(draft.preferred_tts_speaker),
