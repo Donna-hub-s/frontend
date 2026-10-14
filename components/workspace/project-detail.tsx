@@ -28,6 +28,7 @@ import { DriveFolderImportProgress } from "./drive-folder-import-progress";
 import { NasSection } from "./nas-section";
 import { MemoryPolicyBlock } from "./memory-policy-block";
 import { MemoryQuotaBlock } from "./memory-quota-block";
+import { ContextWindowCard } from "./context-window-card";
 import { inviteErrorKind, projectInviteLink, spaceInviteLink, spaceStatusKey, type InviteErrorKind } from "@/lib/project-invites";
 import { startDriveFolderImport, type DriveFolderImportRun } from "@/lib/drive-folder-import";
 import { AgentsCard } from "./agents-manager";
@@ -117,7 +118,7 @@ export function ProjectDetail({
   currentUserId: string;
 }) {
   const labels = dict.projects;
-  const { projects, upsertProject, removeProject } = useWorkspace();
+  const { projects, upsertProject, removeProject, memoryTicks } = useWorkspace();
   const router = useRouter();
   const isOwner = project.my_role === "owner";
   const canEdit = project.my_role !== "viewer";
@@ -207,6 +208,14 @@ export function ProjectDetail({
               contextChunksLimit={liveProject.context_chunks_limit}
             />
             <MemoryCard labels={labels} projectId={project.id} initialFacts={initialFacts} canEdit={canEdit} members={members} currentUserId={currentUserId} />
+            {/* Relue quand ce qui la compose change : consignes, mémoire (poussée en temps réel), nombre de documents. */}
+            <ContextWindowCard
+              lang={lang}
+              labels={labels}
+              projectId={project.id}
+              conversations={initialConversations}
+              refreshKey={`${memoryTicks[project.id] ?? 0}:${liveProject.updated_at}:${liveProject.document_count}`}
+            />
           </aside>
         </div>
       </div>
