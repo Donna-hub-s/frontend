@@ -5,7 +5,7 @@ import "server-only";
  * Le navigateur ne parle jamais directement à l'API d'authentification :
  * les jetons restent côté serveur, dans des cookies httpOnly (voir lib/session.ts).
  */
-export const BACKEND_URL = (process.env.DONNA_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
+export const BACKEND_URL = (process.env.DONNA_API_URL ?? "http://localhost:8080").replace(/\/$/, "");
 export const AUTH_BASE = `${BACKEND_URL}/app/auth`;
 
 /** Reflète xauth TokenResponse (backend/app/xauth/src/schemas/auth.py). */
