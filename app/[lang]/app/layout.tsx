@@ -12,7 +12,7 @@ import { getDictionary } from "../dictionaries";
  * lui-même (httpOnly), juste l'hôte : la connexion s'authentifie via un
  * ticket à usage unique (voir lib/use-project-ws.ts). */
 function wsBaseUrl(): string | null {
-  const publicUrl = process.env.DONNA_API_PUBLIC_URL || process.env.DONNA_API_URL || "http://localhost:8000";
+  const publicUrl = process.env.DONNA_API_PUBLIC_URL || process.env.DONNA_API_URL || "http://localhost:8080";
   if (!/^https?:\/\//.test(publicUrl)) return null;
   return publicUrl.replace(/\/$/, "").replace(/^http/, "ws");
 }

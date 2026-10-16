@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { LOCALE_COOKIE, isLocale, locales, negotiateLocale } from "./i18n/config";
 import { COOKIES, MAX_AGE, cookieOptions } from "./lib/session-cookies";
 
-const BACKEND_URL = (process.env.DONNA_API_URL ?? "http://localhost:8000").replace(/\/$/, "");
+const BACKEND_URL = (process.env.DONNA_API_URL ?? "http://localhost:8080").replace(/\/$/, "");
 
 /**
  * 1. Pages de l'application (/fr/app…) : contrôle optimiste de session. Jeton d'accès expiré

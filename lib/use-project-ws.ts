@@ -18,6 +18,7 @@ export type { AppNotification, DocumentStatusUpdate, MemoryChange, ReminderDue }
 
 const RECONNECT_INITIAL_MS = 1_000;
 const RECONNECT_MAX_MS = 30_000;
+const HEARTBEAT_INTERVAL_MS = 25_000;
 
 export function useProjectCapacityWs(
   wsBaseUrl: string | null,
@@ -53,9 +54,18 @@ export function useProjectCapacityWs(
     let cancelled = false;
     let socket: WebSocket | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
     let backoff = RECONNECT_INITIAL_MS;
 
+    const clearHeartbeat = () => {
+      if (heartbeatTimer) {
+        clearInterval(heartbeatTimer);
+        heartbeatTimer = null;
+      }
+    };
+
     const scheduleReconnect = () => {
+      clearHeartbeat();
       if (cancelled) return;
       reconnectTimer = setTimeout(connect, backoff);
       backoff = Math.min(backoff * 2, RECONNECT_MAX_MS);
@@ -72,6 +82,16 @@ export function useProjectCapacityWs(
         socket = new WebSocket(`${wsBaseUrl}/ws/user?ticket=${encodeURIComponent(ticket)}`);
         socket.onopen = () => {
           backoff = RECONNECT_INITIAL_MS;
+          clearHeartbeat();
+          heartbeatTimer = setInterval(() => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+              try {
+                socket.send(JSON.stringify({ type: "ping" }));
+              } catch {
+                socket.close();
+              }
+            }
+          }, HEARTBEAT_INTERVAL_MS);
         };
         socket.onmessage = (event) => {
           for (const update of parseUserChannelMessage(event.data as string)) {
@@ -83,6 +103,7 @@ export function useProjectCapacityWs(
           }
         };
         socket.onclose = () => {
+          clearHeartbeat();
           if (!cancelled) scheduleReconnect();
         };
         socket.onerror = () => {
@@ -97,6 +118,7 @@ export function useProjectCapacityWs(
 
     return () => {
       cancelled = true;
+      clearHeartbeat();
       if (reconnectTimer) clearTimeout(reconnectTimer);
       socket?.close();
     };

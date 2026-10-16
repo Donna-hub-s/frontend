@@ -5,7 +5,7 @@ Next.js 16 (App Router, Turbopack), React 19, Tailwind CSS 4, TypeScript.
 
 ## Démarrer
 
-Le backend doit tourner (`make dev` à la racine, API sur `http://localhost:8000`).
+Le backend doit tourner (`make dev` à la racine, API sur `http://localhost:8080`).
 
 ```sh
 npm install
@@ -26,7 +26,7 @@ Depuis la racine du dépôt : `make frontend-install` puis `make frontend-dev`.
 
 | Variable | Défaut | Rôle |
 |---|---|---|
-| `DONNA_API_URL` | `http://localhost:8000` | API DONNA vue par le serveur Next (Server Actions, `proxy.ts`, route `/api/donna`) |
+| `DONNA_API_URL` | `http://localhost:8080` | API DONNA vue par le serveur Next (Server Actions, `proxy.ts`, route `/api/donna`) |
 | `DONNA_API_PUBLIC_URL` | `DONNA_API_URL` | API vue par le navigateur (démarrage de la connexion Google) |
 
 Côté backend, `XAUTH_WEB_APP_URL` et `XAUTH_OAUTH_WEB_REDIRECT_ORIGINS` doivent pointer vers

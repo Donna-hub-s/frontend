@@ -19,7 +19,8 @@ beforeEach(() => {
   root = createRoot(host);
   // ViewerBody charge le fichier au montage (fetch(file.url)) : jamais de vrai réseau en test,
   // même patron que side-panel.test.ts.
-  vi.stubGlobal("fetch", vi.fn());
+  // Mock fetch returning a resolved promise with ok response to handle async state change gracefully
+  vi.stubGlobal("fetch", vi.fn().mockImplementation(() => new Promise(() => {})));
 });
 
 afterEach(() => {
