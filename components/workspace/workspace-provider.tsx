@@ -1,14 +1,13 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { startChatRun, uid, visibleSteps, type RunInput } from "@/lib/chat-run";
+import { EMPTY_MENTIONS, startChatRun, uid, visibleSteps, type RunInput } from "@/lib/chat-run";
 import { nextSiblings, selectMessageBranch } from "@/lib/branches";
 import { useProjectCapacityWs, type AppNotification, type DocumentStatusUpdate, type MemoryChange, type ReminderDue } from "@/lib/use-project-ws";
 import type { SkillSettings } from "@/lib/skills";
 import { installSessionGuard } from "@/lib/session-guard";
 import type { Locale } from "@/i18n/config";
 import {
-  EMPTY_MENTIONS,
   toChatMessages,
   type ChatMessage,
   type ConversationOut,

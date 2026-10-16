@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fr from "@/app/[lang]/dictionaries/fr.json";
 import type { ProjectInviteOut } from "@/lib/api";
 import { AcceptInviteButton } from "./accept-invite-button";
-import { InviteForm } from "./project-detail";
+import { InviteForm } from "./invite-form";
 import { WorkspaceProjects } from "./workspace-projects";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
