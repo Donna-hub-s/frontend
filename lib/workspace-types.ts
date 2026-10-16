@@ -116,7 +116,6 @@ export type Mention = { id: string; label: string; kind: MentionKind; projectId?
 /** Ce qui part réellement dans la requête (ChatRequest.mentioned_document_ids/
  * mentioned_project_id) — un seul projet mentionné à la fois, comme le backend. */
 export type MentionSelection = { documentIds: string[]; projectId: string | null };
-export const EMPTY_MENTIONS: MentionSelection = { documentIds: [], projectId: null };
 
 export type ChatMessage = {
   id: string;

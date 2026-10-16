@@ -10,7 +10,7 @@ Le backend doit tourner (`make dev` à la racine, API sur `http://localhost:8080
 ```sh
 npm install
 cp .env.example .env.local   # facultatif : les valeurs par défaut conviennent en local
-npm run dev                  # http://localhost:3000
+npm run dev                  # http://localhost:4200 (--port 4200)
 ```
 
 Depuis la racine du dépôt : `make frontend-install` puis `make frontend-dev`.

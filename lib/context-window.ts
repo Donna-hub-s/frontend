@@ -34,8 +34,6 @@ export type ContextSection = {
   items: ContextItem[];
   note: string | null;
   text: string | null;
-  /** Le texte existe mais n'est montré qu'au responsable de l'espace. */
-  text_hidden: boolean;
   truncated: boolean;
 };
 

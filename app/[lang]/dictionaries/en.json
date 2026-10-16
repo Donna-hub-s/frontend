@@ -1008,7 +1008,6 @@
         "wouldWeigh": "would weigh {n}",
         "notLoaded": "Not loaded ({n})",
         "notLoadedWeight": "{n} tokens if they were",
-        "hiddenText": "The text is reserved for the workspace owner.",
         "truncated": "Text truncated.",
         "showText": "Show text",
         "itemTokens": "{n} t.",

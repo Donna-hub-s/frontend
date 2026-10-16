@@ -126,7 +126,7 @@ function SectionRow({ section, data, c, lang }: { section: ContextSection; data:
   const base = data.window ?? data.used_tokens;
   const share = section.counted ? shareLabel(section.tokens, base) : null;
   const label = names[section.id] ?? section.label;
-  const body = section.text || section.text_hidden || section.items.length > 0 || section.note;
+  const body = section.text || section.items.length > 0 || section.note;
   const weightText = section.counted
     ? formatTokens(weight, lang)
     : section.variable
@@ -154,7 +154,6 @@ function SectionRow({ section, data, c, lang }: { section: ContextSection; data:
             {section.counted && section.potential_tokens > 0 && (
               <p className="text-meta text-ink-3">{fill(c.wouldWeigh, { n: formatTokens(section.potential_tokens, lang) })}</p>
             )}
-            {section.text_hidden && <p className="mt-1 text-meta text-ink-3">{c.hiddenText}</p>}
             {section.text && (
               <pre className="mt-2 max-h-48 overflow-auto rounded-badge bg-active p-2 text-micro whitespace-pre-wrap text-ink-2">{section.text}</pre>
             )}

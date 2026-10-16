@@ -1008,7 +1008,6 @@
         "wouldWeigh": "pèserait {n}",
         "notLoaded": "Non chargés ({n})",
         "notLoadedWeight": "{n} jetons s'ils l'étaient",
-        "hiddenText": "Le texte est réservé au responsable de l'espace.",
         "truncated": "Texte tronqué.",
         "showText": "Voir le texte",
         "itemTokens": "{n} j.",

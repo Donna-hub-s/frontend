@@ -26,7 +26,6 @@ const section = (over: Partial<ContextSection>): ContextSection => ({
   items: [],
   note: null,
   text: null,
-  text_hidden: false,
   truncated: false,
   ...over,
 });

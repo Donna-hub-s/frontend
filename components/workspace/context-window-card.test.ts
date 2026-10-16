@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Fenêtre de contexte d'un projet : résumé dans la colonne latérale (barre + total), détail dans une fenêtre (rubriques, outils actifs/non offerts avec
-// la raison, outils MCP hors de la fenêtre de DONNA, extraits RAG variables, textes réservés au responsable), choix du modèle / de la conversation
-// / de l'agent qui relancent la lecture. Le réseau est doublé par un faux serveur en mémoire.
+// la raison, outils MCP hors de la fenêtre de DONNA, extraits RAG variables, consigne système et guide des outils montrés par leur poids seul), choix du
+// modèle / de la conversation / de l'agent qui relancent la lecture. Le réseau est doublé par un faux serveur en mémoire.
 import { act, createElement } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -35,7 +35,6 @@ const section = (over: Partial<ContextSection> & { id: string }): ContextSection
   items: [],
   note: null,
   text: null,
-  text_hidden: false,
   truncated: false,
   ...over,
 });
@@ -53,7 +52,7 @@ function breakdown(url: string): ContextBreakdown {
     percent: model ? 4 : null,
     estimator: "chars/4",
     sections: [
-      section({ id: "system_prompt", kind: "system", tokens: 500, text_hidden: true, note: "Posée par l'opérateur du serveur." }),
+      section({ id: "system_prompt", kind: "system", tokens: 500, note: "Posée par l'opérateur du serveur." }),
       section({
         id: "tools",
         kind: "tools",
@@ -237,10 +236,12 @@ describe("ContextWindowCard — détail", () => {
     expect(rag.textContent).not.toContain("%");
   });
 
-  it("dit que le texte est réservé au responsable quand le serveur le cache, sans rien inventer", async () => {
+  it("montre la consigne système par son poids seul, jamais son texte", async () => {
     await openDetails();
-    expect(row("system_prompt").textContent).toContain(c.hiddenText);
-    expect(row("system_prompt").querySelector("pre")).toBeNull();
+    const prompt = row("system_prompt");
+    expect(prompt.textContent).toContain(fr.workspace.projects.contextWindow.sections.system_prompt);
+    expect(prompt.textContent).toContain("500");
+    expect(prompt.querySelector("pre")).toBeNull();
   });
 
   it("montre le texte d'un fait de la mémoire en texte brut (jamais interprété)", async () => {
