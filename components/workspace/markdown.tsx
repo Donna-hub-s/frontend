@@ -25,6 +25,14 @@ export type MarkdownLabels = {
   linkConfirmHint: string;
   linkPreviewError: string;
   mermaidInvalid: string;
+  mermaidTitle: string;
+  mermaidExpand: string;
+  mermaidDownload: string;
+  mermaidDownloadFailed: string;
+  mermaidClose: string;
+  mermaidZoomIn: string;
+  mermaidZoomOut: string;
+  mermaidFit: string;
 };
 const MarkdownLabelsContext = createContext<MarkdownLabels>({
   copy: "Copy",
@@ -34,8 +42,30 @@ const MarkdownLabelsContext = createContext<MarkdownLabels>({
   linkConfirmHint: "You're about to leave DONNA for an external site.",
   linkPreviewError: "Preview unavailable.",
   mermaidInvalid: "This diagram could not be drawn — source text below.",
+  mermaidTitle: "Diagram",
+  mermaidExpand: "Enlarge",
+  mermaidDownload: "Download as image",
+  mermaidDownloadFailed: "Image unavailable.",
+  mermaidClose: "Close",
+  mermaidZoomIn: "Zoom in",
+  mermaidZoomOut: "Zoom out",
+  mermaidFit: "Fit to window",
 });
 export const MarkdownLabelsProvider = MarkdownLabelsContext.Provider;
+
+const mermaidLabels = (labels: MarkdownLabels) => ({
+  invalid: labels.mermaidInvalid,
+  title: labels.mermaidTitle,
+  expand: labels.mermaidExpand,
+  copy: labels.copy,
+  copied: labels.copied,
+  download: labels.mermaidDownload,
+  downloadFailed: labels.mermaidDownloadFailed,
+  close: labels.mermaidClose,
+  zoomIn: labels.mermaidZoomIn,
+  zoomOut: labels.mermaidZoomOut,
+  fit: labels.mermaidFit,
+});
 
 /** Copie dans le presse-papiers ; repli sur une zone de texte cachée (contexte non sécurisé, ancien navigateur). */
 async function copyToClipboard(text: string): Promise<boolean> {
@@ -208,7 +238,7 @@ export function Markdown({
         // peu à peu, et le redessiner à chaque jeton serait coûteux (même logique que le code/les formules
         // juste au-dessus, voir withCode/withMath).
         if (!streaming && codeLanguage(node) === "mermaid") {
-          return <MermaidDiagram source={nodeText(node).replace(/\n$/, "")} labels={{ invalid: labels.mermaidInvalid }} />;
+          return <MermaidDiagram source={nodeText(node).replace(/\n$/, "")} labels={mermaidLabels(labels)} />;
         }
         return <CodeBlock node={node}>{children}</CodeBlock>;
       },

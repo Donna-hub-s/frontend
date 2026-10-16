@@ -68,6 +68,14 @@ export function WorkspaceShell({
           linkConfirmHint: dict.chat.linkConfirmHint,
           linkPreviewError: dict.chat.linkPreviewError,
           mermaidInvalid: dict.chat.mermaidInvalid,
+          mermaidTitle: dict.chat.mermaidTitle,
+          mermaidExpand: dict.chat.mermaidExpand,
+          mermaidDownload: dict.chat.mermaidDownload,
+          mermaidDownloadFailed: dict.chat.mermaidDownloadFailed,
+          mermaidClose: dict.chat.mermaidClose,
+          mermaidZoomIn: dict.chat.mermaidZoomIn,
+          mermaidZoomOut: dict.chat.mermaidZoomOut,
+          mermaidFit: dict.chat.mermaidFit,
         }}
       >
       {/* `relative` : repère des éléments `absolute` sans ancêtre positionné, notamment les `sr-only` du fil de discussion.

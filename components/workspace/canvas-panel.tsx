@@ -3,6 +3,7 @@
 import { Check, Clock, Download, Eye, FileText, PencilLine, Plus, Printer, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import type { Dictionary } from "@/app/[lang]/dictionaries";
+import { prepareExportAt, saveExport } from "@/lib/conversation-export";
 import { canvasActivity, canvasUrls, EXPORT_FORMATS, type CanvasMeta, type CanvasVersionMeta, type CanvasExportFormat, type SaveStatus } from "@/lib/canvas";
 import { hasMermaidBlock, inlineMermaid } from "@/lib/canvas-preview";
 import {
@@ -13,6 +14,7 @@ import { diffLines, diffStats, foldUnchanged } from "@/lib/diff";
 import { useCanvas, type CanvasController } from "@/lib/use-canvas";
 import type { ChatMessage } from "@/lib/workspace-types";
 import { CanvasEditor } from "./canvas-editor";
+import { browserExportDeps } from "./export-deps";
 import { renderMermaidSvg } from "./mermaid-diagram";
 import { useWorkspace } from "./workspace-provider";
 import { Sheet, SheetHeader } from "./sheet";
@@ -155,7 +157,7 @@ function CanvasPanel({
             <button type="button" className={BUTTON} onClick={() => setHistoryOpen((value) => !value)} aria-expanded={historyOpen} aria-label={labels.history} title={labels.history}>
               <Clock size={17} />
             </button>
-            <ExportMenu id={editor.doc.id} labels={labels} />
+            <ExportMenu id={editor.doc.id} labels={labels} lang={lang} />
             <button type="button" className={BUTTON} onClick={() => setConfirmDelete(true)} aria-label={labels.delete} title={labels.delete}>
               <Trash2 size={17} />
             </button>
@@ -464,9 +466,26 @@ function ConflictBanner({ labels, canvas }: { labels: Labels; canvas: CanvasCont
   );
 }
 
-function ExportMenu({ id, labels }: { id: string; labels: Labels }) {
+export function ExportMenu({ id, labels, lang }: { id: string; labels: Labels; lang: string }) {
   const [open, setOpen] = useState(false);
+  const [exporting, setExporting] = useState<CanvasExportFormat | null>(null);
+  const [failed, setFailed] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  // PDF et Word : les diagrammes Mermaid du document sont dessinés ici (seul le navigateur sait le faire) puis envoyés au serveur, qui
+  // les pose dans le fichier. Sans diagramme, ou si le dessin échoue, c'est le simple lien d'export, comme avant.
+  const run = async (format: CanvasExportFormat) => {
+    setFailed(false);
+    setExporting(format);
+    const outcome = await prepareExportAt({ listUrl: canvasUrls.exportDiagrams(id), postUrl: canvasUrls.exportPost(id) }, format, lang, browserExportDeps());
+    setExporting(null);
+    if (outcome.kind === "error") {
+      setFailed(true);
+      return;
+    }
+    saveExport(outcome, canvasUrls.export(id, format));
+    setOpen(false);
+  };
   useEffect(() => {
     if (!open) return;
     const onPointer = (event: PointerEvent) => !ref.current?.contains(event.target as Node) && setOpen(false);
@@ -492,12 +511,19 @@ function ExportMenu({ id, labels }: { id: string; labels: Labels }) {
               role="menuitem"
               href={canvasUrls.export(id, format)}
               download
-              onClick={() => setOpen(false)}
-              className="block px-3 py-2 text-label text-ink no-underline hover:bg-active hover:text-ink"
+              aria-disabled={exporting !== null}
+              onClick={(event) => {
+                if (format === "md") return setOpen(false); // Markdown : le lien suffit, le texte source est le fichier
+                event.preventDefault();
+                if (exporting === null) void run(format);
+              }}
+              className="block px-3 py-2 text-label text-ink no-underline hover:bg-active hover:text-ink aria-disabled:opacity-60"
             >
               {names[format]}
             </a>
           ))}
+          {exporting && <p role="status" className="px-3 py-1.5 text-meta text-ink-3">{labels.exportPreparing}</p>}
+          {failed && <p role="alert" className="px-3 py-1.5 text-meta text-danger">{labels.exportFailed}</p>}
         </div>
       )}
     </div>

@@ -8,7 +8,8 @@ import type { Dictionary } from "@/app/[lang]/dictionaries";
 import { DonnaLockup } from "@/components/brand/donna-mark";
 import { LanguageSwitch } from "@/components/language-switch";
 import { logout } from "@/lib/auth-actions";
-import { EXPORT_FORMATS, exportHref } from "@/lib/conversation-export";
+import { EXPORT_FORMATS, exportHref, prepareExport, saveExport, type ExportFormat } from "@/lib/conversation-export";
+import { browserExportDeps } from "./export-deps";
 import { groupByDate, groupByProject } from "@/lib/sidebar-grouping";
 import type { ConversationOut } from "@/lib/workspace-types";
 import { ChatIcon, CheckIcon, ChevronIcon, CloseIcon, ComposeIcon, FolderIcon, LogoutIcon, MoreIcon, SearchIcon, SettingsIcon } from "./icons";
@@ -378,6 +379,8 @@ function ConversationItem({
   const [title, setTitle] = useState(conversation.title);
   const [busy, setBusy] = useState(false);
   const [moveError, setMoveError] = useState(false);
+  const [exporting, setExporting] = useState<ExportFormat | null>(null);
+  const [exportFailed, setExportFailed] = useState(false);
   const itemRef = useRef<HTMLLIElement>(null);
   // Nom du projet de rattachement, s'il existe encore (un projet supprimé ne
   // doit pas faire disparaître la conversation de la liste).
@@ -388,6 +391,21 @@ function ConversationItem({
     (anchor) => onHover(anchor),
     () => onHover(null),
   );
+
+  // PDF et Word : les diagrammes Mermaid de la conversation sont dessinés ici (seul le navigateur sait le faire) puis envoyés au serveur,
+  // qui les pose dans le fichier. Sans diagramme, ou si le dessin échoue, c'est le simple lien d'export, comme avant.
+  const runExport = async (format: ExportFormat) => {
+    setExportFailed(false);
+    setExporting(format);
+    const outcome = await prepareExport(conversation.id, format, lang, browserExportDeps());
+    setExporting(null);
+    if (outcome.kind === "error") {
+      setExportFailed(true);
+      return;
+    }
+    saveExport(outcome, exportHref(conversation.id, format, lang));
+    setMode("idle");
+  };
 
   // Fermeture du menu au clic extérieur ou sur Échap.
   useEffect(() => {
@@ -596,12 +614,19 @@ function ConversationItem({
               role="menuitem"
               href={exportHref(conversation.id, format, lang)}
               download
-              onClick={() => setMode("idle")}
-              className="flex w-full rounded-badge px-2.5 py-2 text-left text-label text-ink no-underline hover:bg-active hover:text-ink"
+              aria-disabled={exporting !== null}
+              onClick={(event) => {
+                if (format === "md") return setMode("idle"); // Markdown : le lien suffit, le texte source est le fichier
+                event.preventDefault();
+                if (exporting === null) void runExport(format);
+              }}
+              className="flex w-full rounded-badge px-2.5 py-2 text-left text-label text-ink no-underline hover:bg-active hover:text-ink aria-disabled:opacity-60"
             >
               {labels.exportFormats[format]}
             </a>
           ))}
+          {exporting && <p role="status" className="px-2.5 py-1.5 text-meta text-ink-3">{labels.exportPreparing}</p>}
+          {exportFailed && <p role="alert" className="px-2.5 py-1.5 text-meta text-danger">{labels.exportFailed}</p>}
         </div>
       )}
       {mode === "move" && (

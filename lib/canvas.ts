@@ -35,6 +35,9 @@ export const canvasUrls = {
   version: (id: string, version: number) => `${base}/${encodeURIComponent(id)}/versions/${version}`,
   restore: (id: string) => `${base}/${encodeURIComponent(id)}/restore`,
   export: (id: string, format: CanvasExportFormat) => `${base}/${encodeURIComponent(id)}/export?format=${format}`,
+  // PDF/Word avec les diagrammes Mermaid dessinés par le navigateur (voir lib/conversation-export.ts).
+  exportDiagrams: (id: string) => `${base}/${encodeURIComponent(id)}/export/diagrams`,
+  exportPost: (id: string) => `${base}/${encodeURIComponent(id)}/export`,
   // Le document rendu par le serveur : c'est cette page qu'affiche l'aperçu ET que les exports convertissent.
   // Un aperçu rendu dans le navigateur ne pourrait pas garantir qu'un export lui ressemble.
   render: (id: string) => `${base}/${encodeURIComponent(id)}/render`,
