@@ -72,6 +72,19 @@ function Driver() {
       "button",
       {
         type: "button",
+        "data-testid": "register-many",
+        onClick: () => {
+          for (let i = 1; i <= 35; i += 1) {
+            registerThread(`k-${i}`, null, [{ id: `m-${i}`, role: "assistant", content: "", createdAt: 0, attachments: [] }]);
+          }
+        },
+      },
+      "register-many",
+    ),
+    createElement(
+      "button",
+      {
+        type: "button",
         "data-testid": "patch",
         onClick: () => patchMessage("k1", "m1", { content: "jeton" }),
       },
@@ -116,5 +129,12 @@ describe("WorkspaceProvider — contexte scindé (threads/activity à part)", ()
     click("patch");
     expect(countOf("stable-count")).toBe(stableAfterRegister);
     expect(countOf("threads-count")).toBeGreaterThan(threadsAfterRegister);
+  });
+
+  it("borne le nombre de fils en mémoire à 30 maximum", () => {
+    mount();
+    click("register-many");
+    const threadsCountNode = host.querySelector('[data-testid="threads-count"]');
+    expect(Number(threadsCountNode?.textContent)).toBe(30);
   });
 });

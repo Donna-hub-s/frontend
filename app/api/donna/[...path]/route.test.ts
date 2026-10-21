@@ -90,3 +90,30 @@ describe("GET /api/donna/chat — renouvellement de jeton sur 401", () => {
     expect(deleted).toEqual([]);
   });
 });
+
+describe("GET /api/donna/... — filtrage des routes autorisées (ALLOWED)", () => {
+  it("refuse les chemins non autorisés avec un statut 404 sans appeler le backend", async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal("fetch", fetchSpy);
+    store.set("donna_access", "access-valide");
+
+    const response = await call("admin/system");
+    expect(response.status).toBe(404);
+    const body = await response.json();
+    expect(body).toEqual({ detail: "Not found" });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("autorise les chemins valides de l'allowlist et les transmet au backend", async () => {
+    store.set("donna_access", "access-valide");
+    const fetchSpy = vi.fn(async () => new Response("ok", { status: 200 }));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    const paths = ["chat", "profile/me", "workflows/runs", "auth/me", "auth/ws/ticket"];
+    for (const path of paths) {
+      const response = await call(path);
+      expect(response.status).toBe(200);
+    }
+    expect(fetchSpy).toHaveBeenCalledTimes(paths.length);
+  });
+});

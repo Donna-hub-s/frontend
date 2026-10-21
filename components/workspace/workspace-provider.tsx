@@ -238,12 +238,15 @@ export function WorkspaceProvider({
       // un fil affiché ou en cours de rédaction (ceux-ci sont en fin d'objet).
       const keys = Object.keys(existing);
       let next = { ...existing, [key]: { key, conversationId, messages: initialMessages, busy: false, steps: [] } };
-      for (let i = 0; keys.length - i >= THREAD_LIMIT; i += 1) {
-        const oldest = next[keys[i]];
-        if (oldest.busy || keys[i] === activeKeyRef.current) continue;
-        const rest = { ...next };
-        delete rest[keys[i]];
-        next = rest;
+      if (Object.keys(next).length > THREAD_LIMIT) {
+        for (const k of keys) {
+          if (Object.keys(next).length <= THREAD_LIMIT) break;
+          const oldest = next[k];
+          if (!oldest || oldest.busy || k === activeKeyRef.current) continue;
+          const rest = { ...next };
+          delete rest[k];
+          next = rest;
+        }
       }
       return next;
     });
@@ -376,7 +379,7 @@ export function WorkspaceProvider({
     if (catalog) setSkills(catalog);
     if (profile) setSkillSettings(profile.skills ?? {});
   }, []);
-  // Chargement initial (même lecture que refreshSkills, gardée contre un démontage en cours de route).
+  // Chargement initial des skills (gardé contre un démontage en cours de route).
   useEffect(() => {
     let cancelled = false;
     void Promise.all([
