@@ -1382,7 +1382,8 @@
         "compact": "Compactage de l'historique",
         "title": "Titres de conversations",
         "research": "Recherches approfondies",
-        "image": "Images générées"
+        "image": "Images générées",
+        "delegate": "Sous-agents"
       },
       "noProject": "Hors projet",
       "projectGone": "Projet inaccessible",

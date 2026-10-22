@@ -1382,7 +1382,8 @@
         "compact": "History compaction",
         "title": "Conversation titles",
         "research": "Deep research",
-        "image": "Generated images"
+        "image": "Generated images",
+        "delegate": "Sub-agents"
       },
       "noProject": "No project",
       "projectGone": "Inaccessible project",
