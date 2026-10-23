@@ -23,6 +23,8 @@ export type TokenResponse = {
   tenant_id?: string | null;
   mfa_required: boolean;
   mfa_token?: string | null;
+  /** Identité de l'appareil émise (ou reconnue) par le serveur — voir COOKIES.device. */
+  device_id?: string | null;
   needs_tenant_setup: boolean;
   tenants?: TenantInfo[] | null;
 };

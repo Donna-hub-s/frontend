@@ -37,6 +37,12 @@ export function safeNext(lang: Locale, next: unknown): string {
  */
 export async function applyTokens(tokens: TokenResponse, lang: Locale, next?: unknown): Promise<string | "mfa"> {
   const store = await cookies();
+  // Identité de l'appareil : posée dès qu'elle arrive, quelle que soit la suite. C'est le
+  // point de passage de TOUTES les réponses de jetons (mot de passe, MFA, choix d'espace,
+  // OAuth), donc le seul endroit où la mémoriser une fois pour toutes.
+  if (tokens.device_id) {
+    store.set(COOKIES.device, tokens.device_id, cookieOptions(MAX_AGE.device));
+  }
   if (tokens.mfa_required && tokens.mfa_token) {
     store.set(COOKIES.mfa, tokens.mfa_token, cookieOptions(MAX_AGE.mfa));
     return "mfa";

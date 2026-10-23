@@ -1232,6 +1232,7 @@
       "sessionsEmpty": "No other active session.",
       "sessionCurrentBadge": "This device",
       "sessionUnknownDevice": "Unknown device",
+      "sessionSince": "signed in {date}",
       "sessionLastSeen": "Last seen {date}",
       "sessionRevoke": "Sign out",
       "sessionRevoking": "Signing out…",

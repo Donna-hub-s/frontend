@@ -43,7 +43,14 @@ export async function login(_: AuthState, formData: FormData): Promise<AuthState
   if (!password) fields.password = "required";
   if (Object.keys(fields).length) return { fields, email };
 
-  const result = await postJson<TokenResponse>(`${AUTH_BASE}/login`, { email, password }, await clientIp());
+  // Identité de l'appareil déjà connue, s'il y en a une. Absente à la première connexion
+  // depuis ce navigateur : le serveur en émet alors une, qu'applyTokens mémorise.
+  const device = (await cookies()).get(COOKIES.device)?.value;
+  const result = await postJson<TokenResponse>(
+    `${AUTH_BASE}/login`,
+    { email, password, ...(device ? { device_id: device } : {}) },
+    await clientIp(),
+  );
   if (!result.ok) {
     const inactive = result.detail.toLowerCase().includes("inactive");
     return { error: commonError(result) ?? (inactive ? "accountInactive" : "invalidCredentials"), email };

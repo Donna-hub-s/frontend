@@ -22,7 +22,12 @@ type SessionOut = {
   id: string;
   tenant_id: string | null;
   ip_address: string | null;
-  device_fingerprint: string | null;
+  /** « Chrome sur macOS », dérivé du User-Agent côté serveur. null si indéchiffrable. */
+  device_label: string | null;
+  /** Système seul (« macOS »), pour le montrer à part de l'étiquette complète. */
+  os: string | null;
+  /** Ouverture de la session. null pour les sessions antérieures à ce champ. */
+  created_at: string | null;
   last_seen: string;
   expires_at: string;
   is_current: boolean;
@@ -417,10 +422,20 @@ function SessionsCard({ labels, lang }: { labels: Labels; lang: Locale }) {
             {sessions.map((session) => (
               <li key={session.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 first:pt-0 last:pb-0">
                 <span className="flex min-w-[10rem] flex-1 flex-col">
-                  <span className="text-label text-ink">{session.device_fingerprint || labels.sessionUnknownDevice}</span>
+                  <span className="text-label text-ink">{session.device_label || labels.sessionUnknownDevice}</span>
                   <span className="text-meta text-ink-3">
-                    {session.ip_address ? `${session.ip_address} — ` : ""}
-                    {labels.sessionLastSeen.replace("{date}", format.format(new Date(session.last_seen)))}
+                    {/* Ce que l'utilisateur veut reconnaître d'un coup d'œil : d'où, et depuis
+                        quand. « connecté le » n'existe pas pour les sessions antérieures à ce
+                        champ — on l'omet alors plutôt que d'inventer une date. */}
+                    {[
+                      session.ip_address,
+                      session.created_at
+                        ? labels.sessionSince.replace("{date}", format.format(new Date(session.created_at)))
+                        : null,
+                      labels.sessionLastSeen.replace("{date}", format.format(new Date(session.last_seen))),
+                    ]
+                      .filter(Boolean)
+                      .join(" — ")}
                   </span>
                 </span>
                 {session.is_current ? (

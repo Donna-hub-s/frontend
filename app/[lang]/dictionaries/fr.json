@@ -1232,6 +1232,7 @@
       "sessionsEmpty": "Aucune autre session active.",
       "sessionCurrentBadge": "Cet appareil",
       "sessionUnknownDevice": "Appareil inconnu",
+      "sessionSince": "connecté le {date}",
       "sessionLastSeen": "Vu le {date}",
       "sessionRevoke": "Déconnecter",
       "sessionRevoking": "Déconnexion…",
